@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gestor de Terrenos — IRN</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f3ef;--bg2:#eceae4;--white:#fff;
+  --ink:#1c1a17;--ink2:#4a4740;--ink3:#8a8780;--line:#d8d4cc;
+  --teal:#1a5f6e;--teal2:#227080;--teal-lt:#e8f4f7;
+  --red:#c0392b;--red-lt:#fdf0ee;--amber:#b7620a;--amber-lt:#fef4e8;
+  --green:#1a7a4a;--green-lt:#eaf6f0;--purple:#6e1a6e;--purple-lt:#f7e8f7;
+  --shadow:0 2px 8px rgba(0,0,0,0.08);--shadow-lg:0 8px 32px rgba(0,0,0,0.13)
+}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--ink);font-size:13.5px}
+h1,h2,h3,h4{font-family:'Libre Baskerville',serif}
+button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:pointer}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{width:258px;flex-shrink:0;background:#1c1a17;color:#d8d4cc;display:flex;flex-direction:column;overflow:hidden}
+.sidebar-brand{padding:18px 16px 13px;border-bottom:1px solid rgba(255,255,255,0.07)}
+.sidebar-brand h1{font-size:13.5px;color:#f0eeea;line-height:1.35}
+.sidebar-brand span{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:#5a5750}
+.sidebar-search{padding:8px 10px 4px}
+.sidebar-search input{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);border-radius:6px;padding:6px 10px;font-size:12px;color:#d8d4cc;outline:none;transition:border 0.14s}
+.sidebar-search input:focus{border-color:rgba(26,95,110,0.6)}
+.sidebar-search input::placeholder{color:#4a4740}
+.terreno-list{flex:1;overflow-y:auto;padding:4px 8px 10px}
+.terreno-list::-webkit-scrollbar{width:3px}
+.terreno-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+.city-group{margin-bottom:2px}
+.city-header{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:6px;cursor:pointer;transition:all 0.14s;user-select:none}
+.city-header:hover{background:rgba(255,255,255,0.04)}
+.city-arrow{font-size:8px;color:#5a5750;transition:transform 0.2s;display:inline-block;width:10px;flex-shrink:0}
+.city-arrow.open{transform:rotate(90deg)}
+.city-name{flex:1;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:#7a7770}
+.city-count{font-size:10px;color:#4a4740;background:rgba(255,255,255,0.05);padding:1px 6px;border-radius:8px}
+.city-terrenos{padding-left:8px;border-left:1px solid rgba(255,255,255,0.06);margin-left:10px}
+.terreno-item{padding:7px 9px;border-radius:5px;cursor:pointer;transition:all 0.14s;border:1px solid transparent;margin-bottom:1px;display:flex;align-items:center;gap:7px}
+.terreno-item:hover{background:rgba(255,255,255,0.05)}
+.terreno-item.active{background:rgba(26,95,110,0.3);border-color:rgba(26,95,110,0.45)}
+.t-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;box-shadow:0 0 4px rgba(0,0,0,0.3)}
+.t-info{flex:1;min-width:0}
+.t-name{font-size:11.5px;color:#b0adb6;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.terreno-item.active .t-name{color:#fff}
+.t-rol{font-size:9.5px;color:#5a5750;font-family:monospace}
+.sidebar-bottom{padding:6px 8px 12px;display:flex;flex-direction:column;gap:4px}
+.sbtn{width:100%;padding:8px 12px;border-radius:6px;font-size:11.5px;font-weight:500;transition:all 0.15s;text-align:left;border:1px solid;display:flex;align-items:center;gap:7px}
+.sbtn-primary{background:rgba(26,95,110,0.25);border-color:rgba(26,95,110,0.4);color:#90c4cc}
+.sbtn-primary:hover{background:rgba(26,95,110,0.4)}
+.sbtn-ghost{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.09);color:#808070}
+.sbtn-ghost:hover{background:rgba(255,255,255,0.08);color:#c0bdb6}
+.sync-bar{border-top:1px solid rgba(255,255,255,0.07);padding:9px 14px;display:flex;align-items:center;gap:7px}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background 0.3s}
+.sync-dot.ok{background:#5cba8a;box-shadow:0 0 5px rgba(92,186,138,0.45)}
+.sync-dot.loading{background:#e09a5c;animation:pulse 0.9s infinite}
+.sync-dot.error{background:#e05c5c}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.sync-text{font-size:10px;color:#5a5750;flex:1}
+.sync-refresh{background:none;border:none;color:#5a5750;cursor:pointer;font-size:12px;padding:2px 4px;border-radius:3px;transition:color 0.14s}
+.sync-refresh:hover{color:#a0a090}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--white);border-bottom:1px solid var(--line);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:var(--shadow)}
+.topbar-left{display:flex;align-items:center;gap:10px;min-width:0}
+.topbar-left h2{font-size:18px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px}
+.topbar-right{display:flex;gap:10px;align-items:center;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:20px 24px 40px}
+.content::-webkit-scrollbar{width:6px}
+.content::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi-card{background:var(--white);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow);border:1px solid var(--line);border-top:3px solid var(--line)}
+.kpi-card.teal{border-top-color:var(--teal)}
+.kpi-card.alert{border-top-color:var(--red)}
+.kpi-card.warning{border-top-color:var(--amber)}
+.kpi-card.good{border-top-color:var(--green)}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);font-weight:600;margin-bottom:8px}
+.kpi-value{font-size:24px;font-weight:700;color:var(--ink);font-family:'IBM Plex Sans',sans-serif;line-height:1.1}
+.kpi-card.alert .kpi-value{color:var(--red)}
+.kpi-card.warning .kpi-value{color:var(--amber)}
+.kpi-card.good .kpi-value{color:var(--green)}
+.kpi-sub{font-size:11px;color:var(--ink3);margin-top:5px}
+
+/* ── TABS ── */
+.tab-nav{display:flex;border-bottom:2px solid var(--line);margin-bottom:18px}
+.tab-btn{padding:9px 18px;font-size:13px;font-weight:500;color:var(--ink3);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;transition:all 0.14s;white-space:nowrap}
+.tab-btn:hover{color:var(--ink2)}
+.tab-btn.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
+
+/* ── INFO ── */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.info-card{background:var(--white);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.info-card h4{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);font-weight:600;margin-bottom:14px;font-family:'IBM Plex Sans',sans-serif}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.info-row:last-child{border-bottom:none}
+.info-key{font-size:12px;color:var(--ink3)}
+.info-val{font-size:13px;color:var(--ink);font-weight:500;text-align:right;max-width:60%}
+.badge-chip{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600}
+.chip-si{background:var(--red-lt);color:var(--red)}
+.chip-no{background:var(--green-lt);color:var(--green)}
+
+/* ── RESPONSABLE BADGE ── */
+.resp-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.resp-mauricio{background:var(--teal-lt);color:var(--teal)}
+.resp-solange{background:var(--purple-lt);color:var(--purple)}
+.resp-none{background:var(--bg2);color:var(--ink3)}
+
+/* ── CUOTAS ── */
+.cuotas-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.anio-nav{display:flex;align-items:center;gap:10px}
+.anio-nav button{width:30px;height:30px;border-radius:6px;border:1px solid var(--line);background:var(--white);color:var(--ink2);font-size:15px;display:flex;align-items:center;justify-content:center;transition:background 0.13s}
+.anio-nav button:hover{background:var(--bg2)}
+.anio-display{font-size:17px;font-weight:700;color:var(--ink);min-width:52px;text-align:center;font-family:'IBM Plex Sans',sans-serif}
+.cuotas-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}
+.cuota-card{background:var(--white);border-radius:10px;padding:16px;box-shadow:var(--shadow);border:1px solid var(--line);border-top:3px solid var(--line)}
+.cuota-card.pagada{border-top-color:var(--green)}
+.cuota-card.vencida{border-top-color:var(--red)}
+.cuota-card.proxima{border-top-color:var(--amber)}
+.cuota-card.pendiente{border-top-color:var(--line)}
+.cuota-num{font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:8px}
+.cuota-status-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:600;margin-bottom:10px}
+.st-pagada{background:var(--green-lt);color:var(--green)}
+.st-vencida{background:var(--red-lt);color:var(--red)}
+.st-proxima{background:var(--amber-lt);color:var(--amber)}
+.st-pendiente{background:var(--bg2);color:var(--ink3)}
+.cuota-monto-input{width:100%;background:transparent;border:none;border-bottom:1px dashed var(--line);font-size:18px;font-weight:700;color:var(--ink);padding:2px 0;outline:none;transition:border-color 0.14s}
+.cuota-monto-input:focus{border-bottom-color:var(--teal)}
+.cuota-fecha{font-size:11px;color:var(--ink3);margin-top:4px;margin-bottom:12px;line-height:1.6}
+.cuota-divider{height:1px;background:var(--line);margin-bottom:10px}
+.cuota-actions input[type=date]{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:5px 8px;font-size:12px;color:var(--ink);outline:none;margin-bottom:7px;transition:border 0.14s}
+.cuota-actions input[type=date]:focus{border-color:var(--teal)}
+.cuotas-summary{display:flex;gap:0;margin-top:18px;background:var(--white);border-radius:9px;border:1px solid var(--line);overflow:hidden;box-shadow:var(--shadow)}
+.sum-item{flex:1;padding:12px 16px;border-right:1px solid var(--line)}
+.sum-item:last-child{border-right:none}
+.sum-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);font-weight:600;margin-bottom:4px}
+.sum-val{font-size:15px;font-weight:700;color:var(--ink);font-family:'IBM Plex Sans',sans-serif}
+.sum-val.red{color:var(--red)}
+.sum-val.green{color:var(--green)}
+.sum-val.amber{color:var(--amber)}
+
+/* ── BITÁCORA ── */
+.bitacora-add-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.add-entry-box{background:var(--white);border-radius:10px;border:1px solid var(--line);padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
+.add-entry-box .title{font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:14px}
+.bitacora-list{display:flex;flex-direction:column;gap:10px}
+.bita-entry{background:var(--white);border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;transition:box-shadow 0.14s}
+.bita-entry:hover{box-shadow:0 4px 16px rgba(0,0,0,0.1)}
+.bita-header{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;cursor:pointer;user-select:none}
+.bita-date{font-size:11px;font-weight:700;color:#fff;background:var(--teal);padding:3px 9px;border-radius:4px;white-space:nowrap;flex-shrink:0;margin-top:1px}
+.bita-detalle{flex:1;font-size:13px;color:var(--ink);line-height:1.5}
+.bita-meta{display:flex;gap:7px;align-items:center;flex-shrink:0}
+.estatus-chip{padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:600}
+.est-pendiente{background:var(--bg2);color:var(--ink3)}
+.est-proceso{background:var(--teal-lt);color:var(--teal)}
+.est-finalizada{background:var(--green-lt);color:var(--green)}
+.bita-body{border-top:1px solid var(--line);padding:12px 16px}
+.files-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.file-item{display:flex;align-items:center;gap:9px;padding:7px 11px;background:var(--bg);border-radius:7px;border:1px solid var(--line)}
+.file-icon{font-size:17px;flex-shrink:0}
+.file-name{flex:1;font-size:12px;color:var(--teal);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-name:hover{text-decoration:underline}
+.file-size{font-size:10.5px;color:var(--ink3);flex-shrink:0}
+.file-del{background:none;border:none;color:var(--ink3);cursor:pointer;padding:2px 5px;border-radius:4px;font-size:12px;transition:all 0.13s;flex-shrink:0}
+.file-del:hover{color:var(--red);background:var(--red-lt)}
+.upload-zone{display:block;border:2px dashed var(--line);border-radius:8px;padding:13px 16px;text-align:center;cursor:pointer;transition:all 0.15s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--teal);background:var(--teal-lt)}
+.upload-zone input{display:none}
+.upload-zone p{font-size:12px;color:var(--ink3)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 15px;border-radius:6px;font-size:13px;font-weight:500;border:none;transition:all 0.15s;cursor:pointer;white-space:nowrap}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-primary:hover{background:var(--teal2)}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+.btn-outline{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+.btn-outline:hover{background:var(--bg2)}
+.btn-ghost{background:transparent;color:var(--ink3)}
+.btn-ghost:hover{background:var(--bg2);color:var(--ink2)}
+.btn-danger{background:var(--red-lt);color:var(--red);border:1px solid rgba(192,57,43,0.2)}
+.btn-danger:hover{background:rgba(192,57,43,0.14)}
+.btn-success{background:var(--green-lt);color:var(--green);border:1px solid rgba(26,122,74,0.2)}
+.btn-success:hover{background:rgba(26,122,74,0.14)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px;border-radius:4px}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal{background:var(--white);border-radius:12px;box-shadow:var(--shadow-lg);width:100%;max-width:480px;overflow:hidden;animation:fadeUp 0.18s ease}
+.modal-lg{max-width:640px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.modal-head{padding:18px 22px 0;display:flex;justify-content:space-between;align-items:center}
+.modal-head h3{font-size:17px;color:var(--ink)}
+.modal-body{padding:16px 22px;display:flex;flex-direction:column;gap:12px;max-height:70vh;overflow-y:auto}
+.modal-foot{padding:0 22px 18px;display:flex;justify-content:flex-end;gap:8px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);font-weight:600}
+.field input,.field select,.field textarea{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 11px;font-size:13px;color:var(--ink);outline:none;transition:border 0.14s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--teal);background:#fff}
+.field textarea{resize:vertical;min-height:72px;line-height:1.5}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── SETUP ── */
+.setup-screen{display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg)}
+.setup-card{background:var(--white);border-radius:14px;box-shadow:var(--shadow-lg);padding:40px;max-width:500px;width:100%;border-top:4px solid var(--teal)}
+.setup-card h2{font-size:24px;color:var(--ink);margin-bottom:8px}
+.setup-sub{font-size:13px;color:var(--ink3);margin-bottom:26px;line-height:1.65}
+.setup-steps{background:var(--bg);border-radius:10px;padding:16px 18px;margin-bottom:18px}
+.setup-step{display:flex;gap:10px;margin-bottom:10px}
+.setup-step:last-child{margin-bottom:0}
+.step-n{width:20px;height:20px;border-radius:50%;background:var(--teal);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-txt{font-size:13px;color:var(--ink2);line-height:1.5}
+.step-txt code{background:var(--bg2);padding:1px 5px;border-radius:3px;font-size:11.5px;font-family:monospace;color:var(--teal)}
+.setup-error{background:var(--red-lt);border:1px solid rgba(192,57,43,0.2);border-radius:7px;padding:11px 13px;font-size:13px;color:var(--red);margin-bottom:14px}
+
+/* ── DASHBOARD ── */
+.dash-2col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
+.dash-section h4{font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:7px}
+.data-table{background:var(--white);border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden}
+.dt-head{background:var(--bg);display:grid;padding:8px 14px;font-size:10.5px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:0.8px}
+.dt-row{display:grid;padding:9px 14px;border-top:1px solid var(--line);font-size:12.5px;align-items:center;transition:background 0.1s}
+.dt-row:hover{background:var(--bg)}
+.dt-row.overdue-row{background:rgba(192,57,43,0.03)}
+.dt-empty{padding:22px;text-align:center;color:var(--ink3);font-size:13px}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:55%;gap:12px;color:var(--ink3)}
+.empty-icon{font-size:44px}
+.empty-state h3{font-size:18px;color:var(--ink2)}
+.loading-cover{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px}
+.spinner{width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:spin 0.75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── DASHBOARD FILTER BAR ── */
+.dash-filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:20px;background:var(--white);border-radius:9px;padding:11px 16px;border:1px solid var(--line);box-shadow:var(--shadow);flex-wrap:wrap}
+.dash-filter-bar label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-right:2px;white-space:nowrap}
+.dash-filter-bar select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:12.5px;color:var(--ink2);outline:none;cursor:pointer;transition:border 0.14s}
+.dash-filter-bar select:focus{border-color:var(--teal)}
+.dash-clr{margin-left:auto;font-size:12px;color:var(--ink3);background:none;border:none;cursor:pointer;padding:4px 9px;border-radius:5px;transition:all 0.13s}
+.dash-clr:hover{background:var(--bg2);color:var(--ink2)}
+.kpi-grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:20px}
+/* ── CHART ── */
+.chart-card{background:var(--white);border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--line);padding:18px 20px;margin-bottom:20px}
+.chart-card h4{font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:14px;display:flex;align-items:center;gap:7px;font-family:'IBM Plex Sans',sans-serif}
+.chart-scroll{overflow-x:auto;padding-bottom:4px}
+.chart-scroll::-webkit-scrollbar{height:4px}
+.chart-scroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+/* ── RESP TABLE ── */
+.resp-table{background:var(--white);border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;margin-bottom:20px}
+.resp-table-head{display:grid;padding:8px 14px;font-size:10.5px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:0.8px;background:var(--bg)}
+.resp-table-row{display:grid;padding:9px 14px;border-top:1px solid var(--line);font-size:13px;align-items:center;transition:background 0.1s}
+.resp-table-row:hover{background:var(--bg)}
+/* ── HIDE TOGGLE ── */
+.hide-btn{background:none;border:none;cursor:pointer;padding:2px 4px;font-size:11px;color:#5a5750;border-radius:3px;transition:all 0.13s;flex-shrink:0;opacity:0;line-height:1}
+.terreno-item:hover .hide-btn{opacity:1}
+.terreno-item.hidden-item{opacity:0.35}
+.terreno-item.hidden-item .hide-btn{opacity:1}
+/* ── SUBTAREAS ── */
+.subtareas-section{margin-top:13px;border-top:1px dashed var(--line);padding-top:12px}
+.sub-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.sub-header-title{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--ink3)}
+.subtarea-item{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;background:var(--bg);border-radius:7px;border:1px solid var(--line);margin-bottom:6px}
+.sub-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.sub-body{flex:1;min-width:0}
+.sub-desc{font-size:12.5px;color:var(--ink);line-height:1.45;margin-bottom:5px}
+.sub-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.sub-meta-pill{font-size:10.5px;color:var(--ink3)}
+.sub-actions{display:flex;flex-direction:column;gap:3px;flex-shrink:0}
+.sub-act-btn{background:none;border:none;font-size:11px;color:var(--ink3);cursor:pointer;padding:2px 5px;border-radius:4px;line-height:1.4;transition:all 0.12s}
+.sub-act-btn:hover{background:var(--bg2);color:var(--ink2)}
+.sub-act-btn.del:hover{color:var(--red);background:var(--red-lt)}
+.sub-files-area{margin-top:9px}
+.subtarea-add-form{background:var(--bg);border-radius:8px;border:1px solid var(--line);padding:12px;margin-bottom:9px}
+</style>
+</head>
+<body>
+<script>window.INITIAL_DATA=[{"rol":"671-1","terreno":"Diego Portales","vigente":"SI","ciudad":"Arica","m2_sii":4234.0,"avaluo":783732889,"uf_m2":4.65,"sobretasa":false,"proyecto":null,"cuota_monto":2227267,"tasa":0.01137,"fecha_tarea":null,"detalle_tarea":null,"estatus":"Pendiente"},{"rol":"9401-4","terreno":"Laneri B3-B4-1-1c","vigente":"SI","ciudad":"Arica","m2_sii":6933.8,"avaluo":864859132,"uf_m2":3.13,"sobretasa":false,"proyecto":"Sala de Ventas","cuota_monto":2468828,"tasa":0.01142,"fecha_tarea":null,"detalle_tarea":null,"estatus":"En Proceso"},{"rol":"9401-14","terreno":"B-3B-4-1-2A","vigente":"SI","ciudad":"Arica","m2_sii":31787.0,"avaluo":1780054101,"uf_m2":1.41,"sobretasa":true,"proyecto":null,"cuota_monto":11792478,"tasa":0.0265,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"9401-217","terreno":"B3-B4-1-2A LT X1","vigente":"SI","ciudad":"Arica","m2_sii":10175.0,"avaluo":1051677201,"uf_m2":2.6,"sobretasa":true,"proyecto":"Doña Catalina","cuota_monto":6971643,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"9401-218","terreno":"B3-B4-1-2A LT X2","vigente":"SI","ciudad":"Arica","m2_sii":11999.31,"avaluo":0,"uf_m2":0,"sobretasa":false,"proyecto":"Doña Eugenia","cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":"Roles sin activar","estatus":"Pendiente"},{"rol":"9401-219","terreno":"B3-B4-1-2A LT X3","vigente":"SI","ciudad":"Arica","m2_sii":9612.29,"avaluo":0,"uf_m2":0,"sobretasa":false,"proyecto":"Doña Pilar","cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":"Roles sin activar","estatus":"Pendiente"},{"rol":"9401-15","terreno":"B3-B4-1-2B","vigente":"SI","ciudad":"Arica","m2_sii":9956.0,"avaluo":1045120368,"uf_m2":2.64,"sobretasa":false,"proyecto":"Doña Isidora","cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":"Rol Eliminado","estatus":"Finalizada","extra_bitacora":[{"detalle":"Solicitar devolución","estatus":"En Proceso","fecha":"2025-01-01"}]},{"rol":"654-9","terreno":"Playa Chinchorro","vigente":"SI","ciudad":"Arica","m2_sii":4308.0,"avaluo":637910547,"uf_m2":3.72,"sobretasa":false,"proyecto":null,"cuota_monto":4233086,"tasa":0.02654,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"654-10","terreno":"Playa Chinchorro","vigente":"SI","ciudad":"Arica","m2_sii":3218.0,"avaluo":6826428894,"uf_m2":53.27,"sobretasa":true,"proyecto":"Novotel","cuota_monto":19399826,"tasa":0.01137,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1300-1","terreno":"21 de Mayo","vigente":"SI","ciudad":"Arica","m2_sii":8564.0,"avaluo":1103436257,"uf_m2":3.24,"sobretasa":false,"proyecto":null,"cuota_monto":3146833,"tasa":0.01141,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3571-1","terreno":"Chipana cerro dragón lote 17","vigente":"SI","ciudad":"Iquique","m2_sii":906.0,"avaluo":297277523,"uf_m2":8.24,"sobretasa":false,"proyecto":null,"cuota_monto":829073,"tasa":0.01116,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3571-2","terreno":"Chipana cerro dragón lote 18","vigente":"SI","ciudad":"Iquique","m2_sii":403.0,"avaluo":137046683,"uf_m2":8.54,"sobretasa":true,"proyecto":null,"cuota_monto":899255,"tasa":0.02625,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"2361-1","terreno":"Terreno Alto Hospicio Lote H","vigente":"SI","ciudad":"Iquique","m2_sii":0,"avaluo":2911274237,"uf_m2":0,"sobretasa":true,"proyecto":null,"cuota_monto":12803556,"tasa":0.01759,"fecha_tarea":null,"detalle_tarea":"Cambiar propetiario a municipalidad","estatus":"En Proceso"},{"rol":"3320-2","terreno":"Lote 5A","vigente":"SI","ciudad":"Iquique","m2_sii":0,"avaluo":5537591022,"uf_m2":0,"sobretasa":false,"proyecto":null,"cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":"Cambiar propetiario a municipalidad","estatus":"En Proceso"},{"rol":"3320-494","terreno":"Lote 5B-A","vigente":"SI","ciudad":"Iquique","m2_sii":6145.0,"avaluo":2720175997,"uf_m2":11.12,"sobretasa":false,"proyecto":null,"cuota_monto":7458168,"tasa":0.01097,"fecha_tarea":"2025-10-22","detalle_tarea":"Se rebaja m2 vendidos","estatus":"Finalizada"},{"rol":"3320-496","terreno":"Lote 5B-3","vigente":"SI","ciudad":"Iquique","m2_sii":3545.0,"avaluo":1373786522,"uf_m2":9.73,"sobretasa":false,"proyecto":null,"cuota_monto":3913234,"tasa":0.01139,"fecha_tarea":"2025-10-22","detalle_tarea":"Cobrar arriendo a EC (Tarifado)","estatus":"Finalizada"},{"rol":"728-6","terreno":"Econsa LT C - 5B","vigente":"SI","ciudad":"Iquique","m2_sii":956.0,"avaluo":194608267,"uf_m2":5.11,"sobretasa":false,"proyecto":null,"cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"100-5","terreno":"LOTE 1-A REG. TELEC. EL LOA","vigente":"SI","ciudad":"Antofagasta","m2_sii":4267.0,"avaluo":1139281681,"uf_m2":6.71,"sobretasa":false,"proyecto":"area verde, frente","cuota_monto":3237691,"tasa":0.01137,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"100-23","terreno":"LOTE 1A1 calle S/N 215","vigente":"SI","ciudad":"Antofagasta","m2_sii":8335.0,"avaluo":3128077103,"uf_m2":9.43,"sobretasa":false,"proyecto":"SANTA LUCÍA- BARTOLOMÉ","cuota_monto":9712977,"tasa":0.01242,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"100-24","terreno":"LOTE 1A2 CERRO PARANAL 271","vigente":"SI","ciudad":"Antofagasta","m2_sii":14173.0,"avaluo":4763661197,"uf_m2":8.44,"sobretasa":false,"proyecto":"TOBAGO - Bahamas","cuota_monto":13555419,"tasa":0.01138,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"100-25","terreno":"LOTE 1A3 CERRO PARANAL 315","vigente":"SI","ciudad":"Antofagasta","m2_sii":6675.0,"avaluo":2952002741,"uf_m2":11.11,"sobretasa":false,"proyecto":"ANTIGUA - BARLOVENTO","cuota_monto":8406921,"tasa":0.01139,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"100-35","terreno":"LOTE 1-A 9","vigente":"SI","ciudad":"Antofagasta","m2_sii":609.0,"avaluo":242395911,"uf_m2":10.0,"sobretasa":false,"proyecto":"SITIO ERIAZO","cuota_monto":170792,"tasa":0.00282,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-13","terreno":"LOTE 1Z (PIANITO)","vigente":"SI","ciudad":"Antofagasta","m2_sii":35942.0,"avaluo":3559778507,"uf_m2":2.49,"sobretasa":false,"proyecto":"SITIO ERIAZO (pianito)","cuota_monto":11974478,"tasa":0.01346,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-55","terreno":"LOTE 1A6","vigente":"SI","ciudad":"Antofagasta","m2_sii":795.0,"avaluo":112123409,"uf_m2":3.54,"sobretasa":false,"proyecto":"Franja SV","cuota_monto":759812,"tasa":0.02711,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-51","terreno":"LOTE 1A2","vigente":"SI","ciudad":"Antofagasta","m2_sii":8300.0,"avaluo":1076948873,"uf_m2":3.26,"sobretasa":false,"proyecto":"VICUÑAS 1","cuota_monto":3078261,"tasa":0.01143,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-70","terreno":"LAS VICUÑAS","vigente":"SI","ciudad":"Antofagasta","m2_sii":8349.0,"avaluo":1083306764,"uf_m2":3.26,"sobretasa":false,"proyecto":"Vicuñas 2","cuota_monto":7187689,"tasa":0.02654,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-71","terreno":"EQUIPAMIENTO","vigente":"SI","ciudad":"Antofagasta","m2_sii":1048.0,"avaluo":147805450,"uf_m2":3.54,"sobretasa":false,"proyecto":"EQ Vicuñas","cuota_monto":995978,"tasa":0.02695,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-52","terreno":"LOTE 1A3","vigente":"SI","ciudad":"Antofagasta","m2_sii":55610.0,"avaluo":6352827753,"uf_m2":2.87,"sobretasa":false,"proyecto":"Ex PA SA","cuota_monto":42064547,"tasa":0.02649,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-53","terreno":"LOTE 1A4","vigente":"SI","ciudad":"Antofagasta","m2_sii":8077.0,"avaluo":1048013982,"uf_m2":3.26,"sobretasa":false,"proyecto":"Ex Hotel","cuota_monto":6954099,"tasa":0.02654,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-54","terreno":"LOTE 1A5","vigente":"SI","ciudad":"Antofagasta","m2_sii":2971.0,"avaluo":418876133,"uf_m2":3.54,"sobretasa":false,"proyecto":"Antenas","cuota_monto":2790087,"tasa":0.02664,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-56","terreno":"LOTE 1A7","vigente":"SI","ciudad":"Antofagasta","m2_sii":480.0,"avaluo":67697153,"uf_m2":3.54,"sobretasa":false,"proyecto":"Buffer colegio","cuota_monto":465774,"tasa":0.02752,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-01","terreno":"Club Hipico P. Aguirre Cerda 8980","vigente":"SI","ciudad":"Antofagasta","m2_sii":99820.0,"avaluo":10759486294,"uf_m2":2.71,"sobretasa":false,"proyecto":"PARQUE NORTE","cuota_monto":24147706,"tasa":0.00898,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-72","terreno":"LOTE F equipamiento","vigente":"SI","ciudad":"Antofagasta","m2_sii":2450.0,"avaluo":345537551,"uf_m2":3.54,"sobretasa":false,"proyecto":"Parte EQ Lote F","cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-57","terreno":"PARQUE NORTE LOTE 1","vigente":"SI","ciudad":"Antofagasta","m2_sii":6344.0,"avaluo":858941475,"uf_m2":3.4,"sobretasa":false,"proyecto":"Instalación Faena","cuota_monto":5702703,"tasa":0.02656,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-58","terreno":"PARQUE NORTE LOTE 2","vigente":"SI","ciudad":"Antofagasta","m2_sii":13731.0,"avaluo":1684808659,"uf_m2":3.08,"sobretasa":false,"proyecto":null,"cuota_monto":11168790,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-59","terreno":"PARQUE NORTE LOTE 3","vigente":"SI","ciudad":"Antofagasta","m2_sii":14084.0,"avaluo":1727999443,"uf_m2":3.08,"sobretasa":false,"proyecto":null,"cuota_monto":11454652,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-60","terreno":"PARQUE NORTE LOTE 4","vigente":"SI","ciudad":"Antofagasta","m2_sii":14166.0,"avaluo":1738183633,"uf_m2":3.08,"sobretasa":false,"proyecto":null,"cuota_monto":11522056,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-61","terreno":"PARQUE NORTE LOTE 5","vigente":"SI","ciudad":"Antofagasta","m2_sii":12849.0,"avaluo":1594707980,"uf_m2":3.12,"sobretasa":false,"proyecto":null,"cuota_monto":10572449,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-62","terreno":"PARQUE NORTE LOTE 6","vigente":"SI","ciudad":"Antofagasta","m2_sii":11627.0,"avaluo":1459316496,"uf_m2":3.15,"sobretasa":false,"proyecto":"Halcones","cuota_monto":9676346,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-63","terreno":"PARQUE NORTE LOTE 7","vigente":"SI","ciudad":"Antofagasta","m2_sii":13346.0,"avaluo":1637568740,"uf_m2":3.08,"sobretasa":false,"proyecto":"Cóndores","cuota_monto":4941016,"tasa":0.01207,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-65","terreno":"PARQUE NORTE LOTE 9","vigente":"SI","ciudad":"Antofagasta","m2_sii":5166.0,"avaluo":721304701,"uf_m2":3.51,"sobretasa":false,"proyecto":null,"cuota_monto":4791741,"tasa":0.02657,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-66","terreno":"PARQUE NORTE LOTE 10","vigente":"SI","ciudad":"Antofagasta","m2_sii":7932.0,"avaluo":1040386769,"uf_m2":3.29,"sobretasa":false,"proyecto":"Instalación Faena","cuota_monto":6903617,"tasa":0.02654,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-67","terreno":"PARQUE NORTE LOTE 11","vigente":"SI","ciudad":"Antofagasta","m2_sii":9700.0,"avaluo":1231241967,"uf_m2":3.19,"sobretasa":false,"proyecto":"fabrica de baños","cuota_monto":8166813,"tasa":0.02653,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-68","terreno":"PARQUE NORTE LOTE 12","vigente":"SI","ciudad":"Antofagasta","m2_sii":5095.0,"avaluo":718577070,"uf_m2":3.54,"sobretasa":false,"proyecto":null,"cuota_monto":4773687,"tasa":0.02657,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-69","terreno":"PARQUE NORTE LOTE 13","vigente":"SI","ciudad":"Antofagasta","m2_sii":9648.0,"avaluo":1224641494,"uf_m2":3.19,"sobretasa":false,"proyecto":null,"cuota_monto":8123126,"tasa":0.02653,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"16228-1","terreno":"P.ZUCOVIC LT 2A-2B-1","vigente":"SI","ciudad":"Antofagasta","m2_sii":7344.0,"avaluo":1484546423,"uf_m2":5.08,"sobretasa":false,"proyecto":"BAHIA BLANCA","cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"301-4","terreno":"MEJILLONES Lt2 m2","vigente":"SI","ciudad":"Antofagasta","m2_sii":5084.0,"avaluo":643551283,"uf_m2":3.18,"sobretasa":false,"proyecto":null,"cuota_monto":4277909,"tasa":0.02659,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-147","terreno":"57 A - 5B 2","vigente":"SI","ciudad":"Santiago","m2_sii":9834.0,"avaluo":5012594465,"uf_m2":12.8,"sobretasa":false,"proyecto":"CANCHAS EL ROSAL","cuota_monto":13173494,"tasa":0.01051,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-582","terreno":"LOTE 1 SUBDIV LIRA","vigente":"SI","ciudad":"Santiago","m2_sii":8383.0,"avaluo":2488980745,"uf_m2":7.46,"sobretasa":false,"proyecto":"Sala de ventas","cuota_monto":7084851,"tasa":0.01139,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-583","terreno":"LOTE 2 SUBDIV LIRA","vigente":"SI","ciudad":"Santiago","m2_sii":10529.0,"avaluo":1174431224,"uf_m2":2.8,"sobretasa":false,"proyecto":"entregado","cuota_monto":5282670,"tasa":0.01799,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-584","terreno":"LOTE 3 SUBDIV LIRA","vigente":"SI","ciudad":"Santiago","m2_sii":21400.0,"avaluo":97808841,"uf_m2":0.11,"sobretasa":false,"proyecto":null,"cuota_monto":56114,"tasa":0.00229,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-145","terreno":"PARCELA 55 C1 El Molino Bendersky Lt.A","vigente":"SI","ciudad":"Santiago","m2_sii":58100.0,"avaluo":142753867,"uf_m2":0.06,"sobretasa":false,"proyecto":null,"cuota_monto":229506,"tasa":0.00643,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-539","terreno":"Homecenter 57-a B2 Strip center lt A2","vigente":"SI","ciudad":"Santiago","m2_sii":10000.0,"avaluo":9366197629,"uf_m2":23.52,"sobretasa":false,"proyecto":"Rentas El Rosal","cuota_monto":25508996,"tasa":0.01089,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"2610-003","terreno":"PARCELA 51-A Transan Will","vigente":"SI","ciudad":"Santiago","m2_sii":38000.0,"avaluo":163658746,"uf_m2":0.11,"sobretasa":false,"proyecto":null,"cuota_monto":126268,"tasa":0.00309,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"2610-10","terreno":"PARCELA 52 I LAS VERTIENTES","vigente":"SI","ciudad":"Santiago","m2_sii":64000.0,"avaluo":1903377171,"uf_m2":0.75,"sobretasa":false,"proyecto":"CANCHAS MICHIMALONGO","cuota_monto":5293866,"tasa":0.01113,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"2610-11","terreno":"PARCELA 52-A Inv. Pichilemu","vigente":"SI","ciudad":"Santiago","m2_sii":40000.0,"avaluo":198188168,"uf_m2":0.12,"sobretasa":false,"proyecto":null,"cuota_monto":163055,"tasa":0.00329,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"2585-44","terreno":"PARCELA 28-A","vigente":"SI","ciudad":"Santiago","m2_sii":224724.0,"avaluo":6320187888,"uf_m2":0.71,"sobretasa":false,"proyecto":"Barrio Oeste","cuota_monto":17294918,"tasa":0.01095,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3794-21","terreno":"Reserva Propietario 1","vigente":"SI","ciudad":"Santiago","m2_sii":428.0,"avaluo":167728424,"uf_m2":9.84,"sobretasa":false,"proyecto":"Lote 3A","cuota_monto":1121620,"tasa":0.02675,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3794-22","terreno":"Reserva Propietario 2","vigente":"SI","ciudad":"Santiago","m2_sii":490.0,"avaluo":187851064,"uf_m2":9.63,"sobretasa":false,"proyecto":null,"cuota_monto":1254803,"tasa":0.02672,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3130-009","terreno":"CAMINO GUANACO Lt. 1.8 - 1.9","vigente":"SI","ciudad":"Santiago","m2_sii":204536.0,"avaluo":19598459666,"uf_m2":2.41,"sobretasa":false,"proyecto":null,"cuota_monto":55696279,"tasa":0.01137,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3890-2","terreno":"GOLONDRINAS 180 (INACAP)","vigente":"SI","ciudad":"Talcahuano","m2_sii":6955.0,"avaluo":907441754,"uf_m2":3.28,"sobretasa":false,"proyecto":null,"cuota_monto":3302751,"tasa":0.01456,"fecha_tarea":null,"detalle_tarea":null,"estatus":null}];</script>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ─────────────────────────────────────────────────────
+// SUPABASE CLIENT
+// ─────────────────────────────────────────────────────
+class SupabaseClient {
+  constructor(url, key) {
+    this.url = url.replace(/\/$/, "");
+    this.key = key;
+    this.h = {"Content-Type":"application/json","apikey":key,"Authorization":"Bearer "+key};
+  }
+  async select(table, filter="") {
+    const res = await fetch(`${this.url}/rest/v1/${table}${filter?"?"+filter:""}`, {headers:this.h});
+    if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
+  async insert(table, body) {
+    const res = await fetch(`${this.url}/rest/v1/${table}`, {
+      method:"POST", headers:{...this.h,"Prefer":"return=representation"}, body:JSON.stringify(body)
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
+  async upsert(table, body) {
+    const res = await fetch(`${this.url}/rest/v1/${table}`, {
+      method:"POST", headers:{...this.h,"Prefer":"resolution=merge-duplicates,return=minimal"}, body:JSON.stringify(body)
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    return true;
+  }
+  async patch(table, filter, body) {
+    const res = await fetch(`${this.url}/rest/v1/${table}?${filter}`, {
+      method:"PATCH", headers:{...this.h,"Prefer":"return=minimal"}, body:JSON.stringify(body)
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    return true;
+  }
+  async del(table, filter) {
+    const res = await fetch(`${this.url}/rest/v1/${table}?${filter}`, {method:"DELETE", headers:this.h});
+    if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    return true;
+  }
+  async uploadFile(bucket, path, file) {
+    const res = await fetch(`${this.url}/storage/v1/object/${bucket}/${path}`, {
+      method:"POST",
+      headers:{"apikey":this.key,"Authorization":"Bearer "+this.key,"Content-Type":file.type||"application/octet-stream","x-upsert":"true"},
+      body:file
+    });
+    if(!res.ok) throw new Error(`Upload ${res.status}: ${await res.text()}`);
+    return `${this.url}/storage/v1/object/public/${bucket}/${path}`;
+  }
+  async test() {
+    const res = await fetch(`${this.url}/rest/v1/terrenos?limit=1`, {headers:this.h});
+    if(res.status===401) throw new Error("API Key inválida.");
+    if(!res.ok&&res.status!==404&&res.status!==406) throw new Error(`Error HTTP ${res.status}`);
+    return true;
+  }
+}
+let db = null;
+
+// ─────────────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────────────
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const today = () => new Date().toISOString().slice(0,10);
+const soon30 = () => { const d=new Date(); d.setDate(d.getDate()+30); return d.toISOString().slice(0,10); };
+
+const fmtDate = d => {
+  if(!d) return "—";
+  const s = String(d).slice(0,10);
+  const [y,m,dy] = s.split("-");
+  return `${dy}/${m}/${y}`;
+};
+const fmtCLP = n => {
+  if(!n && n!==0) return "—";
+  const v = Math.round(Number(n));
+  return "$"+v.toLocaleString("es-CL");
+};
+const fmtM2 = n => n ? Math.round(Number(n)).toLocaleString("es-CL")+" m²" : "—";
+
+const CUOTA_DATES = {1:"04-30", 2:"06-30", 3:"09-30", 4:"11-28"};
+const CUOTA_LABELS = {1:"1ª Cuota — Abril", 2:"2ª Cuota — Junio", 3:"3ª Cuota — Septiembre", 4:"4ª Cuota — Noviembre"};
+const CUOTA_SHORT  = {1:"1ª", 2:"2ª", 3:"3ª", 4:"4ª"};
+const RESPONSABLES = ["Mauricio","Solange"];
+const ESTATUS_OPTS = ["Pendiente","En Proceso","Finalizada"];
+const CIUDADES = ["Arica","Iquique","Antofagasta","Santiago","Talcahuano","Maipú","Huechuraba"];
+
+function cuotaStatus(c) {
+  if(c.pagado) return "pagada";
+  const t = today();
+  const s = soon30();
+  if(c.fecha_vencimiento && c.fecha_vencimiento < t) return "vencida";
+  if(c.fecha_vencimiento && c.fecha_vencimiento <= s) return "proxima";
+  return "pendiente";
+}
+function fileIcon(tipo) {
+  if(!tipo) return "📎";
+  if(tipo.includes("pdf")) return "📄";
+  if(tipo.includes("word")||tipo.includes("document")) return "📝";
+  if(tipo.includes("image")||tipo.includes("jpg")||tipo.includes("png")) return "🖼";
+  if(tipo.includes("sheet")||tipo.includes("excel")) return "📊";
+  return "📎";
+}
+function fmtSize(b) {
+  if(!b) return "";
+  if(b<1024) return b+"B";
+  if(b<1048576) return (b/1024).toFixed(1)+"KB";
+  return (b/1048576).toFixed(1)+"MB";
+}
+
+// ─────────────────────────────────────────────────────
+// SETUP SCREEN
+// ─────────────────────────────────────────────────────
+function SetupScreen({onSetup}) {
+  const [url,setUrl]=useState("");
+  const [key,setKey]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+
+  const connect = async () => {
+    const u=url.trim().replace(/\/$/,""), k=key.trim();
+    if(!u||!k){setErr("Debes ingresar la URL y la Key.");return;}
+    if(!u.startsWith("https://")){setErr("La URL debe comenzar con https://");return;}
+    setBusy(true);setErr("");
+    try{
+      const client=new SupabaseClient(u,k);
+      await client.test();
+      localStorage.setItem("sb_url",u);localStorage.setItem("sb_key",k);
+      onSetup(u,k);
+    }catch(e){setErr("⚠️ "+e.message);}
+    setBusy(false);
+  };
+
+  return (
+    <div className="setup-screen">
+      <div className="setup-card">
+        <h2>Conectar Base de Datos</h2>
+        <p className="setup-sub">Ingresa tus credenciales de Supabase para activar la sincronización del gestor de terrenos.</p>
+        <div className="setup-steps">
+          <div className="setup-step"><div className="step-n">1</div><div className="step-txt">Supabase → <code>Project Settings</code> → <code>Data API</code></div></div>
+          <div className="setup-step"><div className="step-n">2</div><div className="step-txt">Copia la <strong>Project URL</strong></div></div>
+          <div className="setup-step"><div className="step-n">3</div><div className="step-txt">En <code>API Keys</code> → copia la key <strong>anon</strong></div></div>
+        </div>
+        {err&&<div className="setup-error">{err}</div>}
+        <div className="field" style={{marginBottom:12}}>
+          <label>Project URL</label>
+          <input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://xxxxxxxxxxxx.supabase.co" onKeyDown={e=>e.key==="Enter"&&connect()}/>
+        </div>
+        <div className="field" style={{marginBottom:20}}>
+          <label>Anon Key</label>
+          <input value={key} onChange={e=>setKey(e.target.value)} placeholder="eyJhbGci..." onKeyDown={e=>e.key==="Enter"&&connect()}/>
+        </div>
+        <button className="btn btn-primary" style={{width:"100%",justifyContent:"center",padding:"11px"}} onClick={connect} disabled={busy}>
+          {busy?"⏳ Conectando...":"✓ Conectar y Guardar"}
+        </button>
+        <p style={{fontSize:11,color:"var(--ink3)",marginTop:12,textAlign:"center"}}>Las credenciales se guardan solo en tu navegador.</p>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// MODAL WRAPPER
+// ─────────────────────────────────────────────────────
+function Modal({title, onClose, children, footer, large}) {
+  return (
+    <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className={`modal${large?" modal-lg":""}`}>
+        <div className="modal-head">
+          <h3>{title}</h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">{children}</div>
+        {footer&&<div className="modal-foot">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+
+// ─────────────────────────────────────────────────────
+// CONTRIB CHART
+// ─────────────────────────────────────────────────────
+function ContribChart({cuotas}) {
+  const groups = {};
+  cuotas.forEach(c=>{
+    const key=`${c.anio}-Q${c.numero}`;
+    if(!groups[key]) groups[key]={key,label:`${c.anio}-Q${c.numero}`,anio:c.anio,numero:c.numero,total:0,paid:0};
+    const m=parseInt(c.monto)||0;
+    groups[key].total+=m;
+    if(c.pagado) groups[key].paid+=m;
+  });
+  const data=Object.values(groups).sort((a,b)=>a.anio!==b.anio?a.anio-b.anio:a.numero-b.numero);
+  if(data.length===0) return <div style={{textAlign:"center",padding:"30px",color:"var(--ink3)",fontSize:13}}>Sin datos de cuotas. Genera cuotas en cada terreno para ver la evolución.</div>;
+  const maxVal=Math.max(...data.map(d=>d.total),1);
+  const barW=40,gap=12,padL=72,padR=20,padT=18,padB=52,chartH=160;
+  const totalW=padL+data.length*(barW+gap)-gap+padR;
+  const fmtM=v=>{if(v>=1e9)return"$"+(v/1e9).toFixed(1)+"B";if(v>=1e6)return"$"+(v/1e6).toFixed(0)+"M";return"$"+(v/1e3).toFixed(0)+"K";};
+  const ticks=[0,0.25,0.5,0.75,1];
+  const qColor={1:"#1a5f6e",2:"#227080",3:"#1a7a4a",4:"#5cba8a"};
+  return (
+    <div className="chart-scroll">
+      <svg viewBox={`0 0 ${totalW} ${chartH+padT+padB}`} style={{minWidth:Math.max(500,totalW),height:chartH+padT+padB,display:"block"}}>
+        {ticks.map(p=>{
+          const y=padT+chartH*(1-p);
+          return <g key={p}>
+            <line x1={padL} y1={y} x2={totalW-padR} y2={y} stroke="var(--line)" strokeWidth="1"/>
+            <text x={padL-6} y={y+4} textAnchor="end" fontSize="10" fill="var(--ink3)">{fmtM(maxVal*p)}</text>
+          </g>;
+        })}
+        {data.map((d,i)=>{
+          const x=padL+i*(barW+gap);
+          const tH=(d.total/maxVal)*chartH;
+          const pH=(d.paid/maxVal)*chartH;
+          const uH=tH-pH;
+          const col=qColor[d.numero]||"var(--teal)";
+          const isCurrentYear=d.anio===new Date().getFullYear();
+          return <g key={d.key}>
+            {uH>0&&<rect x={x} y={padT+chartH-tH} width={barW} height={uH} fill={col} opacity="0.25" rx="2"/>}
+            {pH>0&&<rect x={x} y={padT+chartH-pH} width={barW} height={pH} fill={col} rx="2"/>}
+            <rect x={x} y={padT+chartH-tH} width={barW} height={tH} fill="none" stroke={col} strokeWidth="1" rx="2" opacity="0.7"/>
+            <text x={x+barW/2} y={padT+chartH-tH-4} textAnchor="middle" fontSize="9" fill="var(--ink3)">{fmtM(d.total)}</text>
+            <text x={x+barW/2} y={padT+chartH+15} textAnchor="middle" fontSize="9.5" fill={isCurrentYear?"var(--teal)":"var(--ink2)"} fontWeight={isCurrentYear?"600":"400"}>{d.label}</text>
+          </g>;
+        })}
+        <line x1={padL} y1={padT+chartH} x2={totalW-padR} y2={padT+chartH} stroke="var(--ink3)" strokeWidth="1.5"/>
+        <rect x={padL} y={padT+chartH+26} width="10" height="10" fill="var(--teal)" rx="2"/>
+        <text x={padL+14} y={padT+chartH+35} fontSize="10" fill="var(--ink3)">Pagado</text>
+        <rect x={padL+72} y={padT+chartH+26} width="10" height="10" fill="var(--teal)" opacity="0.25" rx="2" stroke="var(--teal)" strokeWidth="1"/>
+        <text x={padL+86} y={padT+chartH+35} fontSize="10" fill="var(--ink3)">Pendiente</text>
+      </svg>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// SUBTAREAS SECTION
+// ─────────────────────────────────────────────────────
+function SubtareasSection({bitacoraId, terrenoRol, subtareas, archivosSub, onRefresh}) {
+  const [showAdd,setShowAdd]=useState(false);
+  const [form,setForm]=useState({descripcion:'',fecha:today(),estatus:'Pendiente',responsable:''});
+  const [openId,setOpenId]=useState(null);
+  const [editId,setEditId]=useState(null);
+  const [editForm,setEditForm]=useState({});
+  const [uploading,setUploading]=useState({});
+  const [addBusy,setAddBusy]=useState(false);
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const setEF=(k,v)=>setEditForm(f=>({...f,[k]:v}));
+  const dotCol=st=>st==='Finalizada'?'var(--green)':st==='En Proceso'?'var(--teal)':'var(--ink3)';
+
+  const addSub=async()=>{
+    if(!form.descripcion.trim()) return;
+    setAddBusy(true);
+    try{
+      await db.insert("subtareas",[{bitacora_id:bitacoraId,descripcion:form.descripcion.trim(),fecha:form.fecha,estatus:form.estatus,responsable:form.responsable||null}]);
+      setForm({descripcion:'',fecha:today(),estatus:'Pendiente',responsable:''});
+      setShowAdd(false); onRefresh();
+    }catch(e){alert("Error: "+e.message);}
+    setAddBusy(false);
+  };
+
+  const saveSub=async(sub)=>{
+    try{
+      await db.patch("subtareas","id=eq."+sub.id,{descripcion:editForm.descripcion,fecha:editForm.fecha,estatus:editForm.estatus,responsable:editForm.responsable||null});
+      setEditId(null); onRefresh();
+    }catch(e){alert("Error: "+e.message);}
+  };
+
+  const delSub=async(sub)=>{
+    if(!confirm("¿Eliminar subtarea?")) return;
+    try{await db.del("subtareas","id=eq."+sub.id);onRefresh();}
+    catch(e){alert("Error: "+e.message);}
+  };
+
+  const uploadSubFile=async(subId,file)=>{
+    setUploading(u=>({...u,[subId]:true}));
+    try{
+      const ext=file.name.split(".").pop()||"bin";
+      const path=`${terrenoRol.replace(/\//g,"-")}/sub/${subId}/${uid()}.${ext}`;
+      const url=await db.uploadFile("terrenos-archivos",path,file);
+      await db.insert("archivos_subtareas",[{subtarea_id:subId,nombre:file.name,url,tipo:file.type,tamano:file.size}]);
+      onRefresh();
+    }catch(e){alert("Error al subir: "+e.message);}
+    setUploading(u=>({...u,[subId]:false}));
+  };
+
+  const delSubFile=async(a)=>{
+    if(!confirm("¿Eliminar archivo?")) return;
+    try{await db.del("archivos_subtareas","id=eq."+a.id);onRefresh();}
+    catch(e){alert("Error: "+e.message);}
+  };
+
+  return (
+    <div className="subtareas-section">
+      <div className="sub-header">
+        <span className="sub-header-title">↳ Subtareas ({subtareas.length})</span>
+        <button className="btn btn-outline btn-xs" onClick={()=>setShowAdd(s=>!s)}>{showAdd?"✕":"+ Subtarea"}</button>
+      </div>
+
+      {showAdd&&(
+        <div className="subtarea-add-form">
+          <div className="field" style={{marginBottom:9}}>
+            <label>Descripción</label>
+            <textarea value={form.descripcion} onChange={e=>set('descripcion',e.target.value)} rows={2} placeholder="Describe la subtarea..."/>
+          </div>
+          <div className="field-row" style={{marginBottom:9}}>
+            <div className="field"><label>Fecha</label><input type="date" value={form.fecha} onChange={e=>set('fecha',e.target.value)}/></div>
+            <div className="field"><label>Estado</label>
+              <select value={form.estatus} onChange={e=>set('estatus',e.target.value)}>
+                {ESTATUS_OPTS.map(s=><option key={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="field" style={{marginBottom:11}}>
+            <label>Responsable</label>
+            <select value={form.responsable} onChange={e=>set('responsable',e.target.value)}>
+              <option value="">— Sin asignar —</option>
+              {RESPONSABLES.map(r=><option key={r}>{r}</option>)}
+            </select>
+          </div>
+          <button className="btn btn-primary btn-xs" onClick={addSub} disabled={!form.descripcion.trim()||addBusy}>{addBusy?"Guardando...":"Guardar subtarea"}</button>
+        </div>
+      )}
+
+      {subtareas.map(sub=>{
+        const isOpen=openId===sub.id;
+        const isEdit=editId===sub.id;
+        const files=archivosSub[sub.id]||[];
+        return (
+          <div key={sub.id} className="subtarea-item">
+            <div className="sub-dot" style={{background:dotCol(sub.estatus)}}/>
+            <div className="sub-body">
+              {isEdit ? (
+                <>
+                  <div className="field" style={{marginBottom:8}}>
+                    <textarea value={editForm.descripcion} onChange={e=>setEF('descripcion',e.target.value)} rows={2} style={{width:"100%",background:"var(--white)",border:"1px solid var(--line)",borderRadius:5,padding:"6px 8px",fontSize:12.5,outline:"none"}}/>
+                  </div>
+                  <div className="field-row" style={{marginBottom:8}}>
+                    <div className="field"><label>Fecha</label><input type="date" value={editForm.fecha} onChange={e=>setEF('fecha',e.target.value)}/></div>
+                    <div className="field"><label>Estado</label>
+                      <select value={editForm.estatus} onChange={e=>setEF('estatus',e.target.value)}>
+                        {ESTATUS_OPTS.map(s=><option key={s}>{s}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="field" style={{marginBottom:9}}>
+                    <label>Responsable</label>
+                    <select value={editForm.responsable||''} onChange={e=>setEF('responsable',e.target.value||null)}>
+                      <option value="">— Sin asignar —</option>
+                      {RESPONSABLES.map(r=><option key={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  <div style={{display:"flex",gap:6}}>
+                    <button className="btn btn-primary btn-xs" onClick={()=>saveSub(sub)}>Guardar</button>
+                    <button className="btn btn-ghost btn-xs" onClick={()=>setEditId(null)}>Cancelar</button>
+                  </div>
+                </>
+              ):(
+                <>
+                  <div className="sub-desc">{sub.descripcion}</div>
+                  <div className="sub-meta">
+                    <span className="sub-meta-pill">{fmtDate(sub.fecha)}</span>
+                    {sub.responsable&&<span className="sub-meta-pill">· {sub.responsable}</span>}
+                    <span className={`estatus-chip est-${sub.estatus==="En Proceso"?"proceso":sub.estatus?.toLowerCase()}`} style={{fontSize:9.5,padding:"1px 6px"}}>{sub.estatus}</span>
+                    {files.length>0&&<span className="sub-meta-pill">📎 {files.length}</span>}
+                  </div>
+                  {isOpen&&(
+                    <div className="sub-files-area">
+                      {files.map(f=>(
+                        <div key={f.id} className="file-item" style={{marginTop:5}}>
+                          <span className="file-icon">{fileIcon(f.tipo)}</span>
+                          <a href={f.url} target="_blank" rel="noreferrer" className="file-name">{f.nombre}</a>
+                          <span className="file-size">{fmtSize(f.tamano)}</span>
+                          <button className="file-del" onClick={()=>delSubFile(f)}>🗑</button>
+                        </div>
+                      ))}
+                      <label className="upload-zone" style={{marginTop:7,padding:"8px 12px"}}>
+                        <input type="file" multiple onChange={async e=>{for(const f of Array.from(e.target.files)) await uploadSubFile(sub.id,f);e.target.value="";}}/>
+                        {uploading[sub.id]?<p>⏳ Subiendo...</p>:<p style={{fontSize:11}}>📎 Adjuntar archivo a subtarea</p>}
+                      </label>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            {!isEdit&&(
+              <div className="sub-actions">
+                <button className="sub-act-btn" onClick={()=>setOpenId(isOpen?null:sub.id)}>{isOpen?"▲":"▼"}</button>
+                <button className="sub-act-btn" onClick={()=>{setEditId(sub.id);setEditForm({...sub});}}>✏️</button>
+                <button className="sub-act-btn del" onClick={()=>delSub(sub)}>🗑</button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// DASHBOARD
+// ─────────────────────────────────────────────────────
+function Dashboard({terrenos, allCuotas, allBitacora, onSelectTerreno, hiddenRols}) {
+  const [filterCiudad,setFilterCiudad]=useState('');
+  const [filterResp,setFilterResp]=useState('');
+  const [filterEstado,setFilterEstado]=useState('');
+
+  const visTer=terrenos.filter(t=>!hiddenRols.has(t.rol));
+  const visRols=new Set(visTer.map(t=>t.rol));
+  const visCuotas=allCuotas.filter(c=>visRols.has(c.terreno_rol));
+  const visBita=allBitacora.filter(b=>visRols.has(b.terreno_rol));
+
+  const totalM2=visTer.reduce((s,t)=>s+(parseFloat(t.m2_sii)||0),0);
+  const totalAvaluo=visTer.reduce((s,t)=>s+(parseInt(t.avaluo)||0),0);
+  const anio=new Date().getFullYear();
+
+  const sobretasaSI=visTer.filter(t=>t.sobretasa);
+  const sobretasaNO=visTer.filter(t=>!t.sobretasa);
+  const rolsConSobre=new Set(sobretasaSI.map(t=>t.rol));
+  const totalConSobre=visCuotas.filter(c=>rolsConSobre.has(c.terreno_rol)).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  const totalSinSobre=visCuotas.filter(c=>!rolsConSobre.has(c.terreno_rol)).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  const pendingBita=visBita.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso");
+
+  const filteredBita=visBita.filter(b=>{
+    const t=visTer.find(x=>x.rol===b.terreno_rol);
+    return (!filterCiudad||(t&&t.ciudad===filterCiudad))
+      &&(!filterResp||b.responsable===filterResp)
+      &&(!filterEstado||b.estatus===filterEstado);
+  });
+
+  const respMap={};
+  filteredBita.forEach(b=>{
+    const r=b.responsable||'Sin asignar';
+    if(!respMap[r]) respMap[r]={name:r,total:0,pendiente:0,proceso:0,finalizada:0};
+    respMap[r].total++;
+    if(b.estatus==='Pendiente') respMap[r].pendiente++;
+    else if(b.estatus==='En Proceso') respMap[r].proceso++;
+    else if(b.estatus==='Finalizada') respMap[r].finalizada++;
+  });
+  const respList=Object.values(respMap).sort((a,b)=>b.total-a.total);
+
+  const ciudades=[...new Set(visTer.map(t=>t.ciudad))].sort();
+  const responsables=[...new Set(visBita.map(b=>b.responsable).filter(Boolean))].sort();
+
+  const byCiudad={};
+  visTer.forEach(t=>{
+    if(!byCiudad[t.ciudad]) byCiudad[t.ciudad]={n:0,imp:0};
+    byCiudad[t.ciudad].n++;
+  });
+  visCuotas.filter(c=>c.anio===anio).forEach(c=>{
+    const t=visTer.find(x=>x.rol===c.terreno_rol);
+    if(t&&byCiudad[t.ciudad]) byCiudad[t.ciudad].imp+=parseInt(c.monto)||0;
+  });
+
+  const hasFilters=filterCiudad||filterResp||filterEstado;
+
+  return (
+    <>
+      {/* FILTER BAR */}
+      <div className="dash-filter-bar">
+        <label>Filtrar:</label>
+        <select value={filterCiudad} onChange={e=>setFilterCiudad(e.target.value)}>
+          <option value="">Todas las ciudades</option>
+          {ciudades.map(c=><option key={c}>{c}</option>)}
+        </select>
+        <select value={filterResp} onChange={e=>setFilterResp(e.target.value)}>
+          <option value="">Todos los responsables</option>
+          {responsables.map(r=><option key={r}>{r}</option>)}
+        </select>
+        <select value={filterEstado} onChange={e=>setFilterEstado(e.target.value)}>
+          <option value="">Todos los estados</option>
+          {ESTATUS_OPTS.map(s=><option key={s}>{s}</option>)}
+        </select>
+        {hasFilters&&<button className="dash-clr" onClick={()=>{setFilterCiudad('');setFilterResp('');setFilterEstado('');}}>✕ Limpiar filtros</button>}
+      </div>
+
+      {/* KPI — 5 cards */}
+      <div className="kpi-grid-5">
+        <div className="kpi-card teal">
+          <div className="kpi-label">Portafolio total</div>
+          <div className="kpi-value">{Math.round(totalM2).toLocaleString("es-CL")}</div>
+          <div className="kpi-sub">m² · {visTer.length} terrenos</div>
+        </div>
+        <div className="kpi-card teal">
+          <div className="kpi-label">Avalúo fiscal global</div>
+          <div className="kpi-value" style={{fontSize:15}}>{fmtCLP(totalAvaluo)}</div>
+          <div className="kpi-sub">Según SII · {anio}</div>
+        </div>
+        <div className="kpi-card" style={{borderTopColor:"var(--red)"}}>
+          <div className="kpi-label">Con sobretasa</div>
+          <div className="kpi-value" style={{color:"var(--red)"}}>{sobretasaSI.length}</div>
+          <div className="kpi-sub">Cuotas {anio}: {fmtCLP(totalConSobre)}</div>
+        </div>
+        <div className="kpi-card good">
+          <div className="kpi-label">Sin sobretasa</div>
+          <div className="kpi-value">{sobretasaNO.length}</div>
+          <div className="kpi-sub">Cuotas {anio}: {fmtCLP(totalSinSobre)}</div>
+        </div>
+        <div className={`kpi-card${pendingBita.length>0?" warning":""}`}>
+          <div className="kpi-label">Tareas en bitácora</div>
+          <div className="kpi-value">{pendingBita.length}</div>
+          <div className="kpi-sub">Pendiente o en proceso</div>
+        </div>
+      </div>
+
+      {/* IMPUESTO + SOBRETASA */}
+      <div className="dash-2col">
+        <div className="dash-section">
+          <h4>📍 Impuesto {anio} por ciudad</h4>
+          <div className="data-table">
+            <div className="dt-head" style={{gridTemplateColumns:"1fr 60px 110px"}}>
+              <span>Ciudad</span><span style={{textAlign:"center"}}>Terrenos</span><span style={{textAlign:"right"}}>Total</span>
+            </div>
+            {Object.entries(byCiudad).sort((a,b)=>b[1].imp-a[1].imp).map(([city,d])=>(
+              <div key={city} className="dt-row" style={{gridTemplateColumns:"1fr 60px 110px"}}>
+                <span style={{fontWeight:600}}>{city}</span>
+                <span style={{textAlign:"center",color:"var(--ink3)"}}>{d.n}</span>
+                <span style={{textAlign:"right",color:"var(--ink2)"}}>{fmtCLP(d.imp)}</span>
+              </div>
+            ))}
+            {Object.keys(byCiudad).length===0&&<div className="dt-empty">Sin datos</div>}
+          </div>
+        </div>
+        <div className="dash-section">
+          <h4>⚖️ Desglose por sobretasa</h4>
+          <div className="data-table">
+            <div className="dt-head" style={{gridTemplateColumns:"1fr 70px 130px"}}>
+              <span>Categoría</span><span style={{textAlign:"center"}}>Terrenos</span><span style={{textAlign:"right"}}>Cuotas {anio}</span>
+            </div>
+            <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px"}}>
+              <span style={{fontWeight:600,color:"var(--red)"}}>⚠ Con sobretasa</span>
+              <span style={{textAlign:"center"}}>{sobretasaSI.length}</span>
+              <span style={{textAlign:"right",fontWeight:600,color:"var(--red)"}}>{fmtCLP(totalConSobre)}</span>
+            </div>
+            <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px"}}>
+              <span style={{fontWeight:600,color:"var(--green)"}}>✓ Sin sobretasa</span>
+              <span style={{textAlign:"center"}}>{sobretasaNO.length}</span>
+              <span style={{textAlign:"right",fontWeight:600,color:"var(--green)"}}>{fmtCLP(totalSinSobre)}</span>
+            </div>
+            <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px",background:"var(--bg)"}}>
+              <span style={{fontWeight:700}}>TOTAL</span>
+              <span style={{textAlign:"center",fontWeight:600}}>{visTer.length}</span>
+              <span style={{textAlign:"right",fontWeight:700}}>{fmtCLP(totalConSobre+totalSinSobre)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* TIMELINE CHART */}
+      <div className="chart-card">
+        <h4>📈 Evolución de contribuciones por año y cuota</h4>
+        <ContribChart cuotas={visCuotas}/>
+      </div>
+
+      {/* TASKS BY RESPONSABLE */}
+      <div className="dash-section">
+        <h4>👤 Tareas por responsable{hasFilters?" — filtrado":""}</h4>
+        <div className="resp-table">
+          <div className="resp-table-head" style={{gridTemplateColumns:"1fr 70px 90px 90px 90px"}}>
+            <span>Responsable</span>
+            <span style={{textAlign:"center"}}>Total</span>
+            <span style={{textAlign:"center",color:"var(--ink3)"}}>Pendiente</span>
+            <span style={{textAlign:"center",color:"var(--teal)"}}>En Proceso</span>
+            <span style={{textAlign:"center",color:"var(--green)"}}>Finalizada</span>
+          </div>
+          {respList.length===0
+            ?<div className="dt-empty">Sin tareas registradas</div>
+            :respList.map(r=>(
+              <div key={r.name} className="resp-table-row" style={{gridTemplateColumns:"1fr 70px 90px 90px 90px"}}>
+                <span style={{fontWeight:600}}>{r.name}</span>
+                <span style={{textAlign:"center",fontWeight:700}}>{r.total}</span>
+                <span style={{textAlign:"center"}}>{r.pendiente>0&&<span className="estatus-chip est-pendiente">{r.pendiente}</span>}</span>
+                <span style={{textAlign:"center"}}>{r.proceso>0&&<span className="estatus-chip est-proceso">{r.proceso}</span>}</span>
+                <span style={{textAlign:"center"}}>{r.finalizada>0&&<span className="estatus-chip est-finalizada">{r.finalizada}</span>}</span>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      {/* BITACORA ACTIVE TASKS */}
+      <div className="dash-section">
+        <h4>📓 Bitácora — tareas activas{hasFilters?" — filtrado":""}</h4>
+        <div className="data-table">
+          {filteredBita.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso").length===0?(
+            <div className="dt-empty">✓ Sin tareas pendientes</div>
+          ):(
+            <>
+              <div className="dt-head" style={{gridTemplateColumns:"150px 1fr 110px 90px"}}>
+                <span>Terreno · ROL</span><span>Detalle</span><span>Estatus</span><span>Responsable</span>
+              </div>
+              {filteredBita.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso").slice(0,12).map(b=>{
+                const t=visTer.find(x=>x.rol===b.terreno_rol);
+                return (
+                  <div key={b.id} className="dt-row" style={{gridTemplateColumns:"150px 1fr 110px 90px",cursor:"pointer"}} onClick={()=>onSelectTerreno(b.terreno_rol)}>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:11.5}}>{t?.terreno||b.terreno_rol}</div>
+                      <div style={{color:"var(--ink3)",fontSize:10,fontFamily:"monospace"}}>{b.terreno_rol}</div>
+                    </div>
+                    <span style={{color:"var(--ink2)",fontSize:12}}>{b.detalle.slice(0,70)}{b.detalle.length>70?"…":""}</span>
+                    <span><span className={`estatus-chip est-${b.estatus==="En Proceso"?"proceso":b.estatus.toLowerCase()}`}>{b.estatus}</span></span>
+                    <span style={{fontSize:12,color:"var(--ink3)"}}>{b.responsable||"—"}</span>
+                  </div>
+                );
+              })}
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// INFO TAB
+// ─────────────────────────────────────────────────────
+function InfoTab({terreno, onUpdated}) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({...terreno});
+  const [saving, setSaving] = useState(false);
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const save = async () => {
+    setSaving(true);
+    try{
+      await db.patch("terrenos","rol=eq."+encodeURIComponent(terreno.rol), {
+        terreno:form.terreno, vigente:form.vigente, ciudad:form.ciudad,
+        m2_sii:parseFloat(form.m2_sii)||0, avaluo:parseInt(form.avaluo)||0,
+        uf_m2:parseFloat(form.uf_m2)||0, sobretasa:form.sobretasa,
+        proyecto:form.proyecto||null, responsable:form.responsable||null, notas:form.notas||null
+      });
+      onUpdated({...form});
+      setEditing(false);
+    }catch(e){alert("Error: "+e.message);}
+    setSaving(false);
+  };
+
+  const Row = ({k,v}) => (
+    <div className="info-row"><span className="info-key">{k}</span><span className="info-val">{v}</span></div>
+  );
+
+  return (
+    <div className="info-grid">
+      <div className="info-card">
+        <h4>Datos del terreno</h4>
+        {editing ? (
+          <>
+            <div className="field" style={{marginBottom:10}}>
+              <label>Nombre</label>
+              <input value={form.terreno} onChange={e=>set("terreno",e.target.value)}/>
+            </div>
+            <div className="field-row" style={{marginBottom:10}}>
+              <div className="field"><label>Ciudad</label>
+                <select value={form.ciudad} onChange={e=>set("ciudad",e.target.value)}>
+                  {CIUDADES.map(c=><option key={c}>{c}</option>)}
+                  {!CIUDADES.includes(form.ciudad)&&<option>{form.ciudad}</option>}
+                </select>
+              </div>
+              <div className="field"><label>Vigente</label>
+                <select value={form.vigente} onChange={e=>set("vigente",e.target.value)}>
+                  <option>SI</option><option>NO</option>
+                </select>
+              </div>
+            </div>
+            <div className="field" style={{marginBottom:10}}>
+              <label>Proyecto asociado</label>
+              <input value={form.proyecto||""} onChange={e=>set("proyecto",e.target.value)}/>
+            </div>
+            <div className="field" style={{marginBottom:10}}>
+              <label>Responsable</label>
+              <select value={form.responsable||""} onChange={e=>set("responsable",e.target.value||null)}>
+                <option value="">— Sin asignar —</option>
+                {RESPONSABLES.map(r=><option key={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="field" style={{marginBottom:12}}>
+              <label>Notas</label>
+              <textarea value={form.notas||""} onChange={e=>set("notas",e.target.value)} rows={3}/>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-primary btn-sm" onClick={save} disabled={saving}>{saving?"Guardando...":"Guardar"}</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>{setForm({...terreno});setEditing(false);}}>Cancelar</button>
+            </div>
+          </>
+        ):(
+          <>
+            <Row k="ROL SII" v={<span style={{fontFamily:"monospace"}}>{terreno.rol}</span>}/>
+            <Row k="Ciudad" v={terreno.ciudad}/>
+            <Row k="Vigente" v={terreno.vigente}/>
+            <Row k="Proyecto" v={terreno.proyecto||"—"}/>
+            <div className="info-row">
+              <span className="info-key">Responsable</span>
+              <span className={`resp-badge resp-${terreno.responsable?.toLowerCase()||"none"}`}>
+                {terreno.responsable||"Sin asignar"}
+              </span>
+            </div>
+            {terreno.notas&&<div style={{padding:"8px 0"}}>
+              <div className="info-key" style={{marginBottom:4}}>Notas</div>
+              <div style={{fontSize:12.5,color:"var(--ink2)",lineHeight:1.6}}>{terreno.notas}</div>
+            </div>}
+            <button className="btn btn-outline btn-sm" style={{marginTop:14}} onClick={()=>setEditing(true)}>✏️ Editar información</button>
+          </>
+        )}
+      </div>
+
+      <div className="info-card">
+        <h4>Datos SII</h4>
+        {editing ? (
+          <>
+            <div className="field-row" style={{marginBottom:10}}>
+              <div className="field"><label>M² SII</label><input type="number" value={form.m2_sii||""} onChange={e=>set("m2_sii",e.target.value)}/></div>
+              <div className="field"><label>UF/m²</label><input type="number" step="0.01" value={form.uf_m2||""} onChange={e=>set("uf_m2",e.target.value)}/></div>
+            </div>
+            <div className="field" style={{marginBottom:10}}>
+              <label>Avalúo fiscal ($CLP)</label>
+              <input type="number" value={form.avaluo||""} onChange={e=>set("avaluo",e.target.value)}/>
+            </div>
+            <div className="field">
+              <label>Sobretasa</label>
+              <select value={form.sobretasa?"Si":"No"} onChange={e=>set("sobretasa",e.target.value==="Si")}>
+                <option>No</option><option>Si</option>
+              </select>
+            </div>
+          </>
+        ):(
+          <>
+            <Row k="Superficie (M² SII)" v={fmtM2(terreno.m2_sii)}/>
+            <Row k="Avalúo fiscal" v={fmtCLP(terreno.avaluo)}/>
+            <Row k="UF por m²" v={terreno.uf_m2?Number(terreno.uf_m2).toLocaleString("es-CL",{minimumFractionDigits:2})+" UF":"—"}/>
+            <div className="info-row">
+              <span className="info-key">Sobretasa</span>
+              <span className={`badge-chip ${terreno.sobretasa?"chip-si":"chip-no"}`}>
+                {terreno.sobretasa?"Sí aplica":"No aplica"}
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// CUOTAS TAB
+// ─────────────────────────────────────────────────────
+function CuotasTab({terreno, cuotas, onRefresh}) {
+  const [anio, setAnio] = useState(new Date().getFullYear());
+  const [saving, setSaving] = useState({});
+  const [payDates, setPayDates] = useState({});
+  const [genBusy, setGenBusy] = useState(false);
+
+  const current = cuotas.filter(c=>c.anio===anio);
+  const anioRef = useRef(anio);
+  useEffect(()=>{anioRef.current=anio;},[anio]);
+
+  const genCuotas = async () => {
+    setGenBusy(true);
+    const baseMonto = parseInt(terreno._cuota_monto)||0;
+    const baseTasa  = parseFloat(terreno._tasa)||0;
+    const rows = [1,2,3,4].map(n=>({
+      terreno_rol:terreno.rol, anio, numero:n,
+      monto:baseMonto, tasa:baseTasa,
+      fecha_vencimiento:`${anio}-${CUOTA_DATES[n]}`, pagado:false
+    }));
+    try{
+      await db.upsert("cuotas", rows);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
+    setGenBusy(false);
+  };
+
+  const markPaid = async (c, paid) => {
+    setSaving(s=>({...s,[c.id]:true}));
+    try{
+      await db.patch("cuotas","id=eq."+c.id, {pagado:paid, fecha_pago:paid?(payDates[c.id]||today()):null});
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
+    setSaving(s=>({...s,[c.id]:false}));
+  };
+
+  const updateMonto = async (c, monto) => {
+    try{ await db.patch("cuotas","id=eq."+c.id, {monto:parseInt(monto)||0}); onRefresh(); }
+    catch(e){alert("Error: "+e.message);}
+  };
+
+  const paid    = current.filter(c=>c.pagado).reduce((s,c)=>s+(parseInt(c.monto)||0), 0);
+  const pending = current.filter(c=>!c.pagado).reduce((s,c)=>s+(parseInt(c.monto)||0), 0);
+  const overdue = current.filter(c=>!c.pagado&&cuotaStatus(c)==="vencida").reduce((s,c)=>s+(parseInt(c.monto)||0), 0);
+  const total   = current.reduce((s,c)=>s+(parseInt(c.monto)||0), 0);
+
+  return (
+    <>
+      <div className="cuotas-header">
+        <div className="anio-nav">
+          <button onClick={()=>setAnio(a=>a-1)}>◀</button>
+          <div className="anio-display">{anio}</div>
+          <button onClick={()=>setAnio(a=>a+1)}>▶</button>
+        </div>
+        {current.length===0&&(
+          <button className="btn btn-primary btn-sm" onClick={genCuotas} disabled={genBusy}>
+            {genBusy?"Generando...":"✦ Generar cuotas "+anio}
+          </button>
+        )}
+      </div>
+
+      {current.length===0 ? (
+        <div style={{textAlign:"center",padding:"50px 20px",color:"var(--ink3)"}}>
+          <div style={{fontSize:38,marginBottom:14}}>📋</div>
+          <p style={{marginBottom:6}}>No hay cuotas registradas para <strong>{anio}</strong>.</p>
+          <p style={{fontSize:12}}>Haz clic en "Generar cuotas {anio}" para crear las 4 cuotas con las fechas estándar.</p>
+        </div>
+      ):(
+        <>
+          <div className="cuotas-grid">
+            {[1,2,3,4].map(n=>{
+              const c = current.find(x=>x.numero===n);
+              if(!c) return (
+                <div key={n} className="cuota-card" style={{opacity:0.45}}>
+                  <div className="cuota-num">{CUOTA_SHORT[n]} Cuota</div>
+                  <div style={{fontSize:12,color:"var(--ink3)"}}>No generada</div>
+                </div>
+              );
+              const st = cuotaStatus(c);
+              return (
+                <div key={n} className={`cuota-card ${st}`}>
+                  <div className="cuota-num">{CUOTA_LABELS[n]}</div>
+                  <span className={`cuota-status-chip st-${st}`}>
+                    {st==="pagada"?"✓ Pagada":st==="vencida"?"⚠ Vencida":st==="proxima"?"⏰ Próxima":"Pendiente"}
+                  </span>
+                  <div>
+                    <MontoInput value={c.monto} onSave={v=>updateMonto(c,v)}/>
+                  </div>
+                  <div className="cuota-fecha">
+                    Vence: <strong>{fmtDate(c.fecha_vencimiento)}</strong>
+                    {c.pagado&&c.fecha_pago&&<><br/>Pagado: <strong>{fmtDate(c.fecha_pago)}</strong></>}
+                  </div>
+                  <div className="cuota-divider"/>
+                  <div className="cuota-actions">
+                    {!c.pagado&&(
+                      <input type="date" value={payDates[c.id]||today()}
+                        onChange={e=>setPayDates(d=>({...d,[c.id]:e.target.value}))}/>
+                    )}
+                    <button className={`btn btn-sm ${c.pagado?"btn-outline btn-success":"btn-primary"}`}
+                      style={{width:"100%",justifyContent:"center"}}
+                      disabled={saving[c.id]}
+                      onClick={()=>markPaid(c,!c.pagado)}>
+                      {saving[c.id]?"...":(c.pagado?"✕ Marcar impaga":"✓ Marcar pagada")}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="cuotas-summary">
+            <div className="sum-item"><div className="sum-label">Total {anio}</div><div className="sum-val">{fmtCLP(total)}</div></div>
+            <div className="sum-item"><div className="sum-label">Pagado</div><div className="sum-val green">{fmtCLP(paid)}</div></div>
+            <div className="sum-item"><div className="sum-label">Por pagar</div><div className="sum-val">{fmtCLP(pending)}</div></div>
+            {overdue>0&&<div className="sum-item"><div className="sum-label">Vencido</div><div className="sum-val red">{fmtCLP(overdue)}</div></div>}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function MontoInput({value, onSave}) {
+  const [v, setV] = useState(value||"");
+  useEffect(()=>setV(value||""),[value]);
+  return (
+    <input type="number" className="cuota-monto-input" value={v}
+      onChange={e=>setV(e.target.value)}
+      onBlur={()=>String(v)!==String(value)&&onSave(v)}/>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// BITÁCORA TAB
+// ─────────────────────────────────────────────────────
+function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRefresh}) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({fecha:today(), detalle:"", estatus:"Pendiente", responsable:""});
+  const [openId, setOpenId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [uploading, setUploading] = useState({});
+  const [addBusy, setAddBusy] = useState(false);
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const setEF = (k,v) => setEditForm(f=>({...f,[k]:v}));
+
+  const addEntry = async () => {
+    if(!form.detalle.trim()) return;
+    setAddBusy(true);
+    try{
+      await db.insert("bitacora",[{
+        terreno_rol:terreno.rol, fecha:form.fecha, detalle:form.detalle.trim(),
+        estatus:form.estatus, responsable:form.responsable||null
+      }]);
+      setForm({fecha:today(),detalle:"",estatus:"Pendiente",responsable:""});
+      setShowAdd(false);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
+    setAddBusy(false);
+  };
+
+  const saveEdit = async (entry) => {
+    try{
+      await db.patch("bitacora","id=eq."+entry.id, {
+        fecha:editForm.fecha, detalle:editForm.detalle, estatus:editForm.estatus, responsable:editForm.responsable||null
+      });
+      setEditingId(null);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
+  };
+
+  const deleteEntry = async (entry) => {
+    if(!confirm("¿Eliminar esta entrada y todos sus archivos adjuntos?")) return;
+    try{ await db.del("bitacora","id=eq."+entry.id); onRefresh(); }
+    catch(e){alert("Error: "+e.message);}
+  };
+
+  const uploadFile = async (entryId, file) => {
+    setUploading(u=>({...u,[entryId]:true}));
+    try{
+      const ext = file.name.split(".").pop()||"bin";
+      const path = `${terreno.rol.replace(/\//g,"-")}/${entryId}/${uid()}.${ext}`;
+      const url = await db.uploadFile("terrenos-archivos", path, file);
+      await db.insert("archivos",[{bitacora_id:entryId, nombre:file.name, url, tipo:file.type, tamano:file.size}]);
+      onRefresh();
+    }catch(e){alert("Error al subir archivo: "+e.message);}
+    setUploading(u=>({...u,[entryId]:false}));
+  };
+
+  const deleteFile = async (a) => {
+    if(!confirm("¿Eliminar este archivo?")) return;
+    try{ await db.del("archivos","id=eq."+a.id); onRefresh(); }
+    catch(e){alert("Error: "+e.message);}
+  };
+
+  const sorted = [...bitacora].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+
+  return (
+    <>
+      <div className="bitacora-add-bar">
+        <span style={{fontSize:13,color:"var(--ink3)"}}>{bitacora.length} {bitacora.length===1?"entrada":"entradas"}</span>
+        <button className="btn btn-primary btn-sm" onClick={()=>setShowAdd(s=>!s)}>
+          {showAdd?"✕ Cancelar":"+ Nueva entrada"}
+        </button>
+      </div>
+
+      {showAdd&&(
+        <div className="add-entry-box">
+          <div className="title">Nueva entrada de bitácora</div>
+          <div className="field-row" style={{marginBottom:10}}>
+            <div className="field"><label>Fecha</label><input type="date" value={form.fecha} onChange={e=>set("fecha",e.target.value)}/></div>
+            <div className="field"><label>Estatus</label>
+              <select value={form.estatus} onChange={e=>set("estatus",e.target.value)}>
+                {ESTATUS_OPTS.map(s=><option key={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="field" style={{marginBottom:10}}>
+            <label>Detalle / Tarea</label>
+            <textarea value={form.detalle} onChange={e=>set("detalle",e.target.value)} placeholder="Describe la acción, tarea o nota relevante del terreno..."/>
+          </div>
+          <div className="field" style={{marginBottom:14}}>
+            <label>Responsable</label>
+            <select value={form.responsable} onChange={e=>set("responsable",e.target.value)}>
+              <option value="">— Sin asignar —</option>
+              {RESPONSABLES.map(r=><option key={r}>{r}</option>)}
+            </select>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn btn-primary btn-sm" onClick={addEntry} disabled={!form.detalle.trim()||addBusy}>{addBusy?"Guardando...":"Guardar entrada"}</button>
+          </div>
+        </div>
+      )}
+
+      {sorted.length===0 ? (
+        <div style={{textAlign:"center",padding:"50px 20px",color:"var(--ink3)"}}>
+          <div style={{fontSize:38,marginBottom:14}}>📓</div>
+          <p>Sin entradas en la bitácora de este terreno.</p>
+        </div>
+      ):(
+        <div className="bitacora-list">
+          {sorted.map(entry=>{
+            const files = archivos[entry.id]||[];
+            const isOpen = openId===entry.id;
+            const isEditing = editingId===entry.id;
+            const st = entry.estatus;
+            return (
+              <div key={entry.id} className="bita-entry">
+                <div className="bita-header" onClick={()=>setOpenId(isOpen?null:entry.id)}>
+                  <div className="bita-date">{fmtDate(entry.fecha)}</div>
+                  <div className="bita-detalle">{entry.detalle}</div>
+                  <div className="bita-meta">
+                    <span className={`estatus-chip est-${st==="En Proceso"?"proceso":st.toLowerCase()}`}>{st}</span>
+                    {entry.responsable&&<span style={{fontSize:11,color:"var(--ink3)"}}>{entry.responsable}</span>}
+                    {files.length>0&&<span style={{fontSize:11,color:"var(--ink3)"}}>📎{files.length}</span>}
+                    <span style={{fontSize:10,color:"var(--ink3)"}}>{isOpen?"▲":"▼"}</span>
+                  </div>
+                </div>
+
+                {isOpen&&(
+                  <div className="bita-body" onClick={e=>e.stopPropagation()}>
+                    {isEditing ? (
+                      <>
+                        <div className="field-row" style={{marginBottom:9}}>
+                          <div className="field"><label>Fecha</label><input type="date" value={editForm.fecha} onChange={e=>setEF("fecha",e.target.value)}/></div>
+                          <div className="field"><label>Estatus</label>
+                            <select value={editForm.estatus} onChange={e=>setEF("estatus",e.target.value)}>
+                              {ESTATUS_OPTS.map(s=><option key={s}>{s}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="field" style={{marginBottom:9}}>
+                          <label>Detalle</label>
+                          <textarea value={editForm.detalle} onChange={e=>setEF("detalle",e.target.value)} rows={3}/>
+                        </div>
+                        <div className="field" style={{marginBottom:12}}>
+                          <label>Responsable</label>
+                          <select value={editForm.responsable||""} onChange={e=>setEF("responsable",e.target.value||null)}>
+                            <option value="">— Sin asignar —</option>
+                            {RESPONSABLES.map(r=><option key={r}>{r}</option>)}
+                          </select>
+                        </div>
+                        <div style={{display:"flex",gap:8,marginBottom:14}}>
+                          <button className="btn btn-primary btn-sm" onClick={()=>saveEdit(entry)}>Guardar</button>
+                          <button className="btn btn-ghost btn-sm" onClick={()=>setEditingId(null)}>Cancelar</button>
+                        </div>
+                      </>
+                    ):(
+                      <div style={{display:"flex",gap:7,marginBottom:files.length>0?12:0}}>
+                        <button className="btn btn-outline btn-xs" onClick={()=>{setEditingId(entry.id);setEditForm({...entry});}}>✏️ Editar</button>
+                        <button className="btn btn-danger btn-xs" onClick={()=>deleteEntry(entry)}>🗑 Eliminar</button>
+                      </div>
+                    )}
+
+                    {files.length>0&&(
+                      <div className="files-list">
+                        {files.map(f=>(
+                          <div key={f.id} className="file-item">
+                            <span className="file-icon">{fileIcon(f.tipo)}</span>
+                            <a href={f.url} target="_blank" rel="noreferrer" className="file-name">{f.nombre}</a>
+                            <span className="file-size">{fmtSize(f.tamano)}</span>
+                            <button className="file-del" onClick={()=>deleteFile(f)}>🗑</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <label className={`upload-zone${uploading[entry.id]?" drag":""}`}>
+                      <input type="file" multiple onChange={async e=>{
+                        for(const f of Array.from(e.target.files)) await uploadFile(entry.id, f);
+                        e.target.value="";
+                      }}/>
+                      {uploading[entry.id] ? (
+                        <p>⏳ Subiendo archivo...</p>
+                      ):(
+                        <p>📎 Arrastra archivos o <strong style={{color:"var(--teal)"}}>haz clic para adjuntar</strong> PDF, Word, imágenes...</p>
+                      )}
+                    </label>
+                    <SubtareasSection
+                      bitacoraId={entry.id}
+                      terrenoRol={terreno.rol}
+                      subtareas={subtareas[entry.id]||[]}
+                      archivosSub={archivosSub}
+                      onRefresh={onRefresh}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// IMPORT EXCEL MODAL
+// ─────────────────────────────────────────────────────
+function ImportModal({onClose, onImported}) {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const parsePreview = (f) => {
+    setFile(f);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try{
+        const wb = XLSX.read(e.target.result, {type:"binary"});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+        setPreview(rows.slice(1).filter(r=>r[8]).slice(0,5));
+      }catch(err){alert("Error al leer: "+err.message);}
+    };
+    reader.readAsBinaryString(f);
+  };
+
+  const doImport = async () => {
+    if(!file) return;
+    setImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try{
+        const wb = XLSX.read(e.target.result, {type:"binary"});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+        const data = rows.slice(1).filter(r=>r[8]&&r[0]&&r[2]);
+        const anio = new Date().getFullYear();
+
+        // 1. Upsert terrenos
+        const terrenosArr = data.map(r=>({
+          rol:String(r[8]).trim(),
+          terreno:String(r[0]).trim(),
+          vigente:String(r[1]||"SI").trim(),
+          ciudad:String(r[2]).trim(),
+          m2_sii:parseFloat(r[3])||0,
+          avaluo:parseInt(r[4])||0,
+          uf_m2:parseFloat(r[5])||0,
+          sobretasa:String(r[6]||"").toLowerCase()==="si",
+          proyecto:r[7]?String(r[7]).trim():null,
+        }));
+        await db.upsert("terrenos", terrenosArr);
+
+        // 2. Upsert cuotas (current year)
+        let cuotasCount = 0;
+        const cuotasArr = [];
+        for(const r of data){
+          const rol = String(r[8]).trim();
+          const monto = parseInt(r[9])||0;
+          const tasa  = parseFloat(r[10])||0;
+          if(monto>0){
+            for(let n=1;n<=4;n++){
+              cuotasArr.push({terreno_rol:rol,anio,numero:n,monto,tasa,
+                fecha_vencimiento:`${anio}-${CUOTA_DATES[n]}`,pagado:false});
+            }
+            cuotasCount++;
+          }
+        }
+        if(cuotasArr.length>0) await db.upsert("cuotas", cuotasArr);
+
+        // 3. Bitácora entries from detalle column
+        let bitaCount = 0;
+        for(const r of data){
+          const rol = String(r[8]).trim();
+          const detalle = r[12]?String(r[12]).trim():"";
+          if(!detalle) continue;
+          let fecha = today();
+          if(r[11] instanceof Date) fecha = r[11].toISOString().slice(0,10);
+          else if(typeof r[11]==="number"){
+            const d = new Date((r[11]-25569)*86400000);
+            fecha = d.toISOString().slice(0,10);
+          }
+          const estatus = String(r[13]||"Pendiente").trim()||"Pendiente";
+          try{
+            await db.insert("bitacora",[{terreno_rol:rol,fecha,detalle,estatus}]);
+            bitaCount++;
+          }catch(e){/* skip dups */}
+        }
+
+        setResult({terrenos:terrenosArr.length, cuotas:cuotasCount, bitacora:bitaCount});
+        onImported();
+      }catch(err){alert("Error en importación: "+err.message);}
+      setImporting(false);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  return (
+    <Modal title="Importar datos desde Excel" onClose={onClose} large
+      footer={<>
+        <button className="btn btn-ghost" onClick={onClose}>Cerrar</button>
+        {!result&&<button className="btn btn-primary" onClick={doImport} disabled={!file||importing}>
+          {importing?"⏳ Importando...":"↑ Importar datos"}
+        </button>}
+      </>}>
+      {result ? (
+        <div style={{textAlign:"center",padding:"24px"}}>
+          <div style={{fontSize:42,marginBottom:14}}>✅</div>
+          <div style={{fontSize:16,fontWeight:600,color:"var(--green)",marginBottom:10}}>Importación completada</div>
+          <div style={{color:"var(--ink3)",fontSize:13,lineHeight:1.9}}>
+            <div><strong style={{color:"var(--ink)"}}>{result.terrenos}</strong> terrenos importados / actualizados</div>
+            <div><strong style={{color:"var(--ink)"}}>{result.cuotas}</strong> terrenos con cuotas del año generadas</div>
+            <div><strong style={{color:"var(--ink)"}}>{result.bitacora}</strong> entradas creadas en bitácora</div>
+          </div>
+        </div>
+      ):(
+        <>
+          <p style={{fontSize:13,color:"var(--ink3)",lineHeight:1.65}}>
+            Importa tu archivo <strong>data_terreno.xlsx</strong>. Los registros existentes se actualizarán según el <strong>ROL</strong> como clave única. Se generarán cuotas para el año actual y se crearán entradas de bitácora si el Excel incluye tareas.
+          </p>
+          <label style={{display:"block",border:"2px dashed var(--line)",borderRadius:9,padding:"22px",textAlign:"center",cursor:"pointer",transition:"all 0.15s"}}
+            onMouseEnter={e=>e.currentTarget.style.borderColor="var(--teal)"}
+            onMouseLeave={e=>e.currentTarget.style.borderColor="var(--line)"}>
+            <input type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={e=>e.target.files[0]&&parsePreview(e.target.files[0])}/>
+            <div style={{fontSize:32,marginBottom:10}}>📊</div>
+            {file ? (
+              <div style={{fontWeight:600,color:"var(--teal)",fontSize:13}}>{file.name} · listo para importar</div>
+            ):(
+              <div style={{color:"var(--ink3)",fontSize:13}}>Haz clic para seleccionar el archivo Excel</div>
+            )}
+          </label>
+          {preview.length>0&&(
+            <div>
+              <div style={{fontSize:10.5,fontWeight:600,color:"var(--ink3)",marginBottom:8,textTransform:"uppercase",letterSpacing:"1px"}}>Vista previa — {preview.length} filas</div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{borderCollapse:"collapse",width:"100%",fontSize:12}}>
+                  <thead><tr style={{background:"var(--bg)"}}>
+                    {["ROL","Terreno","Ciudad","M² SII","Avalúo"].map(h=>(
+                      <th key={h} style={{padding:"6px 10px",textAlign:"left",fontWeight:600,color:"var(--ink3)",fontSize:10.5}}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>{preview.map((r,i)=>(
+                    <tr key={i} style={{borderTop:"1px solid var(--line)"}}>
+                      <td style={{padding:"5px 10px",fontFamily:"monospace",fontSize:11}}>{r[8]}</td>
+                      <td style={{padding:"5px 10px"}}>{String(r[0]||"").slice(0,22)}</td>
+                      <td style={{padding:"5px 10px"}}>{r[2]}</td>
+                      <td style={{padding:"5px 10px"}}>{(parseFloat(r[3])||0).toLocaleString("es-CL")}</td>
+                      <td style={{padding:"5px 10px"}}>{fmtCLP(r[4])}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </Modal>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// NEW TERRENO MODAL
+// ─────────────────────────────────────────────────────
+function NewTerrenoModal({onClose, onCreated}) {
+  const [form,setForm]=useState({rol:"",terreno:"",ciudad:"Antofagasta",vigente:"SI",m2_sii:"",avaluo:"",uf_m2:"",sobretasa:false,proyecto:"",responsable:"",notas:""});
+  const [saving,setSaving]=useState(false);
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+
+  const create = async () => {
+    if(!form.rol.trim()||!form.terreno.trim()||!form.ciudad){return;}
+    setSaving(true);
+    try{
+      await db.insert("terrenos",[{
+        rol:form.rol.trim(), terreno:form.terreno.trim(), ciudad:form.ciudad, vigente:form.vigente,
+        m2_sii:parseFloat(form.m2_sii)||0, avaluo:parseInt(form.avaluo)||0, uf_m2:parseFloat(form.uf_m2)||0,
+        sobretasa:form.sobretasa, proyecto:form.proyecto||null,
+        responsable:form.responsable||null, notas:form.notas||null
+      }]);
+      onCreated();onClose();
+    }catch(e){alert("Error: "+e.message);}
+    setSaving(false);
+  };
+
+  return (
+    <Modal title="Nuevo Terreno" onClose={onClose} large
+      footer={<>
+        <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+        <button className="btn btn-primary" onClick={create} disabled={!form.rol.trim()||!form.terreno.trim()||saving}>
+          {saving?"Guardando...":"Crear terreno"}
+        </button>
+      </>}>
+      <div className="field-row">
+        <div className="field"><label>ROL SII *</label><input value={form.rol} onChange={e=>set("rol",e.target.value)} placeholder="ej: 5511-01"/></div>
+        <div className="field"><label>Ciudad *</label>
+          <select value={form.ciudad} onChange={e=>set("ciudad",e.target.value)}>
+            {CIUDADES.map(c=><option key={c}>{c}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="field"><label>Nombre del terreno *</label><input value={form.terreno} onChange={e=>set("terreno",e.target.value)} placeholder="ej: LOTE 1A3 CERRO PARANAL 315"/></div>
+      <div className="field-row">
+        <div className="field"><label>M² SII</label><input type="number" value={form.m2_sii} onChange={e=>set("m2_sii",e.target.value)}/></div>
+        <div className="field"><label>UF/m²</label><input type="number" step="0.01" value={form.uf_m2} onChange={e=>set("uf_m2",e.target.value)}/></div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Avalúo fiscal ($CLP)</label><input type="number" value={form.avaluo} onChange={e=>set("avaluo",e.target.value)}/></div>
+        <div className="field"><label>Proyecto asociado</label><input value={form.proyecto} onChange={e=>set("proyecto",e.target.value)} placeholder="ej: Las Vicuñas"/></div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Responsable</label>
+          <select value={form.responsable} onChange={e=>set("responsable",e.target.value)}>
+            <option value="">— Sin asignar —</option>
+            {RESPONSABLES.map(r=><option key={r}>{r}</option>)}
+          </select>
+        </div>
+        <div className="field"><label>Sobretasa</label>
+          <select value={form.sobretasa?"Si":"No"} onChange={e=>set("sobretasa",e.target.value==="Si")}>
+            <option>No</option><option>Si</option>
+          </select>
+        </div>
+      </div>
+      <div className="field"><label>Notas</label><textarea value={form.notas} onChange={e=>set("notas",e.target.value)} rows={2} placeholder="Observaciones adicionales..."/></div>
+    </Modal>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// APP
+// ─────────────────────────────────────────────────────
+function App() {
+  const [terrenos, setTerrenos] = useState([]);
+  const [selRol, setSelRol] = useState(null);
+  const [cuotas, setCuotas] = useState([]);
+  const [bitacora, setBitacora] = useState([]);
+  const [archivos, setArchivos] = useState({});
+  const [allCuotas, setAllCuotas] = useState([]);
+  const [allBitacora, setAllBitacora] = useState([]);
+  const [subtareas, setSubtareas] = useState({});
+  const [archivosSub, setArchivosSub] = useState({});
+  const [hiddenRols, setHiddenRols] = useState(()=>new Set(JSON.parse(localStorage.getItem('hiddenRols')||'[]')));
+  const [showHidden, setShowHidden] = useState(false);
+  const [activeTab, setActiveTab] = useState("info");
+  const [search, setSearch] = useState("");
+  const [syncStatus, setSyncStatus] = useState("ok");
+  const [loading, setLoading] = useState(true);
+  const [showNew, setShowNew] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [openCities, setOpenCities] = useState({});
+
+  const loadAll = useCallback(async () => {
+    setSyncStatus("loading");
+    try{
+      const [t, c, b] = await Promise.all([
+        db.select("terrenos","order=ciudad.asc,terreno.asc"),
+        db.select("cuotas","order=anio.desc,numero.asc"),
+        db.select("bitacora","order=fecha.desc")
+      ]);
+      setTerrenos(t); setAllCuotas(c); setAllBitacora(b);
+      setSyncStatus("ok");
+      // Auto-open first city
+      if(t.length>0){
+        setOpenCities(prev=>{
+          if(Object.keys(prev).length>0) return prev;
+          return {[t[0].ciudad]:true};
+        });
+      }
+    }catch(e){setSyncStatus("error");}
+    setLoading(false);
+  }, []);
+
+
+  const seedIfEmpty = useCallback(async () => {
+    if(!window.INITIAL_DATA||window.INITIAL_DATA.length===0) return;
+    try{
+      const existing = await db.select("terrenos","limit=1");
+      if(existing.length>0) return; // already has data
+      const anio = new Date().getFullYear();
+      const CUOTA_DATES_LOCAL = {1:"04-30",2:"06-30",3:"09-30",4:"11-28"};
+      // Insert terrenos
+      const terrenosArr = window.INITIAL_DATA.map(d=>({
+        rol:d.rol, terreno:d.terreno, vigente:d.vigente||"SI", ciudad:d.ciudad,
+        m2_sii:d.m2_sii||0, avaluo:d.avaluo||0, uf_m2:d.uf_m2||0,
+        sobretasa:d.sobretasa||false, proyecto:d.proyecto||null,
+        responsable:null, notas:null
+      }));
+      await db.upsert("terrenos", terrenosArr);
+      // Insert cuotas
+      const cuotasArr = [];
+      window.INITIAL_DATA.forEach(d=>{
+        if(!d.cuota_monto) return;
+        for(let n=1;n<=4;n++){
+          cuotasArr.push({terreno_rol:d.rol,anio,numero:n,
+            monto:d.cuota_monto,tasa:d.tasa||0,
+            fecha_vencimiento:`${anio}-${CUOTA_DATES_LOCAL[n]}`,pagado:false});
+        }
+      });
+      if(cuotasArr.length>0) await db.upsert("cuotas",cuotasArr);
+      // Insert bitácora
+      const bitaArr = [];
+      window.INITIAL_DATA.forEach(d=>{
+        if(d.detalle_tarea){
+          bitaArr.push({terreno_rol:d.rol,
+            fecha:d.fecha_tarea||new Date().toISOString().slice(0,10),
+            detalle:d.detalle_tarea,
+            estatus:d.estatus||"Pendiente", responsable:null});
+        }
+        if(d.extra_bitacora){
+          d.extra_bitacora.forEach(e=>{
+            if(e.detalle) bitaArr.push({terreno_rol:d.rol,
+              fecha:e.fecha||new Date().toISOString().slice(0,10),
+              detalle:e.detalle, estatus:e.estatus||"Pendiente", responsable:null});
+          });
+        }
+      });
+      for(const b of bitaArr){ try{ await db.insert("bitacora",[b]); }catch(e){} }
+      console.log("Seed completado:",terrenosArr.length,"terrenos,",cuotasArr.length,"cuotas,",bitaArr.length,"entradas bitácora");
+    }catch(e){console.error("Seed error:",e);}
+  },[]);
+
+  useEffect(()=>{seedIfEmpty().then(()=>loadAll());},[loadAll, seedIfEmpty]);
+
+  const loadDetail = useCallback(async (rol) => {
+    if(!rol) return;
+    try{
+      const enc = encodeURIComponent(rol);
+      const [c, b] = await Promise.all([
+        db.select("cuotas","terreno_rol=eq."+enc+"&order=anio.desc,numero.asc"),
+        db.select("bitacora","terreno_rol=eq."+enc+"&order=fecha.desc")
+      ]);
+      setCuotas(c); setBitacora(b);
+      if(b.length>0){
+        const ids = b.map(x=>x.id).join(",");
+        const a = await db.select("archivos","bitacora_id=in.("+ids+")&order=created_at.asc");
+        const map = {};
+        a.forEach(f=>{if(!map[f.bitacora_id])map[f.bitacora_id]=[];map[f.bitacora_id].push(f);});
+        setArchivos(map);
+      }else{setArchivos({});}
+      // Load subtareas
+      if(b.length>0){
+        const bitIds=b.map(x=>x.id).join(",");
+        const subs=await db.select("subtareas","bitacora_id=in.("+bitIds+")&order=created_at.asc");
+        const subMap={};
+        subs.forEach(s=>{if(!subMap[s.bitacora_id])subMap[s.bitacora_id]=[];subMap[s.bitacora_id].push(s);});
+        setSubtareas(subMap);
+        if(subs.length>0){
+          const subIds=subs.map(s=>s.id).join(",");
+          const asSub=await db.select("archivos_subtareas","subtarea_id=in.("+subIds+")&order=created_at.asc");
+          const asMap={};
+          asSub.forEach(f=>{if(!asMap[f.subtarea_id])asMap[f.subtarea_id]=[];asMap[f.subtarea_id].push(f);});
+          setArchivosSub(asMap);
+        }else{setArchivosSub({});}
+      }else{setSubtareas({});setArchivosSub({});}
+    }catch(e){console.error(e);}
+  },[]);
+
+  useEffect(()=>{
+    if(selRol) loadDetail(selRol);
+    else{setCuotas([]);setBitacora([]);setArchivos({});}
+  },[selRol, loadDetail]);
+
+  const toggleHide=useCallback((rol,e)=>{
+    e.stopPropagation();
+    setHiddenRols(prev=>{
+      const next=new Set(prev);
+      if(next.has(rol)) next.delete(rol); else next.add(rol);
+      localStorage.setItem('hiddenRols',JSON.stringify([...next]));
+      return next;
+    });
+  },[]);
+
+  const refreshAll = () => { loadDetail(selRol); loadAll(); };
+
+  const selTerreno = terrenos.find(t=>t.rol===selRol);
+
+  // Sidebar groups
+  const cityMap={}, cityOrder=[];
+  terrenos
+    .filter(t=>{
+      const sOK = !search||(t.terreno+" "+t.rol+" "+(t.proyecto||"")).toLowerCase().includes(search.toLowerCase());
+      return sOK;
+    })
+    .forEach(t=>{
+      if(!cityMap[t.ciudad]){cityMap[t.ciudad]=[];cityOrder.push(t.ciudad);}
+      cityMap[t.ciudad].push(t);
+    });
+
+  const hasBadge = (rol) => {
+    const overdue = allCuotas.some(c=>c.terreno_rol===rol&&!c.pagado&&c.fecha_vencimiento&&c.fecha_vencimiento<today());
+    const pending = allBitacora.some(b=>b.terreno_rol===rol&&(b.estatus==="Pendiente"||b.estatus==="En Proceso"));
+    if(overdue) return "var(--red)";
+    if(pending) return "var(--amber)";
+    return "var(--teal)";
+  };
+
+  const selectTerreno = (rol) => {
+    setSelRol(rol); setActiveTab("info");
+    // auto-open that city
+    const t = terrenos.find(x=>x.rol===rol);
+    if(t) setOpenCities(prev=>({...prev,[t.ciudad]:true}));
+  };
+
+  return (
+    <div className="app">
+      {/* ─ SIDEBAR ─ */}
+      <div className="sidebar">
+        <div className="sidebar-brand">
+          <h1>Gestor de Terrenos</h1>
+          <span>IRN Inmobiliaria</span>
+        </div>
+        <div className="sidebar-search">
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar terreno o ROL..."/>
+        </div>
+
+        <div className="terreno-list">
+          {cityOrder.map(city=>{
+            const items=cityMap[city]; const isOpen=!!openCities[city];
+            const hasActive=items.some(t=>t.rol===selRol);
+            return (
+              <div key={city} className="city-group">
+                <div className="city-header" onClick={()=>setOpenCities(p=>({...p,[city]:!p[city]}))}>
+                  <span className={`city-arrow${isOpen?" open":""}`}>▶</span>
+                  <span className="city-name" style={hasActive?{color:"#a0c8d0"}:{}}>{city}</span>
+                  <span className="city-count">{items.length}</span>
+                </div>
+                {isOpen&&(
+                  <div className="city-terrenos">
+                    {(showHidden?items:items.filter(t=>!hiddenRols.has(t.rol))).map(t=>{
+                      const isHidden=hiddenRols.has(t.rol);
+                      return (
+                        <div key={t.rol}
+                          className={`terreno-item${selRol===t.rol?" active":""}${isHidden?" hidden-item":""}`}
+                          onClick={()=>!isHidden&&selectTerreno(t.rol)}>
+                          <span className="t-dot" style={{background:isHidden?"#5a5750":hasBadge(t.rol)}}/>
+                          <div className="t-info">
+                            <div className="t-name">{t.terreno}</div>
+                            <div className="t-rol">{t.rol}</div>
+                          </div>
+                          <button className="hide-btn" onClick={(e)=>toggleHide(t.rol,e)}
+                            title={isHidden?"Mostrar terreno":"Ocultar terreno"}>
+                            {isHidden?"👁":"🙈"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {cityOrder.length===0&&!loading&&(
+            <div style={{padding:"20px 10px",color:"#5a5750",fontSize:12,textAlign:"center"}}>
+              Sin terrenos.<br/>Importa el Excel o crea uno nuevo.
+            </div>
+          )}
+        </div>
+
+        <div className="sidebar-bottom">
+          <button className="sbtn sbtn-primary" onClick={()=>setShowNew(true)}>＋ Nuevo terreno</button>
+          <button className="sbtn sbtn-ghost" onClick={()=>setShowImport(true)}>↑ Importar Excel</button>
+          <button className="sbtn sbtn-ghost" onClick={()=>setSelRol(null)}>⊞ Dashboard global</button>
+          {hiddenRols.size>0&&(
+            <button className="sbtn sbtn-ghost" onClick={()=>setShowHidden(s=>!s)}>
+              {showHidden?"🙈 Ocultar ocultos":"👁 Ocultos ("+hiddenRols.size+")"}
+            </button>
+          )}
+        </div>
+
+        <div className="sync-bar">
+          <div className={`sync-dot ${syncStatus==="loading"?"loading":syncStatus==="error"?"error":"ok"}`}/>
+          <span className="sync-text">{syncStatus==="loading"?"Sincronizando...":syncStatus==="error"?"Error de conexión":"Conectado"}</span>
+          <button className="sync-refresh" onClick={loadAll} title="Recargar">↺</button>
+        </div>
+      </div>
+
+      {/* ─ MAIN ─ */}
+      <div className="main">
+        <div className="topbar">
+          <div className="topbar-left">
+            {selTerreno ? (
+              <>
+                <h2>{selTerreno.terreno}</h2>
+                <span style={{fontFamily:"monospace",fontSize:11.5,color:"var(--ink3)",background:"var(--bg2)",padding:"2px 8px",borderRadius:4,flexShrink:0}}>{selTerreno.rol}</span>
+                {selTerreno.ciudad&&<span style={{fontSize:12,color:"var(--ink3)"}}>{selTerreno.ciudad}</span>}
+              </>
+            ):<h2>Dashboard de Terrenos</h2>}
+          </div>
+          <div className="topbar-right">
+            <span style={{fontSize:12,color:"var(--ink3)"}}>
+              {terrenos.length} terrenos · {allCuotas.filter(c=>!c.pagado&&c.fecha_vencimiento&&c.fecha_vencimiento<today()).length} cuotas vencidas
+            </span>
+          </div>
+        </div>
+
+        <div className="content">
+          {loading ? (
+            <div className="loading-cover">
+              <div className="spinner"/>
+              <span style={{color:"var(--ink3)",fontSize:13}}>Cargando terrenos...</span>
+            </div>
+          ):!selTerreno ? (
+            <Dashboard terrenos={terrenos} allCuotas={allCuotas} allBitacora={allBitacora} onSelectTerreno={selectTerreno} hiddenRols={hiddenRols}/>
+          ):(
+            <>
+              <div className="tab-nav">
+                {[["info","📋 Información"],["cuotas","💰 Contribuciones"],["bitacora","📓 Bitácora"]].map(([id,lbl])=>(
+                  <button key={id} className={`tab-btn${activeTab===id?" active":""}`} onClick={()=>setActiveTab(id)}>{lbl}</button>
+                ))}
+              </div>
+
+              {activeTab==="info"&&(
+                <InfoTab terreno={selTerreno} onUpdated={updated=>{
+                  setTerrenos(ts=>ts.map(t=>t.rol===updated.rol?{...t,...updated}:t));
+                  loadAll();
+                }}/>
+              )}
+              {activeTab==="cuotas"&&(
+                <CuotasTab terreno={selTerreno} cuotas={cuotas} onRefresh={refreshAll}/>
+              )}
+              {activeTab==="bitacora"&&(
+                <BitacoraTab terreno={selTerreno} bitacora={bitacora} archivos={archivos} subtareas={subtareas} archivosSub={archivosSub} onRefresh={refreshAll}/>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {showNew&&<NewTerrenoModal onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);loadAll();}}/>}
+      {showImport&&<ImportModal onClose={()=>setShowImport(false)} onImported={()=>{setShowImport(false);loadAll();if(selRol)loadDetail(selRol);}}/>}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// ROOT
+// ─────────────────────────────────────────────────────
+function Root() {
+  const [ready, setReady] = useState(false);
+  useEffect(()=>{
+    const u=localStorage.getItem("sb_url"), k=localStorage.getItem("sb_key");
+    if(u&&k){db=new SupabaseClient(u,k);setReady(true);}
+  },[]);
+  if(!ready) return <SetupScreen onSetup={(u,k)=>{db=new SupabaseClient(u,k);window.location.reload();}}/>;
+  return <App/>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
+</script>
+</body>
+</html>
