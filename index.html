@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Gestor de Terrenos — IRN</title>
+<title>Gestor de Terrenos — Guzmán & Larraín</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -279,6 +280,27 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 .sub-act-btn.del:hover{color:var(--red);background:var(--red-lt)}
 .sub-files-area{margin-top:9px}
 .subtarea-add-form{background:var(--bg);border-radius:8px;border:1px solid var(--line);padding:12px;margin-bottom:9px}
+
+/* ── AUTH SCREEN ── */
+.auth-screen{display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#1c1a17 0%,#1a5f6e 100%)}
+.auth-card{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.35);padding:44px 40px;width:100%;max-width:420px;animation:fadeUp 0.25s ease}
+.auth-logo{text-align:center;margin-bottom:28px}
+.auth-logo h1{font-size:22px;color:var(--ink);margin-bottom:4px}
+.auth-logo p{font-size:12px;color:var(--ink3);text-transform:uppercase;letter-spacing:2px}
+.auth-divider{height:1px;background:var(--line);margin:20px 0}
+.auth-error{background:var(--red-lt);border:1px solid rgba(192,57,43,0.25);border-radius:7px;padding:10px 13px;font-size:13px;color:var(--red);margin-bottom:14px}
+.auth-success{background:var(--green-lt);border:1px solid rgba(26,122,74,0.25);border-radius:7px;padding:10px 13px;font-size:13px;color:var(--green);margin-bottom:14px}
+.auth-footer{text-align:center;margin-top:16px;font-size:12px;color:var(--ink3)}
+.auth-toggle{background:none;border:none;color:var(--teal);cursor:pointer;font-size:12px;text-decoration:underline;padding:0}
+/* ── USER BAR ── */
+.user-bar{display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid rgba(255,255,255,0.07);flex-shrink:0}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-email{font-size:10.5px;color:#908d86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:9px;color:#5a5750;text-transform:uppercase;letter-spacing:0.8px}
+.logout-btn{background:none;border:none;color:#5a5750;cursor:pointer;font-size:12px;padding:3px 6px;border-radius:4px;transition:all 0.13s;flex-shrink:0}
+.logout-btn:hover{color:#e05c5c;background:rgba(224,92,92,0.1)}
+
 </style>
 </head>
 <body>
@@ -1590,7 +1612,7 @@ function NewTerrenoModal({onClose, onCreated}) {
 // ─────────────────────────────────────────────────────
 // APP
 // ─────────────────────────────────────────────────────
-function App() {
+function App({user, onLogout}) {
   const [terrenos, setTerrenos] = useState([]);
   const [selRol, setSelRol] = useState(null);
   const [cuotas, setCuotas] = useState([]);
@@ -1768,7 +1790,7 @@ function App() {
       <div className="sidebar">
         <div className="sidebar-brand">
           <h1>Gestor de Terrenos</h1>
-          <span>IRN Inmobiliaria</span>
+          <span>Guzmán & Larraín</span>
         </div>
         <div className="sidebar-search">
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar terreno o ROL..."/>
@@ -1828,6 +1850,7 @@ function App() {
           )}
         </div>
 
+        <UserBar user={user} onLogout={onLogout}/>
         <div className="sync-bar">
           <div className={`sync-dot ${syncStatus==="loading"?"loading":syncStatus==="error"?"error":"ok"}`}/>
           <span className="sync-text">{syncStatus==="loading"?"Sincronizando...":syncStatus==="error"?"Error de conexión":"Conectado"}</span>
@@ -1893,17 +1916,182 @@ function App() {
   );
 }
 
+
+
+// ─────────────────────────────────────────────────────
+// SUPABASE AUTH CLIENT
+// ─────────────────────────────────────────────────────
+let supabaseAuth = null;
+let currentUser = null;
+
+function initSupabaseAuth(url, key) {
+  if(window.supabase && window.supabase.createClient) {
+    supabaseAuth = window.supabase.createClient(url, key);
+  }
+}
+
+// ─────────────────────────────────────────────────────
+// LOGIN SCREEN
+// ─────────────────────────────────────────────────────
+function AuthScreen({onAuthed, sbUrl, sbKey}) {
+  const [mode, setMode] = useState('login'); // login | reset
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleLogin = async () => {
+    if(!email.trim()||!password.trim()){setError('Ingresa email y contraseña.');return;}
+    setBusy(true);setError('');
+    try{
+      const {data,error:e} = await supabaseAuth.auth.signInWithPassword({email:email.trim(),password});
+      if(e) throw e;
+      onAuthed(data.user);
+    }catch(e){
+      setError(e.message==='Invalid login credentials'?'Email o contraseña incorrectos.':e.message);
+    }
+    setBusy(false);
+  };
+
+  const handleReset = async () => {
+    if(!email.trim()){setError('Ingresa tu email.');return;}
+    setBusy(true);setError('');setSuccess('');
+    try{
+      const {error:e} = await supabaseAuth.auth.resetPasswordForEmail(email.trim(),{
+        redirectTo: window.location.href
+      });
+      if(e) throw e;
+      setSuccess('Te enviamos un email para restablecer tu contraseña.');
+    }catch(e){setError(e.message);}
+    setBusy(false);
+  };
+
+  return (
+    <div className="auth-screen">
+      <div className="auth-card">
+        <div className="auth-logo">
+          <h1>Gestor de Terrenos</h1>
+          <p>Guzmán & Larraín</p>
+        </div>
+        {error&&<div className="auth-error">{error}</div>}
+        {success&&<div className="auth-success">{success}</div>}
+        {mode==='login'?(
+          <>
+            <div className="field" style={{marginBottom:12}}>
+              <label>Email corporativo</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
+                placeholder="nombre@guzmanlarrain.cl" onKeyDown={e=>e.key==='Enter'&&handleLogin()}/>
+            </div>
+            <div className="field" style={{marginBottom:20}}>
+              <label>Contraseña</label>
+              <input type="password" value={password} onChange={e=>setPassword(e.target.value)}
+                onKeyDown={e=>e.key==='Enter'&&handleLogin()}/>
+            </div>
+            <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',padding:'11px'}}
+              onClick={handleLogin} disabled={busy}>
+              {busy?'Ingresando...':'Ingresar →'}
+            </button>
+            <div className="auth-footer">
+              <button className="auth-toggle" onClick={()=>{setMode('reset');setError('');setSuccess('');}}>
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+          </>
+        ):(
+          <>
+            <p style={{fontSize:13,color:'var(--ink3)',marginBottom:14,lineHeight:1.6}}>
+              Ingresa tu email y te enviaremos un link para restablecer tu contraseña.
+            </p>
+            <div className="field" style={{marginBottom:18}}>
+              <label>Email</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
+                placeholder="nombre@guzmanlarrain.cl" onKeyDown={e=>e.key==='Enter'&&handleReset()}/>
+            </div>
+            <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',padding:'11px'}}
+              onClick={handleReset} disabled={busy}>
+              {busy?'Enviando...':'Enviar email de recuperación'}
+            </button>
+            <div className="auth-footer">
+              <button className="auth-toggle" onClick={()=>{setMode('login');setError('');setSuccess('');}}>
+                ← Volver al login
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// USER BAR in Sidebar
+// ─────────────────────────────────────────────────────
+function UserBar({user, onLogout}) {
+  const initials = user.email?user.email.slice(0,2).toUpperCase():'U';
+  const shortEmail = user.email||'';
+  return (
+    <div className="user-bar">
+      <div className="user-avatar">{initials}</div>
+      <div className="user-info">
+        <div className="user-email">{shortEmail}</div>
+        <div className="user-role">Sesión activa</div>
+      </div>
+      <button className="logout-btn" onClick={onLogout} title="Cerrar sesión">⏻</button>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────
 // ROOT
 // ─────────────────────────────────────────────────────
 function Root() {
-  const [ready, setReady] = useState(false);
+  const [phase, setPhase] = useState('loading'); // loading | setup | auth | app
+  const [sbUrl, setSbUrl] = useState('');
+  const [sbKey, setSbKey] = useState('');
+  const [user, setUser] = useState(null);
+
   useEffect(()=>{
     const u=localStorage.getItem("sb_url"), k=localStorage.getItem("sb_key");
-    if(u&&k){db=new SupabaseClient(u,k);setReady(true);}
+    if(!u||!k){setPhase('setup');return;}
+    setSbUrl(u);setSbKey(k);
+    db=new SupabaseClient(u,k);
+    initSupabaseAuth(u,k);
+    // Check existing session
+    if(supabaseAuth){
+      supabaseAuth.auth.getSession().then(({data:{session}})=>{
+        if(session?.user){setUser(session.user);setPhase('app');}
+        else{setPhase('auth');}
+      }).catch(()=>setPhase('auth'));
+    } else {
+      setPhase('auth');
+    }
   },[]);
-  if(!ready) return <SetupScreen onSetup={(u,k)=>{db=new SupabaseClient(u,k);window.location.reload();}}/>;
-  return <App/>;
+
+  const handleSetup=(u,k)=>{
+    db=new SupabaseClient(u,k);
+    initSupabaseAuth(u,k);
+    setSbUrl(u);setSbKey(k);
+    setPhase('auth');
+  };
+
+  const handleAuthed=(u)=>{
+    setUser(u);setPhase('app');
+  };
+
+  const handleLogout=async()=>{
+    if(supabaseAuth) await supabaseAuth.auth.signOut();
+    setUser(null);setPhase('auth');
+  };
+
+  if(phase==='loading') return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'var(--bg)'}}>
+      <div className="spinner"/>
+    </div>
+  );
+  if(phase==='setup') return <SetupScreen onSetup={handleSetup}/>;
+  if(phase==='auth') return <AuthScreen onAuthed={handleAuthed} sbUrl={sbUrl} sbKey={sbKey}/>;
+  return <App user={user} onLogout={handleLogout}/>;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
