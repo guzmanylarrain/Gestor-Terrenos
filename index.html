@@ -434,7 +434,7 @@ function SetupScreen({onSetup}) {
     try{
       const client=new SupabaseClient(u,k);
       await client.test();
-      localStorage.setItem("sb_url",u);localStorage.setItem("sb_key",k);
+      localStorage.setItem("gt_url",u);localStorage.setItem("gt_key",k);
       onSetup(u,k);
     }catch(e){setErr("⚠️ "+e.message);}
     setBusy(false);
@@ -2052,7 +2052,7 @@ function Root() {
   const [user, setUser] = useState(null);
 
   useEffect(()=>{
-    const u=localStorage.getItem("sb_url"), k=localStorage.getItem("sb_key");
+    const u=localStorage.getItem("gt_url"), k=localStorage.getItem("gt_key");
     if(!u||!k){setPhase('setup');return;}
     setSbUrl(u);setSbKey(k);
     db=new SupabaseClient(u,k);
