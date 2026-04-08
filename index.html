@@ -2046,38 +2046,24 @@ function UserBar({user, onLogout}) {
 // ROOT
 // ─────────────────────────────────────────────────────
 function Root() {
-  const [phase, setPhase] = useState('loading'); // loading | setup | auth | app
-  const [sbUrl, setSbUrl] = useState('');
-  const [sbKey, setSbKey] = useState('');
+  const [phase, setPhase] = useState('loading');
   const [user, setUser] = useState(null);
 
   useEffect(()=>{
-    const u=localStorage.getItem("sb_url"), k=localStorage.getItem("sb_key");
-    if(!u||!k){setPhase('setup');return;}
-    setSbUrl(u);setSbKey(k);
-    db=new SupabaseClient(u,k);
-    initSupabaseAuth(u,k);
-    // Check existing session
+    db = new SupabaseClient('https://hpztcgooeuwacyvniyle.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwenRjZ29vZXV3YWN5dm5peWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODI1ODgsImV4cCI6MjA5MDQ1ODU4OH0.AdJMDIjXfXHGB697u3xyobEfkCM2IePX6lDYTbWtSF0');
+    initSupabaseAuth('https://hpztcgooeuwacyvniyle.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwenRjZ29vZXV3YWN5dm5peWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODI1ODgsImV4cCI6MjA5MDQ1ODU4OH0.AdJMDIjXfXHGB697u3xyobEfkCM2IePX6lDYTbWtSF0');
     if(supabaseAuth){
-      supabaseAuth.auth.getSession().then(({data:{session}})=>{
-        if(session?.user){setUser(session.user);setPhase('app');}
+      supabaseAuth.auth.getSession().then((res)=>{
+        const session = res.data && res.data.session;
+        if(session && session.user){setUser(session.user);setPhase('app');}
         else{setPhase('auth');}
       }).catch(()=>setPhase('auth'));
     } else {
-      setPhase('auth');
+      setTimeout(()=>setPhase('auth'), 500);
     }
   },[]);
 
-  const handleSetup=(u,k)=>{
-    db=new SupabaseClient(u,k);
-    initSupabaseAuth(u,k);
-    setSbUrl(u);setSbKey(k);
-    setPhase('auth');
-  };
-
-  const handleAuthed=(u)=>{
-    setUser(u);setPhase('app');
-  };
+  const handleAuthed=(u)=>{setUser(u);setPhase('app');};
 
   const handleLogout=async()=>{
     if(supabaseAuth) await supabaseAuth.auth.signOut();
@@ -2089,8 +2075,7 @@ function Root() {
       <div className="spinner"/>
     </div>
   );
-  if(phase==='setup') return <SetupScreen onSetup={handleSetup}/>;
-  if(phase==='auth') return <AuthScreen onAuthed={handleAuthed} sbUrl={sbUrl} sbKey={sbKey}/>;
+  if(phase==='auth') return <AuthScreen onAuthed={handleAuthed}/>;
   return <App user={user} onLogout={handleLogout}/>;
 }
 
