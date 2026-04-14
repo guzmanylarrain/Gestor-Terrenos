@@ -896,7 +896,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, onSelectTerreno, hiddenRol
           ):(
             <>
               <div className="dt-head" style={{gridTemplateColumns:"150px 1fr 110px 90px"}}>
-                <span>Terreno · ROL</span><span>Detalle</span><span>Estatus</span><span>Responsable</span>
+                <span>Terreno · ROL</span><span>Detalle</span><span>Estatus</span><span>Editado por</span>
               </div>
               {filteredBita.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso").slice(0,12).map(b=>{
                 const t=visTer.find(x=>x.rol===b.terreno_rol);
@@ -908,7 +908,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, onSelectTerreno, hiddenRol
                     </div>
                     <span style={{color:"var(--ink2)",fontSize:12}}>{b.detalle.slice(0,70)}{b.detalle.length>70?"…":""}</span>
                     <span><span className={`estatus-chip est-${b.estatus==="En Proceso"?"proceso":b.estatus.toLowerCase()}`}>{b.estatus}</span></span>
-                    <span style={{fontSize:12,color:"var(--ink3)"}}>{b.responsable||"—"}</span>
+                    <span style={{fontSize:12,color:"var(--ink3)"}}>{b.editado_por||"—"}</span>
                   </div>
                 );
               })}
@@ -1211,7 +1211,7 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
     try{
       await db.insert("bitacora",[{
         terreno_rol:terreno.rol, fecha:form.fecha, detalle:form.detalle.trim(),
-        estatus:form.estatus, responsable:autorActual||form.responsable||null
+        estatus:form.estatus, responsable:form.responsable||null, editado_por:autorActual||null
       }]);
       setForm({fecha:today(),detalle:"",estatus:"Pendiente",responsable:""});
       setShowAdd(false);
@@ -1223,7 +1223,8 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
   const saveEdit = async (entry) => {
     try{
       await db.patch("bitacora","id=eq."+entry.id, {
-        fecha:editForm.fecha, detalle:editForm.detalle, estatus:editForm.estatus, responsable:editForm.responsable||null
+        fecha:editForm.fecha, detalle:editForm.detalle, estatus:editForm.estatus,
+        responsable:editForm.responsable||null, editado_por:autorActual||null
       });
       setEditingId(null);
       onRefresh();
@@ -1312,8 +1313,9 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
                   <div className="bita-detalle">{entry.detalle}</div>
                   <div className="bita-meta">
                     <span className={`estatus-chip est-${st==="En Proceso"?"proceso":st.toLowerCase()}`}>{st}</span>
-                    {entry.responsable&&<span style={{fontSize:11,color:"var(--ink3)"}}>{entry.responsable}</span>}
+                    {entry.responsable&&<span style={{fontSize:11,color:"var(--ink3)"}}>👤 {entry.responsable}</span>}
                     {files.length>0&&<span style={{fontSize:11,color:"var(--ink3)"}}>📎{files.length}</span>}
+                    {entry.editado_por&&<span style={{fontSize:10.5,color:"var(--teal)",background:"var(--teal-lt)",padding:"1px 7px",borderRadius:8,fontWeight:500}}>{entry.editado_por}</span>}
                     <span style={{fontSize:10,color:"var(--ink3)"}}>{isOpen?"▲":"▼"}</span>
                   </div>
                 </div>
