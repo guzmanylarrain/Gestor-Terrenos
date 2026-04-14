@@ -1186,7 +1186,7 @@ function MontoInput({value, onSave}) {
 // ─────────────────────────────────────────────────────
 // BITÁCORA TAB
 // ─────────────────────────────────────────────────────
-function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRefresh}) {
+function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRefresh, user}) {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({fecha:today(), detalle:"", estatus:"Pendiente", responsable:""});
   const [openId, setOpenId] = useState(null);
@@ -1197,13 +1197,21 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const setEF = (k,v) => setEditForm(f=>({...f,[k]:v}));
 
+  // Derive display name from email: nombre.apellido@... → "Nombre Apellido"
+  const nameFromEmail = (email) => {
+    if(!email) return null;
+    const local = email.split("@")[0];
+    return local.split(".").map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(" ");
+  };
+  const autorActual = nameFromEmail(user?.email);
+
   const addEntry = async () => {
     if(!form.detalle.trim()) return;
     setAddBusy(true);
     try{
       await db.insert("bitacora",[{
         terreno_rol:terreno.rol, fecha:form.fecha, detalle:form.detalle.trim(),
-        estatus:form.estatus, responsable:form.responsable||null
+        estatus:form.estatus, responsable:autorActual||form.responsable||null
       }]);
       setForm({fecha:today(),detalle:"",estatus:"Pendiente",responsable:""});
       setShowAdd(false);
@@ -1903,7 +1911,7 @@ function App({user, onLogout}) {
                 <CuotasTab terreno={selTerreno} cuotas={cuotas} onRefresh={refreshAll}/>
               )}
               {activeTab==="bitacora"&&(
-                <BitacoraTab terreno={selTerreno} bitacora={bitacora} archivos={archivos} subtareas={subtareas} archivosSub={archivosSub} onRefresh={refreshAll}/>
+                <BitacoraTab terreno={selTerreno} bitacora={bitacora} archivos={archivos} subtareas={subtareas} archivosSub={archivosSub} onRefresh={refreshAll} user={user}/>
               )}
             </>
           )}
