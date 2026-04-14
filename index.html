@@ -390,7 +390,7 @@ const fmtM2 = n => n ? Math.round(Number(n)).toLocaleString("es-CL")+" m²" : "�
 const CUOTA_DATES = {1:"04-30", 2:"06-30", 3:"09-30", 4:"11-28"};
 const CUOTA_LABELS = {1:"1ª Cuota — Abril", 2:"2ª Cuota — Junio", 3:"3ª Cuota — Septiembre", 4:"4ª Cuota — Noviembre"};
 const CUOTA_SHORT  = {1:"1ª", 2:"2ª", 3:"3ª", 4:"4ª"};
-const RESPONSABLES = ["Mauricio","Solange"];
+const RESPONSABLES = ["Domingo Mackenna","Mauricio González","Rodrigo Ibarra","Solange Faúndez"];
 const ESTATUS_OPTS = ["Pendiente","En Proceso","Finalizada"];
 const CIUDADES = ["Arica","Iquique","Antofagasta","Santiago","Talcahuano","Maipú","Huechuraba"];
 
@@ -1211,7 +1211,7 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
     try{
       await db.insert("bitacora",[{
         terreno_rol:terreno.rol, fecha:form.fecha, detalle:form.detalle.trim(),
-        estatus:form.estatus, responsable:form.responsable||null, editado_por:autorActual||null
+        estatus:form.estatus, responsable:autorActual||null, editado_por:autorActual||null
       }]);
       setForm({fecha:today(),detalle:"",estatus:"Pendiente",responsable:""});
       setShowAdd(false);
@@ -1224,7 +1224,7 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
     try{
       await db.patch("bitacora","id=eq."+entry.id, {
         fecha:editForm.fecha, detalle:editForm.detalle, estatus:editForm.estatus,
-        responsable:editForm.responsable||null, editado_por:autorActual||null
+        responsable:autorActual||null, editado_por:autorActual||null
       });
       setEditingId(null);
       onRefresh();
