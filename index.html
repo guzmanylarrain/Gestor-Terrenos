@@ -52,7 +52,29 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 .t-info{flex:1;min-width:0}
 .t-name{font-size:11.5px;color:#b0adb6;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .terreno-item.active .t-name{color:#fff}
-.t-rol{font-size:9.5px;color:#5a5750;font-family:monospace}
+.t-rol{font-size:11px;color:#b8b4ac;font-family:monospace;font-weight:500;letter-spacing:0.2px;margin-top:1px}
+.terreno-item.active .t-rol{color:#ffffff}
+.prio-chip{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px}
+.prio-alta{background:var(--red-lt);color:var(--red)}
+.prio-media{background:var(--amber-lt);color:var(--amber)}
+.prio-baja{background:var(--green-lt);color:var(--green)}
+
+.multi-select{position:relative;display:inline-block}
+.ms-trigger{padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--white);font-size:12px;cursor:pointer;min-width:150px;max-width:220px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms-trigger:hover{border-color:var(--teal)}
+.ms-trigger.has-selection{border-color:var(--teal);color:var(--teal);font-weight:500}
+.ms-dropdown{position:absolute;top:calc(100% + 4px);left:0;background:var(--white);border:1px solid var(--line);border-radius:6px;padding:5px;min-width:210px;max-height:300px;overflow-y:auto;z-index:100;box-shadow:var(--shadow-lg)}
+.ms-item{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:4px;cursor:pointer;font-size:12px;user-select:none}
+.ms-item:hover{background:var(--bg)}
+.ms-item input{width:auto;margin:0;cursor:pointer}
+.ms-clear{width:100%;margin-top:4px;padding:6px;font-size:11px;color:var(--red);background:none;border:none;border-top:1px solid var(--line);cursor:pointer;font-weight:500}
+.ms-clear:hover{background:var(--red-lt)}
+.ms-empty{padding:10px;color:var(--ink3);font-size:11px;text-align:center}
+
+.dash-subtabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.dash-subtab{padding:9px 16px;border:none;background:none;font-size:13px;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;font-weight:500}
+.dash-subtab:hover{color:var(--ink2)}
+.dash-subtab.active{color:var(--teal);border-bottom-color:var(--teal)}
 .sidebar-bottom{padding:6px 8px 12px;display:flex;flex-direction:column;gap:4px}
 .sbtn{width:100%;padding:8px 12px;border-radius:6px;font-size:11.5px;font-weight:500;transition:all 0.15s;text-align:left;border:1px solid;display:flex;align-items:center;gap:7px}
 .sbtn-primary{background:rgba(26,95,110,0.25);border-color:rgba(26,95,110,0.4);color:#90c4cc}
@@ -391,7 +413,9 @@ const CUOTA_DATES = {1:"04-30", 2:"06-30", 3:"09-30", 4:"11-28"};
 const CUOTA_LABELS = {1:"1ª Cuota — Abril", 2:"2ª Cuota — Junio", 3:"3ª Cuota — Septiembre", 4:"4ª Cuota — Noviembre"};
 const CUOTA_SHORT  = {1:"1ª", 2:"2ª", 3:"3ª", 4:"4ª"};
 const RESPONSABLES = ["Domingo Mackenna","Mauricio González","Rodrigo Ibarra","Solange Faúndez"];
+const BITACORA_RESPONSABLES = ["Solange Faúndez","Rodrigo Ibarra"];
 const ESTATUS_OPTS = ["Pendiente","En Proceso","Finalizada"];
+const PRIORIDADES = ["Alta","Media","Baja"];
 const CIUDADES = ["Arica","Iquique","Antofagasta","Santiago","Talcahuano","Maipú","Huechuraba"];
 
 function cuotaStatus(c) {
@@ -415,6 +439,85 @@ function fmtSize(b) {
   if(b<1024) return b+"B";
   if(b<1048576) return (b/1024).toFixed(1)+"KB";
   return (b/1048576).toFixed(1)+"MB";
+}
+
+// ─────────────────────────────────────────────────────
+// MULTI-SELECT (dropdown with checkboxes)
+// ─────────────────────────────────────────────────────
+function MultiSelect({label, options, selected, onChange}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(()=>{
+    if(!open) return;
+    const handler = e => { if(ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  },[open]);
+  const count = selected.length;
+  const trigLabel = count===0 ? label : `${label} (${count})`;
+  return (
+    <div className="multi-select" ref={ref}>
+      <button className={"ms-trigger"+(count>0?" has-selection":"")} onClick={()=>setOpen(o=>!o)}>
+        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{trigLabel}</span>
+        <span style={{fontSize:9,opacity:0.6}}>▼</span>
+      </button>
+      {open && (
+        <div className="ms-dropdown">
+          {options.length===0 ? (
+            <div className="ms-empty">Sin opciones</div>
+          ) : options.map(opt => {
+            const isObj = typeof opt === "object";
+            const val = isObj ? opt.value : opt;
+            const lbl = isObj ? opt.label : opt;
+            return (
+              <label key={String(val)} className="ms-item">
+                <input type="checkbox"
+                  checked={selected.includes(val)}
+                  onChange={e => {
+                    const next = e.target.checked
+                      ? [...selected, val]
+                      : selected.filter(x=>x!==val);
+                    onChange(next);
+                  }}/>
+                <span>{lbl}</span>
+              </label>
+            );
+          })}
+          {count>0 && <button className="ms-clear" onClick={()=>onChange([])}>✕ Limpiar selección</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// RESPONSABLE FIELD (dropdown + optional free text)
+// ─────────────────────────────────────────────────────
+function ResponsableField({value, onChange, options}) {
+  const startsCustom = !!value && !options.includes(value);
+  const [otro, setOtro] = useState(startsCustom);
+  useEffect(()=>{
+    if(!value){setOtro(false);return;}
+    if(!options.includes(value)) setOtro(true);
+  },[value, options]);
+  const mode = otro ? "__otro__" : (value || "");
+  return (
+    <>
+      <select value={mode} onChange={e=>{
+        const v = e.target.value;
+        if(v==="__otro__"){setOtro(true); onChange("");}
+        else {setOtro(false); onChange(v||null);}
+      }}>
+        <option value="">— Sin asignar —</option>
+        {options.map(r=><option key={r} value={r}>{r}</option>)}
+        <option value="__otro__">— Otro (escribir) —</option>
+      </select>
+      {otro && (
+        <input type="text" style={{marginTop:6}} placeholder="Nombre del responsable"
+          value={value||""} onChange={e=>onChange(e.target.value)} autoFocus/>
+      )}
+    </>
+  );
 }
 
 // ─────────────────────────────────────────────────────
@@ -709,36 +812,96 @@ function SubtareasSection({bitacoraId, terrenoRol, subtareas, archivosSub, onRef
 // ─────────────────────────────────────────────────────
 // DASHBOARD
 // ─────────────────────────────────────────────────────
-function Dashboard({terrenos, allCuotas, allBitacora, onSelectTerreno, hiddenRols}) {
-  const [filterCiudad,setFilterCiudad]=useState('');
-  const [filterResp,setFilterResp]=useState('');
-  const [filterEstado,setFilterEstado]=useState('');
+function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSelectTerreno, hiddenRols}) {
+  const [subTab, setSubTab] = useState("principal");
 
-  const visTer=terrenos.filter(t=>!hiddenRols.has(t.rol));
-  const visRols=new Set(visTer.map(t=>t.rol));
-  const visCuotas=allCuotas.filter(c=>visRols.has(c.terreno_rol));
-  const visBita=allBitacora.filter(b=>visRols.has(b.terreno_rol));
+  // Principal tab filters (multi-select)
+  const [filterCiudades, setFilterCiudades] = useState([]);
+  const [filterProyectos, setFilterProyectos] = useState([]);
+  const [filterVigente, setFilterVigente] = useState([]);
+  const [filterSobretasa, setFilterSobretasa] = useState([]);
 
-  const totalM2=visTer.reduce((s,t)=>s+(parseFloat(t.m2_sii)||0),0);
-  const totalAvaluo=visTer.reduce((s,t)=>s+(parseInt(t.avaluo)||0),0);
-  const anio=new Date().getFullYear();
+  // Tareas tab filters (multi-select)
+  const [filterBitaCiudades, setFilterBitaCiudades] = useState([]);
+  const [filterBitaResp, setFilterBitaResp] = useState([]);
+  const [filterBitaEstado, setFilterBitaEstado] = useState([]);
 
-  const sobretasaSI=visTer.filter(t=>t.sobretasa);
-  const sobretasaNO=visTer.filter(t=>!t.sobretasa);
-  const rolsConSobre=new Set(sobretasaSI.map(t=>t.rol));
-  const totalConSobre=visCuotas.filter(c=>rolsConSobre.has(c.terreno_rol)).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
-  const totalSinSobre=visCuotas.filter(c=>!rolsConSobre.has(c.terreno_rol)).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
-  const pendingBita=visBita.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso");
+  const visTer = terrenos.filter(t=>!hiddenRols.has(t.rol));
+  const visRols = new Set(visTer.map(t=>t.rol));
+  const visCuotas = allCuotas.filter(c=>visRols.has(c.terreno_rol));
+  const visBita = allBitacora.filter(b=>visRols.has(b.terreno_rol));
+  const visDev = allDevoluciones.filter(d=>visRols.has(d.terreno_rol));
 
-  const filteredBita=visBita.filter(b=>{
-    const t=visTer.find(x=>x.rol===b.terreno_rol);
-    return (!filterCiudad||(t&&t.ciudad===filterCiudad))
-      &&(!filterResp||b.responsable===filterResp)
-      &&(!filterEstado||b.estatus===filterEstado);
+  // Filter option lists
+  const ciudadOpts = [...new Set(visTer.map(t=>t.ciudad).filter(Boolean))].sort();
+  const proyectoOpts = [...new Set(visTer.map(t=>t.proyecto).filter(Boolean))].sort();
+  const respOpts = [...new Set(visBita.map(b=>b.responsable).filter(Boolean))].sort();
+
+  // Apply principal filters across all portfolio-derived data
+  const filTer = visTer.filter(t =>
+    (filterCiudades.length===0 || filterCiudades.includes(t.ciudad))
+    && (filterProyectos.length===0 || filterProyectos.includes(t.proyecto))
+    && (filterVigente.length===0 || filterVigente.includes(t.vigente))
+    && (filterSobretasa.length===0 || filterSobretasa.includes(!!t.sobretasa))
+  );
+  const filRols = new Set(filTer.map(t=>t.rol));
+  const filCuotas = visCuotas.filter(c=>filRols.has(c.terreno_rol));
+  const filDev = visDev.filter(d=>filRols.has(d.terreno_rol));
+  const filBita = visBita.filter(b=>filRols.has(b.terreno_rol));
+
+  const anio = new Date().getFullYear();
+  const contribAnio = filCuotas.filter(c=>c.anio===anio).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  const devAnio = filDev.filter(d=>d.fecha&&d.fecha.startsWith(anio+"-")).reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+  const netoAnio = contribAnio - devAnio;
+
+  const yearlyMap={};
+  filCuotas.forEach(c=>{
+    if(!yearlyMap[c.anio]) yearlyMap[c.anio]={anio:c.anio,contrib:0,dev:0};
+    yearlyMap[c.anio].contrib+=parseInt(c.monto)||0;
+  });
+  filDev.forEach(d=>{
+    if(!d.fecha) return;
+    const y=parseInt(d.fecha.slice(0,4));
+    if(!yearlyMap[y]) yearlyMap[y]={anio:y,contrib:0,dev:0};
+    yearlyMap[y].dev+=parseInt(d.monto)||0;
+  });
+  const yearly = Object.values(yearlyMap).sort((a,b)=>b.anio-a.anio);
+
+  const totalM2 = filTer.reduce((s,t)=>s+(parseFloat(t.m2_sii)||0),0);
+  const totalAvaluo = filTer.reduce((s,t)=>s+(parseInt(t.avaluo)||0),0);
+
+  const sobretasaSI = filTer.filter(t=>t.sobretasa);
+  const sobretasaNO = filTer.filter(t=>!t.sobretasa);
+  const rolsConSobre = new Set(sobretasaSI.map(t=>t.rol));
+  const totalConSobre = filCuotas.filter(c=>rolsConSobre.has(c.terreno_rol)).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  const totalSinSobre = filCuotas.filter(c=>!rolsConSobre.has(c.terreno_rol)).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  const pendingBita = filBita.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso");
+
+  const byCiudad={};
+  filTer.forEach(t=>{
+    if(!byCiudad[t.ciudad]) byCiudad[t.ciudad]={n:0,imp:0};
+    byCiudad[t.ciudad].n++;
+  });
+  filCuotas.filter(c=>c.anio===anio).forEach(c=>{
+    const t=filTer.find(x=>x.rol===c.terreno_rol);
+    if(t&&byCiudad[t.ciudad]) byCiudad[t.ciudad].imp+=parseInt(c.monto)||0;
+  });
+
+  const hasPrincipalFilters = filterCiudades.length||filterProyectos.length||filterVigente.length||filterSobretasa.length;
+  const clearPrincipalFilters = () => {
+    setFilterCiudades([]); setFilterProyectos([]); setFilterVigente([]); setFilterSobretasa([]);
+  };
+
+  // ── Tareas tab (independent filters) ──
+  const bitaFiltered = visBita.filter(b=>{
+    const t = visTer.find(x=>x.rol===b.terreno_rol);
+    return (filterBitaCiudades.length===0 || (t && filterBitaCiudades.includes(t.ciudad)))
+      && (filterBitaResp.length===0 || filterBitaResp.includes(b.responsable))
+      && (filterBitaEstado.length===0 || filterBitaEstado.includes(b.estatus));
   });
 
   const respMap={};
-  filteredBita.forEach(b=>{
+  bitaFiltered.forEach(b=>{
     const r=b.responsable||'Sin asignar';
     if(!respMap[r]) respMap[r]={name:r,total:0,pendiente:0,proceso:0,finalizada:0};
     respMap[r].total++;
@@ -746,176 +909,226 @@ function Dashboard({terrenos, allCuotas, allBitacora, onSelectTerreno, hiddenRol
     else if(b.estatus==='En Proceso') respMap[r].proceso++;
     else if(b.estatus==='Finalizada') respMap[r].finalizada++;
   });
-  const respList=Object.values(respMap).sort((a,b)=>b.total-a.total);
+  const respList = Object.values(respMap).sort((a,b)=>b.total-a.total);
 
-  const ciudades=[...new Set(visTer.map(t=>t.ciudad))].sort();
-  const responsables=[...new Set(visBita.map(b=>b.responsable).filter(Boolean))].sort();
+  const hasBitaFilters = filterBitaCiudades.length||filterBitaResp.length||filterBitaEstado.length;
+  const clearBitaFilters = () => {
+    setFilterBitaCiudades([]); setFilterBitaResp([]); setFilterBitaEstado([]);
+  };
 
-  const byCiudad={};
-  visTer.forEach(t=>{
-    if(!byCiudad[t.ciudad]) byCiudad[t.ciudad]={n:0,imp:0};
-    byCiudad[t.ciudad].n++;
-  });
-  visCuotas.filter(c=>c.anio===anio).forEach(c=>{
-    const t=visTer.find(x=>x.rol===c.terreno_rol);
-    if(t&&byCiudad[t.ciudad]) byCiudad[t.ciudad].imp+=parseInt(c.monto)||0;
-  });
-
-  const hasFilters=filterCiudad||filterResp||filterEstado;
+  const SOBRETASA_OPTS = [{value:true,label:"Con sobretasa"},{value:false,label:"Sin sobretasa"}];
+  const VIGENTE_OPTS = [{value:"SI",label:"Vigente — SI"},{value:"NO",label:"Vigente — NO"}];
 
   return (
     <>
-      {/* FILTER BAR */}
-      <div className="dash-filter-bar">
-        <label>Filtrar:</label>
-        <select value={filterCiudad} onChange={e=>setFilterCiudad(e.target.value)}>
-          <option value="">Todas las ciudades</option>
-          {ciudades.map(c=><option key={c}>{c}</option>)}
-        </select>
-        <select value={filterResp} onChange={e=>setFilterResp(e.target.value)}>
-          <option value="">Todos los responsables</option>
-          {responsables.map(r=><option key={r}>{r}</option>)}
-        </select>
-        <select value={filterEstado} onChange={e=>setFilterEstado(e.target.value)}>
-          <option value="">Todos los estados</option>
-          {ESTATUS_OPTS.map(s=><option key={s}>{s}</option>)}
-        </select>
-        {hasFilters&&<button className="dash-clr" onClick={()=>{setFilterCiudad('');setFilterResp('');setFilterEstado('');}}>✕ Limpiar filtros</button>}
+      <div className="dash-subtabs">
+        <button className={"dash-subtab"+(subTab==="principal"?" active":"")} onClick={()=>setSubTab("principal")}>📊 Principal</button>
+        <button className={"dash-subtab"+(subTab==="tareas"?" active":"")} onClick={()=>setSubTab("tareas")}>📓 Tareas / Bitácora</button>
       </div>
 
-      {/* KPI — 5 cards */}
-      <div className="kpi-grid-5">
-        <div className="kpi-card teal">
-          <div className="kpi-label">Portafolio total</div>
-          <div className="kpi-value">{Math.round(totalM2).toLocaleString("es-CL")}</div>
-          <div className="kpi-sub">m² · {visTer.length} terrenos</div>
-        </div>
-        <div className="kpi-card teal">
-          <div className="kpi-label">Avalúo fiscal global</div>
-          <div className="kpi-value" style={{fontSize:15}}>{fmtCLP(totalAvaluo)}</div>
-          <div className="kpi-sub">Según SII · {anio}</div>
-        </div>
-        <div className="kpi-card" style={{borderTopColor:"var(--red)"}}>
-          <div className="kpi-label">Con sobretasa</div>
-          <div className="kpi-value" style={{color:"var(--red)"}}>{sobretasaSI.length}</div>
-          <div className="kpi-sub">Cuotas {anio}: {fmtCLP(totalConSobre)}</div>
-        </div>
-        <div className="kpi-card good">
-          <div className="kpi-label">Sin sobretasa</div>
-          <div className="kpi-value">{sobretasaNO.length}</div>
-          <div className="kpi-sub">Cuotas {anio}: {fmtCLP(totalSinSobre)}</div>
-        </div>
-        <div className={`kpi-card${pendingBita.length>0?" warning":""}`}>
-          <div className="kpi-label">Tareas en bitácora</div>
-          <div className="kpi-value">{pendingBita.length}</div>
-          <div className="kpi-sub">Pendiente o en proceso</div>
-        </div>
-      </div>
-
-      {/* IMPUESTO + SOBRETASA */}
-      <div className="dash-2col">
-        <div className="dash-section">
-          <h4>📍 Impuesto {anio} por ciudad</h4>
-          <div className="data-table">
-            <div className="dt-head" style={{gridTemplateColumns:"1fr 60px 110px"}}>
-              <span>Ciudad</span><span style={{textAlign:"center"}}>Terrenos</span><span style={{textAlign:"right"}}>Total</span>
-            </div>
-            {Object.entries(byCiudad).sort((a,b)=>b[1].imp-a[1].imp).map(([city,d])=>(
-              <div key={city} className="dt-row" style={{gridTemplateColumns:"1fr 60px 110px"}}>
-                <span style={{fontWeight:600}}>{city}</span>
-                <span style={{textAlign:"center",color:"var(--ink3)"}}>{d.n}</span>
-                <span style={{textAlign:"right",color:"var(--ink2)"}}>{fmtCLP(d.imp)}</span>
-              </div>
-            ))}
-            {Object.keys(byCiudad).length===0&&<div className="dt-empty">Sin datos</div>}
+      {subTab==="principal" && (
+        <>
+          <div className="dash-filter-bar">
+            <label style={{marginRight:4}}>Portafolio:</label>
+            <MultiSelect label="Ciudad" options={ciudadOpts} selected={filterCiudades} onChange={setFilterCiudades}/>
+            <MultiSelect label="Proyecto" options={proyectoOpts} selected={filterProyectos} onChange={setFilterProyectos}/>
+            <MultiSelect label="Vigente" options={VIGENTE_OPTS} selected={filterVigente} onChange={setFilterVigente}/>
+            <MultiSelect label="Sobretasa" options={SOBRETASA_OPTS} selected={filterSobretasa} onChange={setFilterSobretasa}/>
+            {hasPrincipalFilters?<button className="dash-clr" onClick={clearPrincipalFilters}>✕ Limpiar filtros</button>:null}
+            <span style={{marginLeft:"auto",fontSize:11,color:"var(--ink3)"}}>
+              {filTer.length} terrenos{hasPrincipalFilters?` (de ${visTer.length})`:""}
+            </span>
           </div>
-        </div>
-        <div className="dash-section">
-          <h4>⚖️ Desglose por sobretasa</h4>
-          <div className="data-table">
-            <div className="dt-head" style={{gridTemplateColumns:"1fr 70px 130px"}}>
-              <span>Categoría</span><span style={{textAlign:"center"}}>Terrenos</span><span style={{textAlign:"right"}}>Cuotas {anio}</span>
+
+          <div className="kpi-grid-5">
+            <div className="kpi-card teal">
+              <div className="kpi-label">Portafolio total</div>
+              <div className="kpi-value">{Math.round(totalM2).toLocaleString("es-CL")}</div>
+              <div className="kpi-sub">m² · {filTer.length} terrenos</div>
             </div>
-            <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px"}}>
-              <span style={{fontWeight:600,color:"var(--red)"}}>⚠ Con sobretasa</span>
-              <span style={{textAlign:"center"}}>{sobretasaSI.length}</span>
-              <span style={{textAlign:"right",fontWeight:600,color:"var(--red)"}}>{fmtCLP(totalConSobre)}</span>
+            <div className="kpi-card teal">
+              <div className="kpi-label">Avalúo fiscal global</div>
+              <div className="kpi-value" style={{fontSize:15}}>{fmtCLP(totalAvaluo)}</div>
+              <div className="kpi-sub">Según SII · {anio}</div>
             </div>
-            <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px"}}>
-              <span style={{fontWeight:600,color:"var(--green)"}}>✓ Sin sobretasa</span>
-              <span style={{textAlign:"center"}}>{sobretasaNO.length}</span>
-              <span style={{textAlign:"right",fontWeight:600,color:"var(--green)"}}>{fmtCLP(totalSinSobre)}</span>
+            <div className="kpi-card" style={{borderTopColor:"var(--red)"}}>
+              <div className="kpi-label">Con sobretasa</div>
+              <div className="kpi-value" style={{color:"var(--red)"}}>{sobretasaSI.length}</div>
+              <div className="kpi-sub">Cuotas {anio}: {fmtCLP(totalConSobre)}</div>
             </div>
-            <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px",background:"var(--bg)"}}>
-              <span style={{fontWeight:700}}>TOTAL</span>
-              <span style={{textAlign:"center",fontWeight:600}}>{visTer.length}</span>
-              <span style={{textAlign:"right",fontWeight:700}}>{fmtCLP(totalConSobre+totalSinSobre)}</span>
+            <div className="kpi-card good">
+              <div className="kpi-label">Sin sobretasa</div>
+              <div className="kpi-value">{sobretasaNO.length}</div>
+              <div className="kpi-sub">Cuotas {anio}: {fmtCLP(totalSinSobre)}</div>
+            </div>
+            <div className={`kpi-card${pendingBita.length>0?" warning":""}`}>
+              <div className="kpi-label">Tareas en bitácora</div>
+              <div className="kpi-value">{pendingBita.length}</div>
+              <div className="kpi-sub">Pendiente o en proceso</div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* TIMELINE CHART */}
-      <div className="chart-card">
-        <h4>📈 Evolución de contribuciones por año y cuota</h4>
-        <ContribChart cuotas={visCuotas}/>
-      </div>
-
-      {/* TASKS BY RESPONSABLE */}
-      <div className="dash-section">
-        <h4>👤 Tareas por responsable{hasFilters?" — filtrado":""}</h4>
-        <div className="resp-table">
-          <div className="resp-table-head" style={{gridTemplateColumns:"1fr 70px 90px 90px 90px"}}>
-            <span>Responsable</span>
-            <span style={{textAlign:"center"}}>Total</span>
-            <span style={{textAlign:"center",color:"var(--ink3)"}}>Pendiente</span>
-            <span style={{textAlign:"center",color:"var(--teal)"}}>En Proceso</span>
-            <span style={{textAlign:"center",color:"var(--green)"}}>Finalizada</span>
+          <div className="kpi-grid-5" style={{gridTemplateColumns:"repeat(3,1fr)"}}>
+            <div className="kpi-card teal">
+              <div className="kpi-label">Contribuciones {anio}</div>
+              <div className="kpi-value" style={{fontSize:16}}>{fmtCLP(contribAnio)}</div>
+              <div className="kpi-sub">Total facturado en cuotas</div>
+            </div>
+            <div className="kpi-card" style={{borderTopColor:"var(--red)"}}>
+              <div className="kpi-label">Devoluciones {anio}</div>
+              <div className="kpi-value" style={{fontSize:16,color:"var(--red)"}}>{fmtCLP(devAnio)}</div>
+              <div className="kpi-sub">{filDev.filter(d=>d.fecha&&d.fecha.startsWith(anio+"-")).length} registradas</div>
+            </div>
+            <div className="kpi-card" style={{borderTopColor:netoAnio>=0?"var(--green)":"var(--red)"}}>
+              <div className="kpi-label">Neto {anio}</div>
+              <div className="kpi-value" style={{fontSize:16,color:netoAnio>=0?"var(--green)":"var(--red)"}}>{fmtCLP(netoAnio)}</div>
+              <div className="kpi-sub">Contribuciones − Devoluciones</div>
+            </div>
           </div>
-          {respList.length===0
-            ?<div className="dt-empty">Sin tareas registradas</div>
-            :respList.map(r=>(
-              <div key={r.name} className="resp-table-row" style={{gridTemplateColumns:"1fr 70px 90px 90px 90px"}}>
-                <span style={{fontWeight:600}}>{r.name}</span>
-                <span style={{textAlign:"center",fontWeight:700}}>{r.total}</span>
-                <span style={{textAlign:"center"}}>{r.pendiente>0&&<span className="estatus-chip est-pendiente">{r.pendiente}</span>}</span>
-                <span style={{textAlign:"center"}}>{r.proceso>0&&<span className="estatus-chip est-proceso">{r.proceso}</span>}</span>
-                <span style={{textAlign:"center"}}>{r.finalizada>0&&<span className="estatus-chip est-finalizada">{r.finalizada}</span>}</span>
-              </div>
-            ))
-          }
-        </div>
-      </div>
 
-      {/* BITACORA ACTIVE TASKS */}
-      <div className="dash-section">
-        <h4>📓 Bitácora — tareas activas{hasFilters?" — filtrado":""}</h4>
-        <div className="data-table">
-          {filteredBita.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso").length===0?(
-            <div className="dt-empty">✓ Sin tareas pendientes</div>
-          ):(
-            <>
-              <div className="dt-head" style={{gridTemplateColumns:"150px 1fr 110px 90px"}}>
-                <span>Terreno · ROL</span><span>Detalle</span><span>Estatus</span><span>Editado por</span>
+          <div className="dash-2col">
+            <div className="dash-section">
+              <h4>📍 Impuesto {anio} por ciudad</h4>
+              <div className="data-table">
+                <div className="dt-head" style={{gridTemplateColumns:"1fr 60px 110px"}}>
+                  <span>Ciudad</span><span style={{textAlign:"center"}}>Terrenos</span><span style={{textAlign:"right"}}>Total</span>
+                </div>
+                {Object.entries(byCiudad).sort((a,b)=>b[1].imp-a[1].imp).map(([city,d])=>(
+                  <div key={city} className="dt-row" style={{gridTemplateColumns:"1fr 60px 110px"}}>
+                    <span style={{fontWeight:600}}>{city}</span>
+                    <span style={{textAlign:"center",color:"var(--ink3)"}}>{d.n}</span>
+                    <span style={{textAlign:"right",color:"var(--ink2)"}}>{fmtCLP(d.imp)}</span>
+                  </div>
+                ))}
+                {Object.keys(byCiudad).length===0&&<div className="dt-empty">Sin datos</div>}
               </div>
-              {filteredBita.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso").slice(0,12).map(b=>{
-                const t=visTer.find(x=>x.rol===b.terreno_rol);
+            </div>
+            <div className="dash-section">
+              <h4>⚖️ Desglose por sobretasa</h4>
+              <div className="data-table">
+                <div className="dt-head" style={{gridTemplateColumns:"1fr 70px 130px"}}>
+                  <span>Categoría</span><span style={{textAlign:"center"}}>Terrenos</span><span style={{textAlign:"right"}}>Cuotas {anio}</span>
+                </div>
+                <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px"}}>
+                  <span style={{fontWeight:600,color:"var(--red)"}}>⚠ Con sobretasa</span>
+                  <span style={{textAlign:"center"}}>{sobretasaSI.length}</span>
+                  <span style={{textAlign:"right",fontWeight:600,color:"var(--red)"}}>{fmtCLP(totalConSobre)}</span>
+                </div>
+                <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px"}}>
+                  <span style={{fontWeight:600,color:"var(--green)"}}>✓ Sin sobretasa</span>
+                  <span style={{textAlign:"center"}}>{sobretasaNO.length}</span>
+                  <span style={{textAlign:"right",fontWeight:600,color:"var(--green)"}}>{fmtCLP(totalSinSobre)}</span>
+                </div>
+                <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px",background:"var(--bg)"}}>
+                  <span style={{fontWeight:700}}>TOTAL</span>
+                  <span style={{textAlign:"center",fontWeight:600}}>{filTer.length}</span>
+                  <span style={{textAlign:"right",fontWeight:700}}>{fmtCLP(totalConSobre+totalSinSobre)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="chart-card">
+            <h4>📈 Evolución de contribuciones por año y cuota</h4>
+            <ContribChart cuotas={filCuotas}/>
+          </div>
+
+          <div className="dash-section">
+            <h4>📊 Balance anual — contribuciones vs devoluciones</h4>
+            <div className="data-table">
+              <div className="dt-head" style={{gridTemplateColumns:"80px 1fr 1fr 1fr"}}>
+                <span>Año</span>
+                <span style={{textAlign:"right"}}>Contribuciones</span>
+                <span style={{textAlign:"right"}}>Devoluciones</span>
+                <span style={{textAlign:"right"}}>Neto</span>
+              </div>
+              {yearly.length===0?(
+                <div className="dt-empty">Sin datos</div>
+              ):yearly.map(y=>{
+                const n=y.contrib-y.dev;
                 return (
-                  <div key={b.id} className="dt-row" style={{gridTemplateColumns:"150px 1fr 110px 90px",cursor:"pointer"}} onClick={()=>onSelectTerreno(b.terreno_rol)}>
-                    <div>
-                      <div style={{fontWeight:600,fontSize:11.5}}>{t?.terreno||b.terreno_rol}</div>
-                      <div style={{color:"var(--ink3)",fontSize:10,fontFamily:"monospace"}}>{b.terreno_rol}</div>
-                    </div>
-                    <span style={{color:"var(--ink2)",fontSize:12}}>{b.detalle.slice(0,70)}{b.detalle.length>70?"…":""}</span>
-                    <span><span className={`estatus-chip est-${b.estatus==="En Proceso"?"proceso":b.estatus.toLowerCase()}`}>{b.estatus}</span></span>
-                    <span style={{fontSize:12,color:"var(--ink3)"}}>{b.editado_por||"—"}</span>
+                  <div key={y.anio} className="dt-row" style={{gridTemplateColumns:"80px 1fr 1fr 1fr"}}>
+                    <span style={{fontWeight:700}}>{y.anio}</span>
+                    <span style={{textAlign:"right",color:"var(--teal)",fontWeight:600}}>{fmtCLP(y.contrib)}</span>
+                    <span style={{textAlign:"right",color:"var(--red)",fontWeight:600}}>{y.dev>0?"−":""}{fmtCLP(y.dev)}</span>
+                    <span style={{textAlign:"right",fontWeight:700,color:n>=0?"var(--green)":"var(--red)"}}>{fmtCLP(n)}</span>
                   </div>
                 );
               })}
-            </>
-          )}
-        </div>
-      </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {subTab==="tareas" && (
+        <>
+          <div className="dash-filter-bar">
+            <label style={{marginRight:4}}>Bitácora:</label>
+            <MultiSelect label="Ciudad" options={ciudadOpts} selected={filterBitaCiudades} onChange={setFilterBitaCiudades}/>
+            <MultiSelect label="Responsable" options={respOpts} selected={filterBitaResp} onChange={setFilterBitaResp}/>
+            <MultiSelect label="Estatus" options={ESTATUS_OPTS} selected={filterBitaEstado} onChange={setFilterBitaEstado}/>
+            {hasBitaFilters?<button className="dash-clr" onClick={clearBitaFilters}>✕ Limpiar filtros</button>:null}
+            <span style={{marginLeft:"auto",fontSize:11,color:"var(--ink3)"}}>
+              {bitaFiltered.length} entradas{hasBitaFilters?` (de ${visBita.length})`:""}
+            </span>
+          </div>
+
+          <div className="dash-section">
+            <h4>👤 Tareas por responsable{hasBitaFilters?" — filtrado":""}</h4>
+            <div className="resp-table">
+              <div className="resp-table-head" style={{gridTemplateColumns:"1fr 70px 90px 90px 90px"}}>
+                <span>Responsable</span>
+                <span style={{textAlign:"center"}}>Total</span>
+                <span style={{textAlign:"center",color:"var(--ink3)"}}>Pendiente</span>
+                <span style={{textAlign:"center",color:"var(--teal)"}}>En Proceso</span>
+                <span style={{textAlign:"center",color:"var(--green)"}}>Finalizada</span>
+              </div>
+              {respList.length===0
+                ?<div className="dt-empty">Sin tareas registradas</div>
+                :respList.map(r=>(
+                  <div key={r.name} className="resp-table-row" style={{gridTemplateColumns:"1fr 70px 90px 90px 90px"}}>
+                    <span style={{fontWeight:600}}>{r.name}</span>
+                    <span style={{textAlign:"center",fontWeight:700}}>{r.total}</span>
+                    <span style={{textAlign:"center"}}>{r.pendiente>0&&<span className="estatus-chip est-pendiente">{r.pendiente}</span>}</span>
+                    <span style={{textAlign:"center"}}>{r.proceso>0&&<span className="estatus-chip est-proceso">{r.proceso}</span>}</span>
+                    <span style={{textAlign:"center"}}>{r.finalizada>0&&<span className="estatus-chip est-finalizada">{r.finalizada}</span>}</span>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+
+          <div className="dash-section">
+            <h4>📓 Bitácora — tareas activas{hasBitaFilters?" — filtrado":""}</h4>
+            <div className="data-table">
+              {bitaFiltered.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso").length===0?(
+                <div className="dt-empty">✓ Sin tareas pendientes</div>
+              ):(
+                <>
+                  <div className="dt-head" style={{gridTemplateColumns:"150px 1fr 90px 110px 110px"}}>
+                    <span>Terreno · ROL</span><span>Detalle</span><span style={{textAlign:"center"}}>Prioridad</span><span>Estatus</span><span>Responsable</span>
+                  </div>
+                  {bitaFiltered.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso").slice(0,12).map(b=>{
+                    const t=visTer.find(x=>x.rol===b.terreno_rol);
+                    return (
+                      <div key={b.id} className="dt-row" style={{gridTemplateColumns:"150px 1fr 90px 110px 110px",cursor:"pointer"}} onClick={()=>onSelectTerreno(b.terreno_rol)}>
+                        <div>
+                          <div style={{fontWeight:600,fontSize:11.5}}>{t?.terreno||b.terreno_rol}</div>
+                          <div style={{color:"var(--ink3)",fontSize:10,fontFamily:"monospace"}}>{b.terreno_rol}</div>
+                        </div>
+                        <span style={{color:"var(--ink2)",fontSize:12}}>{b.detalle.slice(0,70)}{b.detalle.length>70?"…":""}</span>
+                        <span style={{textAlign:"center"}}>{b.prioridad&&<span className={`prio-chip prio-${b.prioridad.toLowerCase()}`}>{b.prioridad}</span>}</span>
+                        <span><span className={`estatus-chip est-${b.estatus==="En Proceso"?"proceso":b.estatus.toLowerCase()}`}>{b.estatus}</span></span>
+                        <span style={{fontSize:12,color:"var(--ink3)"}}>{b.responsable||"—"}</span>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -1057,6 +1270,10 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
   const [saving, setSaving] = useState({});
   const [payDates, setPayDates] = useState({});
   const [genBusy, setGenBusy] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState({anio:new Date().getFullYear(), numero:1, monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
+  const [addBusy, setAddBusy] = useState(false);
+  const [editingVenc, setEditingVenc] = useState({});
 
   const current = cuotas.filter(c=>c.anio===anio);
   const anioRef = useRef(anio);
@@ -1092,6 +1309,55 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
     catch(e){alert("Error: "+e.message);}
   };
 
+  const updateVenc = async (c, fecha) => {
+    if(!fecha || fecha===c.fecha_vencimiento) return;
+    try{ await db.patch("cuotas","id=eq."+c.id, {fecha_vencimiento:fecha}); onRefresh(); }
+    catch(e){alert("Error: "+e.message);}
+  };
+
+  const updateFechaPago = async (c, fecha) => {
+    if(fecha===c.fecha_pago) return;
+    try{ await db.patch("cuotas","id=eq."+c.id, {fecha_pago:fecha||null}); onRefresh(); }
+    catch(e){alert("Error: "+e.message);}
+  };
+
+  const deleteCuota = async (c) => {
+    if(!confirm(`¿Eliminar la ${CUOTA_SHORT[c.numero]} cuota de ${c.anio}?`)) return;
+    try{ await db.del("cuotas","id=eq."+c.id); onRefresh(); }
+    catch(e){alert("Error: "+e.message);}
+  };
+
+  const addManual = async () => {
+    const n = parseInt(addForm.numero);
+    if(!addForm.fecha_vencimiento){alert("Debes elegir la fecha de vencimiento");return;}
+    if(n<1||n>4){alert("La cuota debe ser entre 1 y 4");return;}
+    const existing = cuotas.find(c=>c.anio===parseInt(addForm.anio)&&c.numero===n);
+    if(existing && !confirm(`Ya existe la cuota ${n} del año ${addForm.anio}. ¿Reemplazar?`)) return;
+    setAddBusy(true);
+    try{
+      if(existing){
+        await db.patch("cuotas","id=eq."+existing.id, {
+          monto:parseInt(addForm.monto)||0,
+          fecha_vencimiento:addForm.fecha_vencimiento,
+          pagado:addForm.pagado,
+          fecha_pago:addForm.pagado?(addForm.fecha_pago||today()):null
+        });
+      }else{
+        await db.insert("cuotas",[{
+          terreno_rol:terreno.rol, anio:parseInt(addForm.anio), numero:n,
+          monto:parseInt(addForm.monto)||0, tasa:0,
+          fecha_vencimiento:addForm.fecha_vencimiento,
+          pagado:addForm.pagado,
+          fecha_pago:addForm.pagado?(addForm.fecha_pago||today()):null
+        }]);
+      }
+      setShowAdd(false);
+      setAddForm({anio:anio, numero:1, monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
+    setAddBusy(false);
+  };
+
   const paid    = current.filter(c=>c.pagado).reduce((s,c)=>s+(parseInt(c.monto)||0), 0);
   const pending = current.filter(c=>!c.pagado).reduce((s,c)=>s+(parseInt(c.monto)||0), 0);
   const overdue = current.filter(c=>!c.pagado&&cuotaStatus(c)==="vencida").reduce((s,c)=>s+(parseInt(c.monto)||0), 0);
@@ -1105,12 +1371,60 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
           <div className="anio-display">{anio}</div>
           <button onClick={()=>setAnio(a=>a+1)}>▶</button>
         </div>
-        {current.length===0&&(
-          <button className="btn btn-primary btn-sm" onClick={genCuotas} disabled={genBusy}>
-            {genBusy?"Generando...":"✦ Generar cuotas "+anio}
+        <div style={{display:"flex",gap:8}}>
+          {current.length===0&&(
+            <button className="btn btn-primary btn-sm" onClick={genCuotas} disabled={genBusy}>
+              {genBusy?"Generando...":"✦ Generar cuotas "+anio}
+            </button>
+          )}
+          <button className="btn btn-outline btn-sm" onClick={()=>{setAddForm(f=>({...f,anio})); setShowAdd(s=>!s);}}>
+            {showAdd?"✕ Cancelar":"➕ Agregar cuota manual"}
           </button>
-        )}
+        </div>
       </div>
+
+      {showAdd&&(
+        <div className="add-entry-box">
+          <div className="title">Agregar / reemplazar cuota manual</div>
+          <div className="field-row" style={{marginBottom:10}}>
+            <div className="field"><label>Año</label>
+              <input type="number" value={addForm.anio} onChange={e=>setAddForm(f=>({...f,anio:parseInt(e.target.value)||f.anio}))}/>
+            </div>
+            <div className="field"><label>Cuota (1-4)</label>
+              <select value={addForm.numero} onChange={e=>setAddForm(f=>({...f,numero:parseInt(e.target.value)}))}>
+                {[1,2,3,4].map(n=><option key={n} value={n}>{CUOTA_LABELS[n]}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="field-row" style={{marginBottom:10}}>
+            <div className="field"><label>Monto ($CLP)</label>
+              <input type="text" inputMode="numeric"
+                value={addForm.monto?parseInt(String(addForm.monto).replace(/[^\d]/g,"")||"0").toLocaleString("es-CL"):""}
+                onChange={e=>setAddForm(f=>({...f,monto:e.target.value.replace(/[^\d]/g,"")}))}
+                placeholder="0"/>
+            </div>
+            <div className="field"><label>Fecha de vencimiento</label>
+              <input type="date" value={addForm.fecha_vencimiento} onChange={e=>setAddForm(f=>({...f,fecha_vencimiento:e.target.value}))}/>
+            </div>
+          </div>
+          <div className="field-row" style={{marginBottom:12}}>
+            <div className="field">
+              <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
+                <input type="checkbox" checked={addForm.pagado} onChange={e=>setAddForm(f=>({...f,pagado:e.target.checked}))} style={{width:"auto"}}/>
+                Ya está pagada
+              </label>
+            </div>
+            {addForm.pagado&&(
+              <div className="field"><label>Fecha de pago</label>
+                <input type="date" value={addForm.fecha_pago} onChange={e=>setAddForm(f=>({...f,fecha_pago:e.target.value}))}/>
+              </div>
+            )}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn btn-primary btn-sm" onClick={addManual} disabled={addBusy}>{addBusy?"Guardando...":"Guardar cuota"}</button>
+          </div>
+        </div>
+      )}
 
       {current.length===0 ? (
         <div style={{textAlign:"center",padding:"50px 20px",color:"var(--ink3)"}}>
@@ -1140,8 +1454,18 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
                     <MontoInput value={c.monto} onSave={v=>updateMonto(c,v)}/>
                   </div>
                   <div className="cuota-fecha">
-                    Vence: <strong>{fmtDate(c.fecha_vencimiento)}</strong>
-                    {c.pagado&&c.fecha_pago&&<><br/>Pagado: <strong>{fmtDate(c.fecha_pago)}</strong></>}
+                    <label style={{fontSize:10.5,color:"var(--ink3)",display:"block",marginBottom:2}}>Vence</label>
+                    <input type="date" defaultValue={c.fecha_vencimiento||""}
+                      onBlur={e=>updateVenc(c, e.target.value)}
+                      style={{fontSize:11.5,padding:"3px 6px",border:"1px solid var(--line)",borderRadius:4,background:"var(--white)",width:"100%"}}/>
+                    {c.pagado&&(
+                      <>
+                        <label style={{fontSize:10.5,color:"var(--ink3)",display:"block",marginTop:6,marginBottom:2}}>Fecha de pago</label>
+                        <input type="date" defaultValue={c.fecha_pago||""}
+                          onBlur={e=>updateFechaPago(c, e.target.value)}
+                          style={{fontSize:11.5,padding:"3px 6px",border:"1px solid var(--line)",borderRadius:4,background:"var(--white)",width:"100%"}}/>
+                      </>
+                    )}
                   </div>
                   <div className="cuota-divider"/>
                   <div className="cuota-actions">
@@ -1155,6 +1479,7 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
                       onClick={()=>markPaid(c,!c.pagado)}>
                       {saving[c.id]?"...":(c.pagado?"✕ Marcar impaga":"✓ Marcar pagada")}
                     </button>
+                    <button className="btn btn-danger btn-xs" style={{width:"100%",justifyContent:"center"}} onClick={()=>deleteCuota(c)}>🗑 Eliminar</button>
                   </div>
                 </div>
               );
@@ -1174,12 +1499,164 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
 }
 
 function MontoInput({value, onSave}) {
-  const [v, setV] = useState(value||"");
-  useEffect(()=>setV(value||""),[value]);
+  const fmtMonto = (n) => {
+    if(n===""||n==null) return "";
+    const num = String(n).replace(/[^\d]/g,"");
+    return num ? parseInt(num).toLocaleString("es-CL") : "";
+  };
+  const [v, setV] = useState(fmtMonto(value));
+  useEffect(()=>setV(fmtMonto(value)),[value]);
   return (
-    <input type="number" className="cuota-monto-input" value={v}
-      onChange={e=>setV(e.target.value)}
-      onBlur={()=>String(v)!==String(value)&&onSave(v)}/>
+    <input type="text" inputMode="numeric" className="cuota-monto-input" value={v}
+      onChange={e=>{
+        const raw = e.target.value.replace(/[^\d]/g,"");
+        setV(raw ? parseInt(raw).toLocaleString("es-CL") : "");
+      }}
+      onBlur={()=>{
+        const raw = v.replace(/[^\d]/g,"");
+        if(String(raw)!==String(value||"")) onSave(raw);
+      }}/>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// DEVOLUCIONES TAB
+// ─────────────────────────────────────────────────────
+function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({fecha:today(), monto:"", motivo:"", notas:""});
+  const [addBusy, setAddBusy] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
+
+  const sorted = [...devoluciones].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const totalDev = sorted.reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+  const totalContrib = cuotas.reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  const neto = totalContrib - totalDev;
+
+  const add = async () => {
+    if(!form.fecha){alert("Debes elegir la fecha");return;}
+    if(!form.monto||parseInt(form.monto)<=0){alert("Ingresa un monto válido");return;}
+    setAddBusy(true);
+    try{
+      await db.insert("devoluciones",[{
+        terreno_rol:terreno.rol, fecha:form.fecha,
+        monto:parseInt(form.monto)||0,
+        motivo:form.motivo.trim()||null, notas:form.notas.trim()||null
+      }]);
+      setForm({fecha:today(), monto:"", motivo:"", notas:""});
+      setShowAdd(false);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
+    setAddBusy(false);
+  };
+
+  const saveEdit = async (d) => {
+    try{
+      await db.patch("devoluciones","id=eq."+d.id, {
+        fecha:editForm.fecha,
+        monto:parseInt(editForm.monto)||0,
+        motivo:editForm.motivo?.trim()||null,
+        notas:editForm.notas?.trim()||null
+      });
+      setEditingId(null);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
+  };
+
+  const del = async (d) => {
+    if(!confirm("¿Eliminar esta devolución?")) return;
+    try{ await db.del("devoluciones","id=eq."+d.id); onRefresh(); }
+    catch(e){alert("Error: "+e.message);}
+  };
+
+  return (
+    <>
+      <div className="bitacora-add-bar">
+        <span style={{fontSize:13,color:"var(--ink3)"}}>
+          {sorted.length} {sorted.length===1?"devolución":"devoluciones"}
+        </span>
+        <button className="btn btn-primary btn-sm" onClick={()=>setShowAdd(s=>!s)}>
+          {showAdd?"✕ Cancelar":"+ Nueva devolución"}
+        </button>
+      </div>
+
+      {showAdd&&(
+        <div className="add-entry-box">
+          <div className="title">Nueva devolución</div>
+          <div className="field-row" style={{marginBottom:10}}>
+            <div className="field"><label>Fecha</label>
+              <input type="date" value={form.fecha} onChange={e=>setForm(f=>({...f,fecha:e.target.value}))}/>
+            </div>
+            <div className="field"><label>Monto ($CLP)</label>
+              <input type="number" value={form.monto} onChange={e=>setForm(f=>({...f,monto:e.target.value}))} placeholder="0"/>
+            </div>
+          </div>
+          <div className="field" style={{marginBottom:10}}>
+            <label>Motivo</label>
+            <input value={form.motivo} onChange={e=>setForm(f=>({...f,motivo:e.target.value}))} placeholder="Ej: Ajuste por avalúo, recálculo SII, etc."/>
+          </div>
+          <div className="field" style={{marginBottom:12}}>
+            <label>Notas</label>
+            <textarea value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} rows={2}/>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn btn-primary btn-sm" onClick={add} disabled={addBusy}>{addBusy?"Guardando...":"Guardar devolución"}</button>
+          </div>
+        </div>
+      )}
+
+      <div className="cuotas-summary" style={{marginBottom:16}}>
+        <div className="sum-item"><div className="sum-label">Total contribuciones</div><div className="sum-val">{fmtCLP(totalContrib)}</div></div>
+        <div className="sum-item"><div className="sum-label">Total devoluciones</div><div className="sum-val red">{fmtCLP(totalDev)}</div></div>
+        <div className="sum-item"><div className="sum-label">Neto (contrib. − dev.)</div>
+          <div className="sum-val" style={{color:neto>=0?"var(--green)":"var(--red)"}}>{fmtCLP(neto)}</div>
+        </div>
+      </div>
+
+      {sorted.length===0 ? (
+        <div style={{textAlign:"center",padding:"50px 20px",color:"var(--ink3)"}}>
+          <div style={{fontSize:38,marginBottom:14}}>↩️</div>
+          <p>Sin devoluciones registradas para este terreno.</p>
+        </div>
+      ):(
+        <div className="data-table">
+          <div className="dt-head" style={{gridTemplateColumns:"110px 130px 1fr 160px"}}>
+            <span>Fecha</span><span style={{textAlign:"right"}}>Monto</span><span>Motivo / Notas</span><span style={{textAlign:"right"}}>Acciones</span>
+          </div>
+          {sorted.map(d=>{
+            const isEd = editingId===d.id;
+            return isEd ? (
+              <div key={d.id} className="dt-row" style={{gridTemplateColumns:"110px 130px 1fr 160px",alignItems:"start",padding:"10px 12px"}}>
+                <input type="date" value={editForm.fecha||""} onChange={e=>setEditForm(f=>({...f,fecha:e.target.value}))}/>
+                <input type="number" value={editForm.monto||""} onChange={e=>setEditForm(f=>({...f,monto:e.target.value}))} style={{textAlign:"right"}}/>
+                <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                  <input value={editForm.motivo||""} onChange={e=>setEditForm(f=>({...f,motivo:e.target.value}))} placeholder="Motivo"/>
+                  <textarea value={editForm.notas||""} onChange={e=>setEditForm(f=>({...f,notas:e.target.value}))} rows={2} placeholder="Notas"/>
+                </div>
+                <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+                  <button className="btn btn-primary btn-xs" onClick={()=>saveEdit(d)}>Guardar</button>
+                  <button className="btn btn-ghost btn-xs" onClick={()=>setEditingId(null)}>Cancelar</button>
+                </div>
+              </div>
+            ) : (
+              <div key={d.id} className="dt-row" style={{gridTemplateColumns:"110px 130px 1fr 160px"}}>
+                <span>{fmtDate(d.fecha)}</span>
+                <span style={{textAlign:"right",fontWeight:600,color:"var(--red)"}}>−{fmtCLP(d.monto)}</span>
+                <span style={{color:"var(--ink2)",fontSize:12}}>
+                  {d.motivo||"—"}
+                  {d.notas&&<div style={{fontSize:11,color:"var(--ink3)",marginTop:2}}>{d.notas}</div>}
+                </span>
+                <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+                  <button className="btn btn-outline btn-xs" onClick={()=>{setEditingId(d.id);setEditForm({...d});}}>✏️ Editar</button>
+                  <button className="btn btn-danger btn-xs" onClick={()=>del(d)}>🗑</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1188,7 +1665,7 @@ function MontoInput({value, onSave}) {
 // ─────────────────────────────────────────────────────
 function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRefresh, user}) {
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({fecha:today(), detalle:"", estatus:"Pendiente", responsable:""});
+  const [form, setForm] = useState({fecha:today(), detalle:"", estatus:"Pendiente", responsable:"", prioridad:"Media"});
   const [openId, setOpenId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -1197,23 +1674,16 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const setEF = (k,v) => setEditForm(f=>({...f,[k]:v}));
 
-  // Derive display name from email: nombre.apellido@... → "Nombre Apellido"
-  const nameFromEmail = (email) => {
-    if(!email) return null;
-    const local = email.split("@")[0];
-    return local.split(".").map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(" ");
-  };
-  const autorActual = nameFromEmail(user?.email);
-
   const addEntry = async () => {
     if(!form.detalle.trim()) return;
     setAddBusy(true);
     try{
       await db.insert("bitacora",[{
         terreno_rol:terreno.rol, fecha:form.fecha, detalle:form.detalle.trim(),
-        estatus:form.estatus, responsable:autorActual||null, editado_por:autorActual||null
+        estatus:form.estatus, responsable:form.responsable?.trim()||null,
+        prioridad:form.prioridad||"Media"
       }]);
-      setForm({fecha:today(),detalle:"",estatus:"Pendiente",responsable:""});
+      setForm({fecha:today(),detalle:"",estatus:"Pendiente",responsable:"",prioridad:"Media"});
       setShowAdd(false);
       onRefresh();
     }catch(e){alert("Error: "+e.message);}
@@ -1224,7 +1694,8 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
     try{
       await db.patch("bitacora","id=eq."+entry.id, {
         fecha:editForm.fecha, detalle:editForm.detalle, estatus:editForm.estatus,
-        responsable:autorActual||null, editado_por:autorActual||null
+        responsable:editForm.responsable?.trim()||null,
+        prioridad:editForm.prioridad||"Media"
       });
       setEditingId(null);
       onRefresh();
@@ -1276,6 +1747,11 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
                 {ESTATUS_OPTS.map(s=><option key={s}>{s}</option>)}
               </select>
             </div>
+            <div className="field"><label>Prioridad</label>
+              <select value={form.prioridad} onChange={e=>set("prioridad",e.target.value)}>
+                {PRIORIDADES.map(p=><option key={p}>{p}</option>)}
+              </select>
+            </div>
           </div>
           <div className="field" style={{marginBottom:10}}>
             <label>Detalle / Tarea</label>
@@ -1283,10 +1759,7 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
           </div>
           <div className="field" style={{marginBottom:14}}>
             <label>Responsable</label>
-            <select value={form.responsable} onChange={e=>set("responsable",e.target.value)}>
-              <option value="">— Sin asignar —</option>
-              {RESPONSABLES.map(r=><option key={r}>{r}</option>)}
-            </select>
+            <ResponsableField value={form.responsable} onChange={v=>set("responsable",v||"")} options={BITACORA_RESPONSABLES}/>
           </div>
           <div style={{display:"flex",gap:8}}>
             <button className="btn btn-primary btn-sm" onClick={addEntry} disabled={!form.detalle.trim()||addBusy}>{addBusy?"Guardando...":"Guardar entrada"}</button>
@@ -1312,10 +1785,10 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
                   <div className="bita-date">{fmtDate(entry.fecha)}</div>
                   <div className="bita-detalle">{entry.detalle}</div>
                   <div className="bita-meta">
+                    {entry.prioridad&&<span className={`prio-chip prio-${entry.prioridad.toLowerCase()}`}>{entry.prioridad}</span>}
                     <span className={`estatus-chip est-${st==="En Proceso"?"proceso":st.toLowerCase()}`}>{st}</span>
                     {entry.responsable&&<span style={{fontSize:11,color:"var(--ink3)"}}>👤 {entry.responsable}</span>}
                     {files.length>0&&<span style={{fontSize:11,color:"var(--ink3)"}}>📎{files.length}</span>}
-                    {entry.editado_por&&<span style={{fontSize:10.5,color:"var(--teal)",background:"var(--teal-lt)",padding:"1px 7px",borderRadius:8,fontWeight:500}}>{entry.editado_por}</span>}
                     <span style={{fontSize:10,color:"var(--ink3)"}}>{isOpen?"▲":"▼"}</span>
                   </div>
                 </div>
@@ -1331,6 +1804,11 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
                               {ESTATUS_OPTS.map(s=><option key={s}>{s}</option>)}
                             </select>
                           </div>
+                          <div className="field"><label>Prioridad</label>
+                            <select value={editForm.prioridad||"Media"} onChange={e=>setEF("prioridad",e.target.value)}>
+                              {PRIORIDADES.map(p=><option key={p}>{p}</option>)}
+                            </select>
+                          </div>
                         </div>
                         <div className="field" style={{marginBottom:9}}>
                           <label>Detalle</label>
@@ -1338,10 +1816,7 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
                         </div>
                         <div className="field" style={{marginBottom:12}}>
                           <label>Responsable</label>
-                          <select value={editForm.responsable||""} onChange={e=>setEF("responsable",e.target.value||null)}>
-                            <option value="">— Sin asignar —</option>
-                            {RESPONSABLES.map(r=><option key={r}>{r}</option>)}
-                          </select>
+                          <ResponsableField value={editForm.responsable||""} onChange={v=>setEF("responsable",v||null)} options={BITACORA_RESPONSABLES}/>
                         </div>
                         <div style={{display:"flex",gap:8,marginBottom:14}}>
                           <button className="btn btn-primary btn-sm" onClick={()=>saveEdit(entry)}>Guardar</button>
@@ -1627,9 +2102,11 @@ function App({user, onLogout}) {
   const [selRol, setSelRol] = useState(null);
   const [cuotas, setCuotas] = useState([]);
   const [bitacora, setBitacora] = useState([]);
+  const [devoluciones, setDevoluciones] = useState([]);
   const [archivos, setArchivos] = useState({});
   const [allCuotas, setAllCuotas] = useState([]);
   const [allBitacora, setAllBitacora] = useState([]);
+  const [allDevoluciones, setAllDevoluciones] = useState([]);
   const [subtareas, setSubtareas] = useState({});
   const [archivosSub, setArchivosSub] = useState({});
   const [hiddenRols, setHiddenRols] = useState(()=>new Set(JSON.parse(localStorage.getItem('hiddenRols')||'[]')));
@@ -1645,12 +2122,13 @@ function App({user, onLogout}) {
   const loadAll = useCallback(async () => {
     setSyncStatus("loading");
     try{
-      const [t, c, b] = await Promise.all([
+      const [t, c, b, d] = await Promise.all([
         db.select("terrenos","order=ciudad.asc,terreno.asc"),
         db.select("cuotas","order=anio.desc,numero.asc"),
-        db.select("bitacora","order=fecha.desc")
+        db.select("bitacora","order=fecha.desc"),
+        db.select("devoluciones","order=fecha.desc")
       ]);
-      setTerrenos(t); setAllCuotas(c); setAllBitacora(b);
+      setTerrenos(t); setAllCuotas(c); setAllBitacora(b); setAllDevoluciones(d);
       setSyncStatus("ok");
       // Auto-open first city
       if(t.length>0){
@@ -1718,11 +2196,12 @@ function App({user, onLogout}) {
     if(!rol) return;
     try{
       const enc = encodeURIComponent(rol);
-      const [c, b] = await Promise.all([
+      const [c, b, d] = await Promise.all([
         db.select("cuotas","terreno_rol=eq."+enc+"&order=anio.desc,numero.asc"),
-        db.select("bitacora","terreno_rol=eq."+enc+"&order=fecha.desc")
+        db.select("bitacora","terreno_rol=eq."+enc+"&order=fecha.desc"),
+        db.select("devoluciones","terreno_rol=eq."+enc+"&order=fecha.desc")
       ]);
-      setCuotas(c); setBitacora(b);
+      setCuotas(c); setBitacora(b); setDevoluciones(d);
       if(b.length>0){
         const ids = b.map(x=>x.id).join(",");
         const a = await db.select("archivos","bitacora_id=in.("+ids+")&order=created_at.asc");
@@ -1750,7 +2229,7 @@ function App({user, onLogout}) {
 
   useEffect(()=>{
     if(selRol) loadDetail(selRol);
-    else{setCuotas([]);setBitacora([]);setArchivos({});}
+    else{setCuotas([]);setBitacora([]);setDevoluciones([]);setArchivos({});}
   },[selRol, loadDetail]);
 
   const toggleHide=useCallback((rol,e)=>{
@@ -1894,11 +2373,11 @@ function App({user, onLogout}) {
               <span style={{color:"var(--ink3)",fontSize:13}}>Cargando terrenos...</span>
             </div>
           ):!selTerreno ? (
-            <Dashboard terrenos={terrenos} allCuotas={allCuotas} allBitacora={allBitacora} onSelectTerreno={selectTerreno} hiddenRols={hiddenRols}/>
+            <Dashboard terrenos={terrenos} allCuotas={allCuotas} allBitacora={allBitacora} allDevoluciones={allDevoluciones} onSelectTerreno={selectTerreno} hiddenRols={hiddenRols}/>
           ):(
             <>
               <div className="tab-nav">
-                {[["info","📋 Información"],["cuotas","💰 Contribuciones"],["bitacora","📓 Bitácora"]].map(([id,lbl])=>(
+                {[["info","📋 Información"],["cuotas","💰 Contribuciones"],["devoluciones","↩️ Devoluciones"],["bitacora","📓 Bitácora"]].map(([id,lbl])=>(
                   <button key={id} className={`tab-btn${activeTab===id?" active":""}`} onClick={()=>setActiveTab(id)}>{lbl}</button>
                 ))}
               </div>
@@ -1911,6 +2390,9 @@ function App({user, onLogout}) {
               )}
               {activeTab==="cuotas"&&(
                 <CuotasTab terreno={selTerreno} cuotas={cuotas} onRefresh={refreshAll}/>
+              )}
+              {activeTab==="devoluciones"&&(
+                <DevolucionesTab terreno={selTerreno} devoluciones={devoluciones} cuotas={cuotas} onRefresh={refreshAll}/>
               )}
               {activeTab==="bitacora"&&(
                 <BitacoraTab terreno={selTerreno} bitacora={bitacora} archivos={archivos} subtareas={subtareas} archivosSub={archivosSub} onRefresh={refreshAll} user={user}/>
