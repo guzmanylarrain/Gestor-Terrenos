@@ -409,6 +409,30 @@ const fmtCLP = n => {
 };
 const fmtM2 = n => n ? Math.round(Number(n)).toLocaleString("es-CL")+" m²" : "—";
 
+// Format a raw string value as Chilean locale with thousand-dot separators.
+// dec=false → integer only. dec=true → allow comma decimal, preserves user's partial typing.
+const fmtCLInput = (v, dec=false) => {
+  if(v===""||v==null) return "";
+  const str = String(v);
+  if(!dec){
+    const digits = str.replace(/[^\d]/g,"");
+    return digits ? parseInt(digits).toLocaleString("es-CL") : "";
+  }
+  const norm = str.replace(",",".");
+  if(norm===""||norm===".") return "";
+  const endsWithDot = norm.endsWith(".") && norm.indexOf(".")===norm.length-1;
+  const [ip, dp=""] = norm.split(".");
+  const cleanInt = ip.replace(/[^\d]/g,"");
+  const intFmt = cleanInt ? parseInt(cleanInt).toLocaleString("es-CL") : "";
+  const cleanDp = dp.replace(/[^\d]/g,"");
+  if(cleanDp) return intFmt+","+cleanDp;
+  if(endsWithDot) return intFmt+",";
+  return intFmt;
+};
+const parseCLInput = (s, dec=false) => dec
+  ? s.replace(/\./g,"").replace(",",".")
+  : s.replace(/[^\d]/g,"");
+
 const CUOTA_DATES = {1:"04-30", 2:"06-30", 3:"09-30", 4:"11-28"};
 const CUOTA_LABELS = {1:"1ª Cuota — Abril", 2:"2ª Cuota — Junio", 3:"3ª Cuota — Septiembre", 4:"4ª Cuota — Noviembre"};
 const CUOTA_SHORT  = {1:"1ª", 2:"2ª", 3:"3ª", 4:"4ª"};
@@ -1230,12 +1254,18 @@ function InfoTab({terreno, onUpdated}) {
         {editing ? (
           <>
             <div className="field-row" style={{marginBottom:10}}>
-              <div className="field"><label>M² SII</label><input type="number" value={form.m2_sii||""} onChange={e=>set("m2_sii",e.target.value)}/></div>
+              <div className="field"><label>M² SII</label>
+                <input type="text" inputMode="decimal"
+                  value={fmtCLInput(form.m2_sii, true)}
+                  onChange={e=>set("m2_sii", parseCLInput(e.target.value, true))}/>
+              </div>
               <div className="field"><label>UF/m²</label><input type="number" step="0.01" value={form.uf_m2||""} onChange={e=>set("uf_m2",e.target.value)}/></div>
             </div>
             <div className="field" style={{marginBottom:10}}>
               <label>Avalúo fiscal ($CLP)</label>
-              <input type="number" value={form.avaluo||""} onChange={e=>set("avaluo",e.target.value)}/>
+              <input type="text" inputMode="numeric"
+                value={fmtCLInput(form.avaluo, false)}
+                onChange={e=>set("avaluo", parseCLInput(e.target.value, false))}/>
             </div>
             <div className="field">
               <label>Sobretasa</label>
@@ -2069,11 +2099,19 @@ function NewTerrenoModal({onClose, onCreated}) {
       </div>
       <div className="field"><label>Nombre del terreno *</label><input value={form.terreno} onChange={e=>set("terreno",e.target.value)} placeholder="ej: LOTE 1A3 CERRO PARANAL 315"/></div>
       <div className="field-row">
-        <div className="field"><label>M² SII</label><input type="number" value={form.m2_sii} onChange={e=>set("m2_sii",e.target.value)}/></div>
+        <div className="field"><label>M² SII</label>
+          <input type="text" inputMode="decimal"
+            value={fmtCLInput(form.m2_sii, true)}
+            onChange={e=>set("m2_sii", parseCLInput(e.target.value, true))}/>
+        </div>
         <div className="field"><label>UF/m²</label><input type="number" step="0.01" value={form.uf_m2} onChange={e=>set("uf_m2",e.target.value)}/></div>
       </div>
       <div className="field-row">
-        <div className="field"><label>Avalúo fiscal ($CLP)</label><input type="number" value={form.avaluo} onChange={e=>set("avaluo",e.target.value)}/></div>
+        <div className="field"><label>Avalúo fiscal ($CLP)</label>
+          <input type="text" inputMode="numeric"
+            value={fmtCLInput(form.avaluo, false)}
+            onChange={e=>set("avaluo", parseCLInput(e.target.value, false))}/>
+        </div>
         <div className="field"><label>Proyecto asociado</label><input value={form.proyecto} onChange={e=>set("proyecto",e.target.value)} placeholder="ej: Las Vicuñas"/></div>
       </div>
       <div className="field-row">
