@@ -486,6 +486,16 @@ const parseCLInput = (s, dec=false) => dec
 const CUOTA_DATES = {1:"04-30", 2:"06-30", 3:"09-30", 4:"11-28"};
 const CUOTA_LABELS = {1:"1ª Cuota — Abril", 2:"2ª Cuota — Junio", 3:"3ª Cuota — Septiembre", 4:"4ª Cuota — Noviembre"};
 const CUOTA_SHORT  = {1:"1ª", 2:"2ª", 3:"3ª", 4:"4ª"};
+const MES_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const cuotaDisplayLabel = (c) => {
+  if(c.numero>=1 && c.numero<=4) return CUOTA_LABELS[c.numero] || ("Cuota "+c.numero);
+  if(c.fecha_vencimiento){
+    const mes = parseInt(String(c.fecha_vencimiento).slice(5,7),10)-1;
+    return MES_NAMES[mes] ? "Extra — "+MES_NAMES[mes] : "Cuota extra";
+  }
+  return "Cuota extra";
+};
+const cuotaDisplayShort = (c) => c.numero>=1 && c.numero<=4 ? (CUOTA_SHORT[c.numero]||c.numero) : "Extra";
 const RESPONSABLES = ["Domingo Mackenna","Mauricio González","Rodrigo Ibarra","Solange Faúndez"];
 const BITACORA_RESPONSABLES = ["Solange Faúndez","Rodrigo Ibarra"];
 const ESTATUS_OPTS = ["Pendiente","En Proceso","Finalizada"];
@@ -1515,7 +1525,7 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
   const [payDates, setPayDates] = useState({});
   const [genBusy, setGenBusy] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
-  const [addForm, setAddForm] = useState({anio:new Date().getFullYear(), numero:1, monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
+  const [addForm, setAddForm] = useState({anio:new Date().getFullYear(), numero:"1", monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
   const [addBusy, setAddBusy] = useState(false);
   const [editingVenc, setEditingVenc] = useState({});
 
@@ -1566,17 +1576,27 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
   };
 
   const deleteCuota = async (c) => {
-    if(!confirm(`¿Eliminar la ${CUOTA_SHORT[c.numero]} cuota de ${c.anio}?`)) return;
+    const lbl = cuotaDisplayLabel(c);
+    if(!confirm(`¿Eliminar "${lbl}" de ${c.anio}?`)) return;
     try{ await db.del("cuotas","id=eq."+c.id); onRefresh(); }
     catch(e){alert("Error: "+e.message);}
   };
 
   const addManual = async () => {
-    const n = parseInt(addForm.numero);
     if(!addForm.fecha_vencimiento){alert("Debes elegir la fecha de vencimiento");return;}
-    if(n<1||n>4){alert("La cuota debe ser entre 1 y 4");return;}
-    const existing = cuotas.find(c=>c.anio===parseInt(addForm.anio)&&c.numero===n);
-    if(existing && !confirm(`Ya existe la cuota ${n} del año ${addForm.anio}. ¿Reemplazar?`)) return;
+    const isExtra = addForm.numero === "extra";
+    const targetAnio = parseInt(addForm.anio);
+    let finalNumero;
+    if(isExtra){
+      const maxN = cuotas.filter(c=>c.anio===targetAnio).reduce((m,c)=>Math.max(m,c.numero||0),4);
+      finalNumero = maxN + 1;
+    }else{
+      finalNumero = parseInt(addForm.numero);
+      if(finalNumero<1||finalNumero>4){alert("La cuota debe ser entre 1 y 4");return;}
+    }
+    // Solo las legales (1-4) tienen lógica de "reemplazar"
+    const existing = !isExtra ? cuotas.find(c=>c.anio===targetAnio&&c.numero===finalNumero) : null;
+    if(existing && !confirm(`Ya existe la cuota ${finalNumero} del año ${targetAnio}. ¿Reemplazar?`)) return;
     setAddBusy(true);
     try{
       if(existing){
@@ -1588,7 +1608,7 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
         });
       }else{
         await db.insert("cuotas",[{
-          terreno_rol:terreno.rol, anio:parseInt(addForm.anio), numero:n,
+          terreno_rol:terreno.rol, anio:targetAnio, numero:finalNumero,
           monto:parseInt(addForm.monto)||0, tasa:0,
           fecha_vencimiento:addForm.fecha_vencimiento,
           pagado:addForm.pagado,
@@ -1596,7 +1616,7 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
         }]);
       }
       setShowAdd(false);
-      setAddForm({anio:anio, numero:1, monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
+      setAddForm({anio:anio, numero:"1", monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
       onRefresh();
     }catch(e){alert("Error: "+e.message);}
     setAddBusy(false);
@@ -1634,9 +1654,10 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
             <div className="field"><label>Año</label>
               <input type="number" value={addForm.anio} onChange={e=>setAddForm(f=>({...f,anio:parseInt(e.target.value)||f.anio}))}/>
             </div>
-            <div className="field"><label>Cuota (1-4)</label>
-              <select value={addForm.numero} onChange={e=>setAddForm(f=>({...f,numero:parseInt(e.target.value)}))}>
-                {[1,2,3,4].map(n=><option key={n} value={n}>{CUOTA_LABELS[n]}</option>)}
+            <div className="field"><label>Cuota</label>
+              <select value={addForm.numero} onChange={e=>setAddForm(f=>({...f,numero:e.target.value}))}>
+                {[1,2,3,4].map(n=><option key={n} value={String(n)}>{CUOTA_LABELS[n]}</option>)}
+                <option value="extra">➕ Cuota extra / adicional</option>
               </select>
             </div>
           </div>
@@ -1714,8 +1735,11 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
                   <div className="cuota-divider"/>
                   <div className="cuota-actions">
                     {!c.pagado&&(
-                      <input type="date" value={payDates[c.id]||today()}
-                        onChange={e=>setPayDates(d=>({...d,[c.id]:e.target.value}))}/>
+                      <>
+                        <label style={{fontSize:10.5,color:"var(--ink3)",display:"block",marginBottom:2}}>Fecha de pago</label>
+                        <input type="date" value={payDates[c.id]||today()}
+                          onChange={e=>setPayDates(d=>({...d,[c.id]:e.target.value}))}/>
+                      </>
                     )}
                     <button className={`btn btn-sm ${c.pagado?"btn-outline btn-success":"btn-primary"}`}
                       style={{width:"100%",justifyContent:"center"}}
@@ -1729,6 +1753,57 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
               );
             })}
           </div>
+
+          {current.filter(c=>c.numero>4).length>0 && (
+            <div style={{marginTop:24}}>
+              <h4 style={{fontSize:13,fontWeight:600,color:"var(--ink2)",marginBottom:12,display:"flex",alignItems:"center",gap:7,fontFamily:"'IBM Plex Sans',sans-serif"}}>➕ Cuotas extras</h4>
+              <div className="cuotas-grid">
+                {current.filter(c=>c.numero>4).sort((a,b)=>(a.fecha_vencimiento||"").localeCompare(b.fecha_vencimiento||"")).map(c=>{
+                  const st = cuotaStatus(c);
+                  return (
+                    <div key={c.id} className={`cuota-card ${st}`}>
+                      <div className="cuota-num">{cuotaDisplayLabel(c)}</div>
+                      <span className={`cuota-status-chip st-${st}`}>
+                        {st==="pagada"?"✓ Pagada":st==="vencida"?"⚠ Vencida":st==="proxima"?"⏰ Próxima":"Pendiente"}
+                      </span>
+                      <div><MontoInput value={c.monto} onSave={v=>updateMonto(c,v)}/></div>
+                      <div className="cuota-fecha">
+                        <label style={{fontSize:10.5,color:"var(--ink3)",display:"block",marginBottom:2}}>Vence</label>
+                        <input type="date" defaultValue={c.fecha_vencimiento||""}
+                          onBlur={e=>updateVenc(c, e.target.value)}
+                          style={{fontSize:11.5,padding:"3px 6px",border:"1px solid var(--line)",borderRadius:4,background:"var(--white)",width:"100%"}}/>
+                        {c.pagado&&(
+                          <>
+                            <label style={{fontSize:10.5,color:"var(--ink3)",display:"block",marginTop:6,marginBottom:2}}>Fecha de pago</label>
+                            <input type="date" defaultValue={c.fecha_pago||""}
+                              onBlur={e=>updateFechaPago(c, e.target.value)}
+                              style={{fontSize:11.5,padding:"3px 6px",border:"1px solid var(--line)",borderRadius:4,background:"var(--white)",width:"100%"}}/>
+                          </>
+                        )}
+                      </div>
+                      <div className="cuota-divider"/>
+                      <div className="cuota-actions">
+                        {!c.pagado&&(
+                          <>
+                            <label style={{fontSize:10.5,color:"var(--ink3)",display:"block",marginBottom:2}}>Fecha de pago</label>
+                            <input type="date" value={payDates[c.id]||today()}
+                              onChange={e=>setPayDates(d=>({...d,[c.id]:e.target.value}))}/>
+                          </>
+                        )}
+                        <button className={`btn btn-sm ${c.pagado?"btn-outline btn-success":"btn-primary"}`}
+                          style={{width:"100%",justifyContent:"center"}}
+                          disabled={saving[c.id]}
+                          onClick={()=>markPaid(c,!c.pagado)}>
+                          {saving[c.id]?"...":(c.pagado?"✕ Marcar impaga":"✓ Marcar pagada")}
+                        </button>
+                        <button className="btn btn-danger btn-xs" style={{width:"100%",justifyContent:"center"}} onClick={()=>deleteCuota(c)}>🗑 Eliminar</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="cuotas-summary">
             <div className="sum-item"><div className="sum-label">Total {anio}</div><div className="sum-val">{fmtCLP(total)}</div></div>
