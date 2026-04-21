@@ -323,6 +323,10 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 .user-role{font-size:9px;color:#5a5750;text-transform:uppercase;letter-spacing:0.8px}
 .logout-btn{background:none;border:none;color:#5a5750;cursor:pointer;font-size:12px;padding:3px 6px;border-radius:4px;transition:all 0.13s;flex-shrink:0}
 .logout-btn:hover{color:#e05c5c;background:rgba(224,92,92,0.1)}
+.user-action-btn{background:none;border:none;color:#5a5750;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:4px;transition:all 0.13s;flex-shrink:0}
+.user-action-btn:hover{color:#90c4cc;background:rgba(26,95,110,0.15)}
+.auth-error{background:var(--red-lt);color:var(--red);padding:9px 12px;border-radius:6px;font-size:12px;margin-bottom:12px}
+.auth-success{background:var(--green-lt);color:var(--green);padding:9px 12px;border-radius:6px;font-size:12px;margin-bottom:12px}
 
 </style>
 </head>
@@ -2598,15 +2602,75 @@ function AuthScreen({onAuthed, sbUrl, sbKey}) {
 function UserBar({user, onLogout}) {
   const initials = user.email?user.email.slice(0,2).toUpperCase():'U';
   const shortEmail = user.email||'';
+  const [showChange, setShowChange] = useState(false);
   return (
-    <div className="user-bar">
-      <div className="user-avatar">{initials}</div>
-      <div className="user-info">
-        <div className="user-email">{shortEmail}</div>
-        <div className="user-role">Sesión activa</div>
+    <>
+      <div className="user-bar">
+        <div className="user-avatar">{initials}</div>
+        <div className="user-info">
+          <div className="user-email">{shortEmail}</div>
+          <div className="user-role">Sesión activa</div>
+        </div>
+        <button className="user-action-btn" onClick={()=>setShowChange(true)} title="Cambiar contraseña">🔑</button>
+        <button className="logout-btn" onClick={onLogout} title="Cerrar sesión">⏻</button>
       </div>
-      <button className="logout-btn" onClick={onLogout} title="Cerrar sesión">⏻</button>
-    </div>
+      {showChange && <ChangePasswordModal onClose={()=>setShowChange(false)}/>}
+    </>
+  );
+}
+
+function ChangePasswordModal({onClose}) {
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const handleChange = async () => {
+    setError('');
+    if(newPw.length < 8){ setError('La contraseña debe tener al menos 8 caracteres.'); return; }
+    if(newPw !== confirmPw){ setError('Las contraseñas no coinciden.'); return; }
+    setBusy(true);
+    try{
+      const {error:e} = await supabaseAuth.auth.updateUser({password:newPw});
+      if(e) throw e;
+      setSuccess(true);
+      setTimeout(()=>onClose(), 2000);
+    }catch(e){
+      setError(e.message || 'Error al cambiar la contraseña.');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title="Cambiar contraseña" onClose={onClose}>
+      {success ? (
+        <div style={{textAlign:'center',padding:'20px 10px'}}>
+          <div style={{fontSize:40,marginBottom:10,color:'var(--green)'}}>✓</div>
+          <p style={{color:'var(--green)',fontWeight:500}}>Contraseña actualizada correctamente.</p>
+          <p style={{fontSize:12,color:'var(--ink3)',marginTop:8}}>Ya puedes cerrar este diálogo.</p>
+        </div>
+      ) : (
+        <>
+          {error && <div className="auth-error">{error}</div>}
+          <div className="field" style={{marginBottom:12}}>
+            <label>Nueva contraseña</label>
+            <input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} autoFocus placeholder="Mínimo 8 caracteres"/>
+          </div>
+          <div className="field" style={{marginBottom:16}}>
+            <label>Confirmar nueva contraseña</label>
+            <input type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&handleChange()}/>
+          </div>
+          <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+            <button className="btn btn-ghost btn-sm" onClick={onClose} disabled={busy}>Cancelar</button>
+            <button className="btn btn-primary btn-sm" onClick={handleChange} disabled={busy||!newPw||!confirmPw}>
+              {busy ? 'Cambiando...' : 'Cambiar contraseña'}
+            </button>
+          </div>
+        </>
+      )}
+    </Modal>
   );
 }
 
