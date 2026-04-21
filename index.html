@@ -284,6 +284,12 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 .proy-table-wrap{max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:6px;background:var(--white)}
 .proy-table-wrap::-webkit-scrollbar{width:4px}
 .proy-table-wrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.proy-row-clickable{cursor:pointer;transition:background 0.12s}
+.proy-row-clickable:hover{background:var(--teal-lt)}
+.proy-subrow{background:var(--bg);cursor:pointer;transition:background 0.12s;padding-left:18px!important}
+.proy-subrow:hover{background:var(--teal-lt)}
+.proy-expand-arrow{color:var(--ink3);font-size:9px;margin-left:6px;display:inline-block;transition:transform 0.15s}
+.proy-expand-arrow.open{transform:rotate(90deg)}
 /* ── RESP TABLE ── */
 .resp-table{background:var(--white);border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;margin-bottom:20px}
 .resp-table-head{display:grid;padding:8px 14px;font-size:10.5px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:0.8px;background:var(--bg)}
@@ -722,7 +728,8 @@ function ContribChart({cuotas, selected, onSelectBar}) {
   );
 }
 
-function ProyectosBreakdown({terrenos, cuotas, chartFilter, onClearFilter}) {
+function ProyectosBreakdown({terrenos, cuotas, chartFilter, onClearFilter, onSelectTerreno}) {
+  const [expanded, setExpanded] = useState({});
   const filtered = chartFilter
     ? cuotas.filter(c=>c.anio===chartFilter.anio && c.numero===chartFilter.numero)
     : cuotas;
@@ -735,15 +742,26 @@ function ProyectosBreakdown({terrenos, cuotas, chartFilter, onClearFilter}) {
     const proy = (t && t.proyecto && String(t.proyecto).trim())
                  || (t && t.terreno && String(t.terreno).trim())
                  || c.terreno_rol;
-    if(!byProy[proy]) byProy[proy] = {proyecto:proy, terrenos:new Set(), total:0, paid:0};
-    byProy[proy].terrenos.add(c.terreno_rol);
+    if(!byProy[proy]) byProy[proy] = {proyecto:proy, terrenos:{}, total:0, paid:0};
+    if(!byProy[proy].terrenos[c.terreno_rol]){
+      byProy[proy].terrenos[c.terreno_rol] = {rol:c.terreno_rol, nombre:(t&&t.terreno)||c.terreno_rol, total:0};
+    }
     const m = parseInt(c.monto)||0;
+    byProy[proy].terrenos[c.terreno_rol].total += m;
     byProy[proy].total += m;
     if(c.pagado) byProy[proy].paid += m;
   });
-  const rows = Object.values(byProy).sort((a,b)=>b.total-a.total);
+  const rows = Object.values(byProy)
+    .map(r => ({...r, terrArr: Object.values(r.terrenos).sort((a,b)=>b.total-a.total)}))
+    .sort((a,b)=>b.total-a.total);
   const grandTotal = rows.reduce((s,r)=>s+r.total,0);
   const grandTerrenos = new Set(filtered.map(c=>c.terreno_rol)).size;
+  const canNavigate = typeof onSelectTerreno === "function";
+  const handleRowClick = (r) => {
+    if(!canNavigate) return;
+    if(r.terrArr.length === 1) onSelectTerreno(r.terrArr[0].rol);
+    else setExpanded(e=>({...e, [r.proyecto]: !e[r.proyecto]}));
+  };
   return (
     <div>
       <h4 style={{margin:0,marginBottom:10,display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,color:"var(--ink2)",fontFamily:"'IBM Plex Sans',sans-serif"}}>
@@ -761,13 +779,35 @@ function ProyectosBreakdown({terrenos, cuotas, chartFilter, onClearFilter}) {
               <span style={{textAlign:"center"}}>Terr.</span>
               <span style={{textAlign:"right"}}>Total</span>
             </div>
-            {rows.map(r=>(
-              <div key={r.proyecto} className="dt-row" style={{gridTemplateColumns:"1fr 58px 112px"}}>
-                <span style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.proyecto}>{r.proyecto}</span>
-                <span style={{textAlign:"center",color:"var(--ink3)",fontSize:12}}>{r.terrenos.size}</span>
-                <span style={{textAlign:"right",fontWeight:600,color:"var(--teal)",fontSize:12}}>{fmtCLP(r.total)}</span>
-              </div>
-            ))}
+            {rows.map(r=>{
+              const isMulti = r.terrArr.length > 1;
+              const isOpen = !!expanded[r.proyecto];
+              return (
+                <React.Fragment key={r.proyecto}>
+                  <div className={"dt-row"+(canNavigate?" proy-row-clickable":"")}
+                    style={{gridTemplateColumns:"1fr 58px 112px"}}
+                    onClick={()=>handleRowClick(r)}
+                    title={canNavigate ? (isMulti ? "Click para ver "+r.terrArr.length+" terrenos" : "Click para ir a "+r.terrArr[0].nombre) : undefined}>
+                    <span style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {r.proyecto}
+                      {isMulti && <span className={"proy-expand-arrow"+(isOpen?" open":"")}>▶</span>}
+                    </span>
+                    <span style={{textAlign:"center",color:"var(--ink3)",fontSize:12}}>{r.terrArr.length}</span>
+                    <span style={{textAlign:"right",fontWeight:600,color:"var(--teal)",fontSize:12}}>{fmtCLP(r.total)}</span>
+                  </div>
+                  {isMulti && isOpen && r.terrArr.map(t=>(
+                    <div key={t.rol} className={"dt-row proy-subrow"}
+                      style={{gridTemplateColumns:"1fr 58px 112px"}}
+                      onClick={(e)=>{e.stopPropagation(); canNavigate && onSelectTerreno(t.rol);}}
+                      title={"Ir a "+t.nombre}>
+                      <span style={{fontSize:11.5,color:"var(--ink2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>└ {t.nombre} <span style={{color:"var(--ink3)",fontFamily:"monospace",fontSize:10}}>({t.rol})</span></span>
+                      <span></span>
+                      <span style={{textAlign:"right",color:"var(--ink2)",fontSize:11.5}}>{fmtCLP(t.total)}</span>
+                    </div>
+                  ))}
+                </React.Fragment>
+              );
+            })}
           </div>
           <div className="dt-row" style={{gridTemplateColumns:"1fr 58px 112px",background:"var(--bg2)",fontWeight:700,borderRadius:"0 0 6px 6px",marginTop:-1,border:"1px solid var(--line)",borderTop:"none",padding:"8px 10px"}}>
             <span style={{fontSize:12}}>TOTAL {rows.length} proyecto{rows.length===1?"":"s"}</span>
@@ -1178,6 +1218,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
                 cuotas={filCuotas}
                 chartFilter={chartFilter}
                 onClearFilter={()=>setChartFilter(null)}
+                onSelectTerreno={onSelectTerreno}
               />
             </div>
           </div>
