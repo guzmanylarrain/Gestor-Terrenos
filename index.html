@@ -728,6 +728,69 @@ function ContribChart({cuotas, selected, onSelectBar}) {
   );
 }
 
+function SobretasaBreakdown({sobretasaSI, sobretasaNO, cuotas, anio, totalConSobre, totalSinSobre, filTerLen, onSelectTerreno}) {
+  const [expanded, setExpanded] = useState({si:false, no:false});
+  // Cuota total por rol para el año actual
+  const cuotasByRol = {};
+  cuotas.filter(c=>c.anio===anio).forEach(c=>{
+    cuotasByRol[c.terreno_rol] = (cuotasByRol[c.terreno_rol]||0) + (parseInt(c.monto)||0);
+  });
+  const canNav = typeof onSelectTerreno === "function";
+  const renderGroup = (key, label, color, arr, total) => {
+    const isOpen = expanded[key];
+    const sorted = [...arr].sort((a,b)=>(cuotasByRol[b.rol]||0)-(cuotasByRol[a.rol]||0));
+    return (
+      <React.Fragment key={key}>
+        <div className={"dt-row"+(canNav?" proy-row-clickable":"")}
+          style={{gridTemplateColumns:"1fr 70px 130px"}}
+          onClick={()=>setExpanded(e=>({...e,[key]:!e[key]}))}
+          title={arr.length>0?`Click para ver ${arr.length} terreno${arr.length===1?"":"s"}`:undefined}>
+          <span style={{fontWeight:600,color:color}}>
+            {label}
+            {arr.length>0 && <span className={"proy-expand-arrow"+(isOpen?" open":"")}>▶</span>}
+          </span>
+          <span style={{textAlign:"center"}}>{arr.length}</span>
+          <span style={{textAlign:"right",fontWeight:600,color:color}}>{fmtCLP(total)}</span>
+        </div>
+        {isOpen && sorted.map(t=>(
+          <div key={t.rol} className="dt-row proy-subrow"
+            style={{gridTemplateColumns:"1fr 70px 130px"}}
+            onClick={(e)=>{e.stopPropagation(); canNav && onSelectTerreno(t.rol);}}
+            title={"Ir a "+t.terreno}>
+            <span style={{fontSize:11.5,color:"var(--ink2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+              └ {t.terreno}
+              <span style={{color:"var(--ink3)",fontFamily:"monospace",fontSize:10,marginLeft:4}}>({t.rol}) · {t.ciudad}</span>
+            </span>
+            <span></span>
+            <span style={{textAlign:"right",color:"var(--ink2)",fontSize:11.5}}>{fmtCLP(cuotasByRol[t.rol]||0)}</span>
+          </div>
+        ))}
+        {isOpen && arr.length===0 && (
+          <div className="dt-row proy-subrow" style={{gridTemplateColumns:"1fr",cursor:"default"}}>
+            <span style={{fontSize:11.5,color:"var(--ink3)",fontStyle:"italic"}}>Sin terrenos en esta categoría</span>
+          </div>
+        )}
+      </React.Fragment>
+    );
+  };
+  return (
+    <div className="data-table">
+      <div className="dt-head" style={{gridTemplateColumns:"1fr 70px 130px"}}>
+        <span>Categoría</span>
+        <span style={{textAlign:"center"}}>Terrenos</span>
+        <span style={{textAlign:"right"}}>Contribuciones {anio}</span>
+      </div>
+      {renderGroup("si","⚠ Con sobretasa","var(--red)",sobretasaSI,totalConSobre)}
+      {renderGroup("no","✓ Sin sobretasa","var(--green)",sobretasaNO,totalSinSobre)}
+      <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px",background:"var(--bg)"}}>
+        <span style={{fontWeight:700}}>TOTAL</span>
+        <span style={{textAlign:"center",fontWeight:600}}>{filTerLen}</span>
+        <span style={{textAlign:"right",fontWeight:700}}>{fmtCLP(totalConSobre+totalSinSobre)}</span>
+      </div>
+    </div>
+  );
+}
+
 function ProyectosBreakdown({terrenos, cuotas, chartFilter, onClearFilter, onSelectTerreno}) {
   const [expanded, setExpanded] = useState({});
   const filtered = chartFilter
@@ -1166,7 +1229,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
 
           <div className="dash-2col">
             <div className="dash-section">
-              <h4>📍 Impuesto {anio} por ciudad</h4>
+              <h4>📍 Contribuciones {anio} por ciudad</h4>
               <div className="data-table">
                 <div className="dt-head" style={{gridTemplateColumns:"1fr 60px 110px"}}>
                   <span>Ciudad</span><span style={{textAlign:"center"}}>Terrenos</span><span style={{textAlign:"right"}}>Total</span>
@@ -1183,26 +1246,12 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
             </div>
             <div className="dash-section">
               <h4>⚖️ Desglose por sobretasa</h4>
-              <div className="data-table">
-                <div className="dt-head" style={{gridTemplateColumns:"1fr 70px 130px"}}>
-                  <span>Categoría</span><span style={{textAlign:"center"}}>Terrenos</span><span style={{textAlign:"right"}}>Cuotas {anio}</span>
-                </div>
-                <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px"}}>
-                  <span style={{fontWeight:600,color:"var(--red)"}}>⚠ Con sobretasa</span>
-                  <span style={{textAlign:"center"}}>{sobretasaSI.length}</span>
-                  <span style={{textAlign:"right",fontWeight:600,color:"var(--red)"}}>{fmtCLP(totalConSobre)}</span>
-                </div>
-                <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px"}}>
-                  <span style={{fontWeight:600,color:"var(--green)"}}>✓ Sin sobretasa</span>
-                  <span style={{textAlign:"center"}}>{sobretasaNO.length}</span>
-                  <span style={{textAlign:"right",fontWeight:600,color:"var(--green)"}}>{fmtCLP(totalSinSobre)}</span>
-                </div>
-                <div className="dt-row" style={{gridTemplateColumns:"1fr 70px 130px",background:"var(--bg)"}}>
-                  <span style={{fontWeight:700}}>TOTAL</span>
-                  <span style={{textAlign:"center",fontWeight:600}}>{filTer.length}</span>
-                  <span style={{textAlign:"right",fontWeight:700}}>{fmtCLP(totalConSobre+totalSinSobre)}</span>
-                </div>
-              </div>
+              <SobretasaBreakdown
+                sobretasaSI={sobretasaSI} sobretasaNO={sobretasaNO}
+                cuotas={filCuotas} anio={anio}
+                totalConSobre={totalConSobre} totalSinSobre={totalSinSobre}
+                filTerLen={filTer.length}
+                onSelectTerreno={onSelectTerreno}/>
             </div>
           </div>
 
