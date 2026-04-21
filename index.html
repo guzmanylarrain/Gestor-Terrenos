@@ -2372,6 +2372,7 @@ function App({user, onLogout}) {
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
   const [openCities, setOpenCities] = useState({});
 
   const loadAll = useCallback(async () => {
@@ -2499,6 +2500,48 @@ function App({user, onLogout}) {
 
   const refreshAll = () => { loadDetail(selRol); loadAll(); };
 
+  const exportJSON = async () => {
+    setExportBusy(true);
+    try{
+      const [terrenos, cuotas, bitacora, devoluciones, archivos, subtareas, archivos_subtareas] = await Promise.all([
+        db.select("terrenos","order=ciudad.asc,terreno.asc"),
+        db.select("cuotas","order=anio.desc,numero.asc"),
+        db.select("bitacora","order=fecha.desc"),
+        db.select("devoluciones","order=fecha.desc"),
+        db.select("archivos","order=created_at.asc"),
+        db.select("subtareas","order=created_at.asc"),
+        db.select("archivos_subtareas","order=created_at.asc"),
+      ]);
+      const backup = {
+        version: 1,
+        app: "Gestor de Terrenos - Guzmán & Larraín",
+        exported_at: new Date().toISOString(),
+        exported_by: (user && user.email) || null,
+        counts: {
+          terrenos: terrenos.length, cuotas: cuotas.length, bitacora: bitacora.length,
+          devoluciones: devoluciones.length, archivos: archivos.length,
+          subtareas: subtareas.length, archivos_subtareas: archivos_subtareas.length
+        },
+        notes: "Respaldo de datos. No incluye el contenido binario de archivos del bucket, ni usuarios/contraseñas. El código vive en GitHub.",
+        tables: { terrenos, cuotas, bitacora, devoluciones, archivos, subtareas, archivos_subtareas }
+      };
+      const json = JSON.stringify(backup, null, 2);
+      const blob = new Blob([json], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);
+      a.href = url;
+      a.download = `gestor-terrenos-backup-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }catch(e){
+      alert("Error al generar respaldo: "+e.message);
+    }
+    setExportBusy(false);
+  };
+
   const selTerreno = terrenos.find(t=>t.rol===selRol);
 
   // Sidebar groups
@@ -2586,6 +2629,9 @@ function App({user, onLogout}) {
         <div className="sidebar-bottom">
           <button className="sbtn sbtn-primary" onClick={()=>setShowNew(true)}>＋ Nuevo terreno</button>
           <button className="sbtn sbtn-ghost" onClick={()=>setShowImport(true)}>↑ Importar Excel</button>
+          <button className="sbtn sbtn-ghost" onClick={exportJSON} disabled={exportBusy} title="Descargar respaldo de todos los datos en JSON">
+            {exportBusy ? "⏳ Generando respaldo..." : "⇩ Descargar respaldo (JSON)"}
+          </button>
           <button className="sbtn sbtn-ghost" onClick={()=>setSelRol(null)}>⊞ Dashboard global</button>
           {hiddenRols.size>0&&(
             <button className="sbtn sbtn-ghost" onClick={()=>setShowHidden(s=>!s)}>
