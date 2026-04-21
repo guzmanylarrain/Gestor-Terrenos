@@ -8,7 +8,6 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.2/babel.min.js"></script>
-<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2.104.0/dist/umd/supabase.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -2120,162 +2119,6 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
 }
 
 // ─────────────────────────────────────────────────────
-// IMPORT EXCEL MODAL
-// ─────────────────────────────────────────────────────
-function ImportModal({onClose, onImported}) {
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState([]);
-  const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState(null);
-
-  const parsePreview = (f) => {
-    setFile(f);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try{
-        const wb = XLSX.read(e.target.result, {type:"binary"});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, {header:1});
-        setPreview(rows.slice(1).filter(r=>r[8]).slice(0,5));
-      }catch(err){alert("Error al leer: "+err.message);}
-    };
-    reader.readAsBinaryString(f);
-  };
-
-  const doImport = async () => {
-    if(!file) return;
-    setImporting(true);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try{
-        const wb = XLSX.read(e.target.result, {type:"binary"});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, {header:1});
-        const data = rows.slice(1).filter(r=>r[8]&&r[0]&&r[2]);
-        const anio = new Date().getFullYear();
-
-        // 1. Upsert terrenos
-        const terrenosArr = data.map(r=>({
-          rol:String(r[8]).trim(),
-          terreno:String(r[0]).trim(),
-          vigente:String(r[1]||"SI").trim(),
-          ciudad:String(r[2]).trim(),
-          m2_sii:parseFloat(r[3])||0,
-          avaluo:parseInt(r[4])||0,
-          uf_m2:parseFloat(r[5])||0,
-          sobretasa:String(r[6]||"").toLowerCase()==="si",
-          proyecto:r[7]?String(r[7]).trim():null,
-        }));
-        await db.upsert("terrenos", terrenosArr);
-
-        // 2. Upsert cuotas (current year)
-        let cuotasCount = 0;
-        const cuotasArr = [];
-        for(const r of data){
-          const rol = String(r[8]).trim();
-          const monto = parseInt(r[9])||0;
-          const tasa  = parseFloat(r[10])||0;
-          if(monto>0){
-            for(let n=1;n<=4;n++){
-              cuotasArr.push({terreno_rol:rol,anio,numero:n,monto,tasa,
-                fecha_vencimiento:`${anio}-${CUOTA_DATES[n]}`,pagado:false});
-            }
-            cuotasCount++;
-          }
-        }
-        if(cuotasArr.length>0) await db.upsert("cuotas", cuotasArr);
-
-        // 3. Bitácora entries from detalle column
-        let bitaCount = 0;
-        for(const r of data){
-          const rol = String(r[8]).trim();
-          const detalle = r[12]?String(r[12]).trim():"";
-          if(!detalle) continue;
-          let fecha = today();
-          if(r[11] instanceof Date) fecha = r[11].toISOString().slice(0,10);
-          else if(typeof r[11]==="number"){
-            const d = new Date((r[11]-25569)*86400000);
-            fecha = d.toISOString().slice(0,10);
-          }
-          const estatus = String(r[13]||"Pendiente").trim()||"Pendiente";
-          try{
-            await db.insert("bitacora",[{terreno_rol:rol,fecha,detalle,estatus}]);
-            bitaCount++;
-          }catch(e){/* skip dups */}
-        }
-
-        setResult({terrenos:terrenosArr.length, cuotas:cuotasCount, bitacora:bitaCount});
-        onImported();
-      }catch(err){alert("Error en importación: "+err.message);}
-      setImporting(false);
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  return (
-    <Modal title="Importar datos desde Excel" onClose={onClose} large
-      footer={<>
-        <button className="btn btn-ghost" onClick={onClose}>Cerrar</button>
-        {!result&&<button className="btn btn-primary" onClick={doImport} disabled={!file||importing}>
-          {importing?"⏳ Importando...":"↑ Importar datos"}
-        </button>}
-      </>}>
-      {result ? (
-        <div style={{textAlign:"center",padding:"24px"}}>
-          <div style={{fontSize:42,marginBottom:14}}>✅</div>
-          <div style={{fontSize:16,fontWeight:600,color:"var(--green)",marginBottom:10}}>Importación completada</div>
-          <div style={{color:"var(--ink3)",fontSize:13,lineHeight:1.9}}>
-            <div><strong style={{color:"var(--ink)"}}>{result.terrenos}</strong> terrenos importados / actualizados</div>
-            <div><strong style={{color:"var(--ink)"}}>{result.cuotas}</strong> terrenos con cuotas del año generadas</div>
-            <div><strong style={{color:"var(--ink)"}}>{result.bitacora}</strong> entradas creadas en bitácora</div>
-          </div>
-        </div>
-      ):(
-        <>
-          <p style={{fontSize:13,color:"var(--ink3)",lineHeight:1.65}}>
-            Importa tu archivo <strong>data_terreno.xlsx</strong>. Los registros existentes se actualizarán según el <strong>ROL</strong> como clave única. Se generarán cuotas para el año actual y se crearán entradas de bitácora si el Excel incluye tareas.
-          </p>
-          <label style={{display:"block",border:"2px dashed var(--line)",borderRadius:9,padding:"22px",textAlign:"center",cursor:"pointer",transition:"all 0.15s"}}
-            onMouseEnter={e=>e.currentTarget.style.borderColor="var(--teal)"}
-            onMouseLeave={e=>e.currentTarget.style.borderColor="var(--line)"}>
-            <input type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={e=>e.target.files[0]&&parsePreview(e.target.files[0])}/>
-            <div style={{fontSize:32,marginBottom:10}}>📊</div>
-            {file ? (
-              <div style={{fontWeight:600,color:"var(--teal)",fontSize:13}}>{file.name} · listo para importar</div>
-            ):(
-              <div style={{color:"var(--ink3)",fontSize:13}}>Haz clic para seleccionar el archivo Excel</div>
-            )}
-          </label>
-          {preview.length>0&&(
-            <div>
-              <div style={{fontSize:10.5,fontWeight:600,color:"var(--ink3)",marginBottom:8,textTransform:"uppercase",letterSpacing:"1px"}}>Vista previa — {preview.length} filas</div>
-              <div style={{overflowX:"auto"}}>
-                <table style={{borderCollapse:"collapse",width:"100%",fontSize:12}}>
-                  <thead><tr style={{background:"var(--bg)"}}>
-                    {["ROL","Terreno","Ciudad","M² SII","Avalúo"].map(h=>(
-                      <th key={h} style={{padding:"6px 10px",textAlign:"left",fontWeight:600,color:"var(--ink3)",fontSize:10.5}}>{h}</th>
-                    ))}
-                  </tr></thead>
-                  <tbody>{preview.map((r,i)=>(
-                    <tr key={i} style={{borderTop:"1px solid var(--line)"}}>
-                      <td style={{padding:"5px 10px",fontFamily:"monospace",fontSize:11}}>{r[8]}</td>
-                      <td style={{padding:"5px 10px"}}>{String(r[0]||"").slice(0,22)}</td>
-                      <td style={{padding:"5px 10px"}}>{r[2]}</td>
-                      <td style={{padding:"5px 10px"}}>{(parseFloat(r[3])||0).toLocaleString("es-CL")}</td>
-                      <td style={{padding:"5px 10px"}}>{fmtCLP(r[4])}</td>
-                    </tr>
-                  ))}</tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </Modal>
-  );
-}
-
-// ─────────────────────────────────────────────────────
 // NEW TERRENO MODAL
 // ─────────────────────────────────────────────────────
 function NewTerrenoModal({onClose, onCreated}) {
@@ -2371,7 +2214,6 @@ function App({user, onLogout}) {
   const [syncStatus, setSyncStatus] = useState("ok");
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
-  const [showImport, setShowImport] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [openCities, setOpenCities] = useState({});
 
@@ -2628,7 +2470,6 @@ function App({user, onLogout}) {
 
         <div className="sidebar-bottom">
           <button className="sbtn sbtn-primary" onClick={()=>setShowNew(true)}>＋ Nuevo terreno</button>
-          <button className="sbtn sbtn-ghost" onClick={()=>setShowImport(true)}>↑ Importar Excel</button>
           <button className="sbtn sbtn-ghost" onClick={exportJSON} disabled={exportBusy} title="Descargar respaldo de todos los datos en JSON">
             {exportBusy ? "⏳ Generando respaldo..." : "⇩ Descargar respaldo (JSON)"}
           </button>
@@ -2704,7 +2545,6 @@ function App({user, onLogout}) {
       </div>
 
       {showNew&&<NewTerrenoModal onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);loadAll();}}/>}
-      {showImport&&<ImportModal onClose={()=>setShowImport(false)} onImported={()=>{setShowImport(false);loadAll();if(selRol)loadDetail(selRol);}}/>}
     </div>
   );
 }
