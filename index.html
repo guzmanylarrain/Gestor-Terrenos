@@ -678,7 +678,7 @@ function ContribChart({cuotas, selected, onSelectBar}) {
   const totalW=padL+data.length*(barW+gap)-gap+padR;
   const fmtM=v=>{if(v>=1e9)return"$"+(v/1e9).toFixed(1)+"B";if(v>=1e6)return"$"+(v/1e6).toFixed(0)+"M";return"$"+(v/1e3).toFixed(0)+"K";};
   const ticks=[0,0.25,0.5,0.75,1];
-  const qColor={1:"#1a5f6e",2:"#227080",3:"#1a7a4a",4:"#5cba8a"};
+  const barColor="#1a5f6e"; // color único (teal) — sólido = pagado, tenue = pendiente
   const clickable = typeof onSelectBar === "function";
   return (
     <div className="chart-scroll">
@@ -695,7 +695,7 @@ function ContribChart({cuotas, selected, onSelectBar}) {
           const tH=(d.total/maxVal)*chartH;
           const pH=(d.paid/maxVal)*chartH;
           const uH=tH-pH;
-          const col=qColor[d.numero]||"var(--teal)";
+          const col=barColor;
           const isCurrentYear=d.anio===new Date().getFullYear();
           const isSelected = selected && selected.anio===d.anio && selected.numero===d.numero;
           const dimmed = selected && !isSelected;
@@ -731,7 +731,10 @@ function ProyectosBreakdown({terrenos, cuotas, chartFilter, onClearFilter}) {
   const byProy = {};
   filtered.forEach(c=>{
     const t = terrMap[c.terreno_rol];
-    const proy = (t && t.proyecto && String(t.proyecto).trim()) || "— Sin proyecto —";
+    // Si no hay proyecto, usar el nombre del terreno (o el rol como fallback)
+    const proy = (t && t.proyecto && String(t.proyecto).trim())
+                 || (t && t.terreno && String(t.terreno).trim())
+                 || c.terreno_rol;
     if(!byProy[proy]) byProy[proy] = {proyecto:proy, terrenos:new Set(), total:0, paid:0};
     byProy[proy].terrenos.add(c.terreno_rol);
     const m = parseInt(c.monto)||0;
