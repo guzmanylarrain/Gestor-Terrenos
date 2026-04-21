@@ -1584,39 +1584,20 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
 
   const addManual = async () => {
     if(!addForm.fecha_vencimiento){alert("Debes elegir la fecha de vencimiento");return;}
-    const isExtra = addForm.numero === "extra";
-    const targetAnio = parseInt(addForm.anio);
-    let finalNumero;
-    if(isExtra){
-      const maxN = cuotas.filter(c=>c.anio===targetAnio).reduce((m,c)=>Math.max(m,c.numero||0),4);
-      finalNumero = maxN + 1;
-    }else{
-      finalNumero = parseInt(addForm.numero);
-      if(finalNumero<1||finalNumero>4){alert("La cuota debe ser entre 1 y 4");return;}
-    }
-    // Solo las legales (1-4) tienen lógica de "reemplazar"
-    const existing = !isExtra ? cuotas.find(c=>c.anio===targetAnio&&c.numero===finalNumero) : null;
-    if(existing && !confirm(`Ya existe la cuota ${finalNumero} del año ${targetAnio}. ¿Reemplazar?`)) return;
+    const targetAnio = anio; // siempre fijo al año visto
+    const maxN = cuotas.filter(c=>c.anio===targetAnio).reduce((m,c)=>Math.max(m,c.numero||0),4);
+    const finalNumero = maxN + 1; // extras siempre >= 5
     setAddBusy(true);
     try{
-      if(existing){
-        await db.patch("cuotas","id=eq."+existing.id, {
-          monto:parseInt(addForm.monto)||0,
-          fecha_vencimiento:addForm.fecha_vencimiento,
-          pagado:addForm.pagado,
-          fecha_pago:addForm.pagado?(addForm.fecha_pago||today()):null
-        });
-      }else{
-        await db.insert("cuotas",[{
-          terreno_rol:terreno.rol, anio:targetAnio, numero:finalNumero,
-          monto:parseInt(addForm.monto)||0, tasa:0,
-          fecha_vencimiento:addForm.fecha_vencimiento,
-          pagado:addForm.pagado,
-          fecha_pago:addForm.pagado?(addForm.fecha_pago||today()):null
-        }]);
-      }
+      await db.insert("cuotas",[{
+        terreno_rol:terreno.rol, anio:targetAnio, numero:finalNumero,
+        monto:parseInt(addForm.monto)||0, tasa:0,
+        fecha_vencimiento:addForm.fecha_vencimiento,
+        pagado:addForm.pagado,
+        fecha_pago:addForm.pagado?(addForm.fecha_pago||today()):null
+      }]);
       setShowAdd(false);
-      setAddForm({anio:anio, numero:"1", monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
+      setAddForm({anio:anio, numero:"extra", monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
       onRefresh();
     }catch(e){alert("Error: "+e.message);}
     setAddBusy(false);
@@ -1642,25 +1623,14 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
             </button>
           )}
           <button className="btn btn-outline btn-sm" onClick={()=>{setAddForm(f=>({...f,anio})); setShowAdd(s=>!s);}}>
-            {showAdd?"✕ Cancelar":"➕ Agregar cuota manual"}
+            {showAdd?"✕ Cancelar":"➕ Agregar cuota extra"}
           </button>
         </div>
       </div>
 
       {showAdd&&(
         <div className="add-entry-box">
-          <div className="title">Agregar / reemplazar cuota manual</div>
-          <div className="field-row" style={{marginBottom:10}}>
-            <div className="field"><label>Año</label>
-              <input type="number" value={addForm.anio} onChange={e=>setAddForm(f=>({...f,anio:parseInt(e.target.value)||f.anio}))}/>
-            </div>
-            <div className="field"><label>Cuota</label>
-              <select value={addForm.numero} onChange={e=>setAddForm(f=>({...f,numero:e.target.value}))}>
-                {[1,2,3,4].map(n=><option key={n} value={String(n)}>{CUOTA_LABELS[n]}</option>)}
-                <option value="extra">➕ Cuota extra / adicional</option>
-              </select>
-            </div>
-          </div>
+          <div className="title">Agregar cuota extra — {anio}</div>
           <div className="field-row" style={{marginBottom:10}}>
             <div className="field"><label>Monto ($CLP)</label>
               <input type="text" inputMode="numeric"
@@ -1686,7 +1656,7 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
             )}
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button className="btn btn-primary btn-sm" onClick={addManual} disabled={addBusy}>{addBusy?"Guardando...":"Guardar cuota"}</button>
+            <button className="btn btn-primary btn-sm" onClick={addManual} disabled={addBusy}>{addBusy?"Guardando...":"Guardar cuota extra"}</button>
           </div>
         </div>
       )}
