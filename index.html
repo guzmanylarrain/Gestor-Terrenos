@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://hpztcgooeuwacyvniyle.supabase.co; connect-src 'self' https://hpztcgooeuwacyvniyle.supabase.co wss://hpztcgooeuwacyvniyle.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"/>
 <title>Gestor de Terrenos — Guzmán & Larraín</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.2/babel.min.js"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2.104.0/dist/umd/supabase.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -326,7 +327,7 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 </style>
 </head>
 <body>
-<script>window.INITIAL_DATA=[{"rol":"671-1","terreno":"Diego Portales","vigente":"SI","ciudad":"Arica","m2_sii":4234.0,"avaluo":783732889,"uf_m2":4.65,"sobretasa":false,"proyecto":null,"cuota_monto":2227267,"tasa":0.01137,"fecha_tarea":null,"detalle_tarea":null,"estatus":"Pendiente"},{"rol":"9401-4","terreno":"Laneri B3-B4-1-1c","vigente":"SI","ciudad":"Arica","m2_sii":6933.8,"avaluo":864859132,"uf_m2":3.13,"sobretasa":false,"proyecto":"Sala de Ventas","cuota_monto":2468828,"tasa":0.01142,"fecha_tarea":null,"detalle_tarea":null,"estatus":"En Proceso"},{"rol":"9401-14","terreno":"B-3B-4-1-2A","vigente":"SI","ciudad":"Arica","m2_sii":31787.0,"avaluo":1780054101,"uf_m2":1.41,"sobretasa":true,"proyecto":null,"cuota_monto":11792478,"tasa":0.0265,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"9401-217","terreno":"B3-B4-1-2A LT X1","vigente":"SI","ciudad":"Arica","m2_sii":10175.0,"avaluo":1051677201,"uf_m2":2.6,"sobretasa":true,"proyecto":"Doña Catalina","cuota_monto":6971643,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"9401-218","terreno":"B3-B4-1-2A LT X2","vigente":"SI","ciudad":"Arica","m2_sii":11999.31,"avaluo":0,"uf_m2":0,"sobretasa":false,"proyecto":"Doña Eugenia","cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":"Roles sin activar","estatus":"Pendiente"},{"rol":"9401-219","terreno":"B3-B4-1-2A LT X3","vigente":"SI","ciudad":"Arica","m2_sii":9612.29,"avaluo":0,"uf_m2":0,"sobretasa":false,"proyecto":"Doña Pilar","cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":"Roles sin activar","estatus":"Pendiente"},{"rol":"9401-15","terreno":"B3-B4-1-2B","vigente":"SI","ciudad":"Arica","m2_sii":9956.0,"avaluo":1045120368,"uf_m2":2.64,"sobretasa":false,"proyecto":"Doña Isidora","cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":"Rol Eliminado","estatus":"Finalizada","extra_bitacora":[{"detalle":"Solicitar devolución","estatus":"En Proceso","fecha":"2025-01-01"}]},{"rol":"654-9","terreno":"Playa Chinchorro","vigente":"SI","ciudad":"Arica","m2_sii":4308.0,"avaluo":637910547,"uf_m2":3.72,"sobretasa":false,"proyecto":null,"cuota_monto":4233086,"tasa":0.02654,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"654-10","terreno":"Playa Chinchorro","vigente":"SI","ciudad":"Arica","m2_sii":3218.0,"avaluo":6826428894,"uf_m2":53.27,"sobretasa":true,"proyecto":"Novotel","cuota_monto":19399826,"tasa":0.01137,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1300-1","terreno":"21 de Mayo","vigente":"SI","ciudad":"Arica","m2_sii":8564.0,"avaluo":1103436257,"uf_m2":3.24,"sobretasa":false,"proyecto":null,"cuota_monto":3146833,"tasa":0.01141,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3571-1","terreno":"Chipana cerro dragón lote 17","vigente":"SI","ciudad":"Iquique","m2_sii":906.0,"avaluo":297277523,"uf_m2":8.24,"sobretasa":false,"proyecto":null,"cuota_monto":829073,"tasa":0.01116,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3571-2","terreno":"Chipana cerro dragón lote 18","vigente":"SI","ciudad":"Iquique","m2_sii":403.0,"avaluo":137046683,"uf_m2":8.54,"sobretasa":true,"proyecto":null,"cuota_monto":899255,"tasa":0.02625,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"2361-1","terreno":"Terreno Alto Hospicio Lote H","vigente":"SI","ciudad":"Iquique","m2_sii":0,"avaluo":2911274237,"uf_m2":0,"sobretasa":true,"proyecto":null,"cuota_monto":12803556,"tasa":0.01759,"fecha_tarea":null,"detalle_tarea":"Cambiar propetiario a municipalidad","estatus":"En Proceso"},{"rol":"3320-2","terreno":"Lote 5A","vigente":"SI","ciudad":"Iquique","m2_sii":0,"avaluo":5537591022,"uf_m2":0,"sobretasa":false,"proyecto":null,"cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":"Cambiar propetiario a municipalidad","estatus":"En Proceso"},{"rol":"3320-494","terreno":"Lote 5B-A","vigente":"SI","ciudad":"Iquique","m2_sii":6145.0,"avaluo":2720175997,"uf_m2":11.12,"sobretasa":false,"proyecto":null,"cuota_monto":7458168,"tasa":0.01097,"fecha_tarea":"2025-10-22","detalle_tarea":"Se rebaja m2 vendidos","estatus":"Finalizada"},{"rol":"3320-496","terreno":"Lote 5B-3","vigente":"SI","ciudad":"Iquique","m2_sii":3545.0,"avaluo":1373786522,"uf_m2":9.73,"sobretasa":false,"proyecto":null,"cuota_monto":3913234,"tasa":0.01139,"fecha_tarea":"2025-10-22","detalle_tarea":"Cobrar arriendo a EC (Tarifado)","estatus":"Finalizada"},{"rol":"728-6","terreno":"Econsa LT C - 5B","vigente":"SI","ciudad":"Iquique","m2_sii":956.0,"avaluo":194608267,"uf_m2":5.11,"sobretasa":false,"proyecto":null,"cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"100-5","terreno":"LOTE 1-A REG. TELEC. EL LOA","vigente":"SI","ciudad":"Antofagasta","m2_sii":4267.0,"avaluo":1139281681,"uf_m2":6.71,"sobretasa":false,"proyecto":"area verde, frente","cuota_monto":3237691,"tasa":0.01137,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"100-23","terreno":"LOTE 1A1 calle S/N 215","vigente":"SI","ciudad":"Antofagasta","m2_sii":8335.0,"avaluo":3128077103,"uf_m2":9.43,"sobretasa":false,"proyecto":"SANTA LUCÍA- BARTOLOMÉ","cuota_monto":9712977,"tasa":0.01242,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"100-24","terreno":"LOTE 1A2 CERRO PARANAL 271","vigente":"SI","ciudad":"Antofagasta","m2_sii":14173.0,"avaluo":4763661197,"uf_m2":8.44,"sobretasa":false,"proyecto":"TOBAGO - Bahamas","cuota_monto":13555419,"tasa":0.01138,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"100-25","terreno":"LOTE 1A3 CERRO PARANAL 315","vigente":"SI","ciudad":"Antofagasta","m2_sii":6675.0,"avaluo":2952002741,"uf_m2":11.11,"sobretasa":false,"proyecto":"ANTIGUA - BARLOVENTO","cuota_monto":8406921,"tasa":0.01139,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"100-35","terreno":"LOTE 1-A 9","vigente":"SI","ciudad":"Antofagasta","m2_sii":609.0,"avaluo":242395911,"uf_m2":10.0,"sobretasa":false,"proyecto":"SITIO ERIAZO","cuota_monto":170792,"tasa":0.00282,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-13","terreno":"LOTE 1Z (PIANITO)","vigente":"SI","ciudad":"Antofagasta","m2_sii":35942.0,"avaluo":3559778507,"uf_m2":2.49,"sobretasa":false,"proyecto":"SITIO ERIAZO (pianito)","cuota_monto":11974478,"tasa":0.01346,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-55","terreno":"LOTE 1A6","vigente":"SI","ciudad":"Antofagasta","m2_sii":795.0,"avaluo":112123409,"uf_m2":3.54,"sobretasa":false,"proyecto":"Franja SV","cuota_monto":759812,"tasa":0.02711,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-51","terreno":"LOTE 1A2","vigente":"SI","ciudad":"Antofagasta","m2_sii":8300.0,"avaluo":1076948873,"uf_m2":3.26,"sobretasa":false,"proyecto":"VICUÑAS 1","cuota_monto":3078261,"tasa":0.01143,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-70","terreno":"LAS VICUÑAS","vigente":"SI","ciudad":"Antofagasta","m2_sii":8349.0,"avaluo":1083306764,"uf_m2":3.26,"sobretasa":false,"proyecto":"Vicuñas 2","cuota_monto":7187689,"tasa":0.02654,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-71","terreno":"EQUIPAMIENTO","vigente":"SI","ciudad":"Antofagasta","m2_sii":1048.0,"avaluo":147805450,"uf_m2":3.54,"sobretasa":false,"proyecto":"EQ Vicuñas","cuota_monto":995978,"tasa":0.02695,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-52","terreno":"LOTE 1A3","vigente":"SI","ciudad":"Antofagasta","m2_sii":55610.0,"avaluo":6352827753,"uf_m2":2.87,"sobretasa":false,"proyecto":"Ex PA SA","cuota_monto":42064547,"tasa":0.02649,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-53","terreno":"LOTE 1A4","vigente":"SI","ciudad":"Antofagasta","m2_sii":8077.0,"avaluo":1048013982,"uf_m2":3.26,"sobretasa":false,"proyecto":"Ex Hotel","cuota_monto":6954099,"tasa":0.02654,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-54","terreno":"LOTE 1A5","vigente":"SI","ciudad":"Antofagasta","m2_sii":2971.0,"avaluo":418876133,"uf_m2":3.54,"sobretasa":false,"proyecto":"Antenas","cuota_monto":2790087,"tasa":0.02664,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-56","terreno":"LOTE 1A7","vigente":"SI","ciudad":"Antofagasta","m2_sii":480.0,"avaluo":67697153,"uf_m2":3.54,"sobretasa":false,"proyecto":"Buffer colegio","cuota_monto":465774,"tasa":0.02752,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-01","terreno":"Club Hipico P. Aguirre Cerda 8980","vigente":"SI","ciudad":"Antofagasta","m2_sii":99820.0,"avaluo":10759486294,"uf_m2":2.71,"sobretasa":false,"proyecto":"PARQUE NORTE","cuota_monto":24147706,"tasa":0.00898,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-72","terreno":"LOTE F equipamiento","vigente":"SI","ciudad":"Antofagasta","m2_sii":2450.0,"avaluo":345537551,"uf_m2":3.54,"sobretasa":false,"proyecto":"Parte EQ Lote F","cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-57","terreno":"PARQUE NORTE LOTE 1","vigente":"SI","ciudad":"Antofagasta","m2_sii":6344.0,"avaluo":858941475,"uf_m2":3.4,"sobretasa":false,"proyecto":"Instalación Faena","cuota_monto":5702703,"tasa":0.02656,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-58","terreno":"PARQUE NORTE LOTE 2","vigente":"SI","ciudad":"Antofagasta","m2_sii":13731.0,"avaluo":1684808659,"uf_m2":3.08,"sobretasa":false,"proyecto":null,"cuota_monto":11168790,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-59","terreno":"PARQUE NORTE LOTE 3","vigente":"SI","ciudad":"Antofagasta","m2_sii":14084.0,"avaluo":1727999443,"uf_m2":3.08,"sobretasa":false,"proyecto":null,"cuota_monto":11454652,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-60","terreno":"PARQUE NORTE LOTE 4","vigente":"SI","ciudad":"Antofagasta","m2_sii":14166.0,"avaluo":1738183633,"uf_m2":3.08,"sobretasa":false,"proyecto":null,"cuota_monto":11522056,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-61","terreno":"PARQUE NORTE LOTE 5","vigente":"SI","ciudad":"Antofagasta","m2_sii":12849.0,"avaluo":1594707980,"uf_m2":3.12,"sobretasa":false,"proyecto":null,"cuota_monto":10572449,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-62","terreno":"PARQUE NORTE LOTE 6","vigente":"SI","ciudad":"Antofagasta","m2_sii":11627.0,"avaluo":1459316496,"uf_m2":3.15,"sobretasa":false,"proyecto":"Halcones","cuota_monto":9676346,"tasa":0.02652,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-63","terreno":"PARQUE NORTE LOTE 7","vigente":"SI","ciudad":"Antofagasta","m2_sii":13346.0,"avaluo":1637568740,"uf_m2":3.08,"sobretasa":false,"proyecto":"Cóndores","cuota_monto":4941016,"tasa":0.01207,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-65","terreno":"PARQUE NORTE LOTE 9","vigente":"SI","ciudad":"Antofagasta","m2_sii":5166.0,"avaluo":721304701,"uf_m2":3.51,"sobretasa":false,"proyecto":null,"cuota_monto":4791741,"tasa":0.02657,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-66","terreno":"PARQUE NORTE LOTE 10","vigente":"SI","ciudad":"Antofagasta","m2_sii":7932.0,"avaluo":1040386769,"uf_m2":3.29,"sobretasa":false,"proyecto":"Instalación Faena","cuota_monto":6903617,"tasa":0.02654,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-67","terreno":"PARQUE NORTE LOTE 11","vigente":"SI","ciudad":"Antofagasta","m2_sii":9700.0,"avaluo":1231241967,"uf_m2":3.19,"sobretasa":false,"proyecto":"fabrica de baños","cuota_monto":8166813,"tasa":0.02653,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-68","terreno":"PARQUE NORTE LOTE 12","vigente":"SI","ciudad":"Antofagasta","m2_sii":5095.0,"avaluo":718577070,"uf_m2":3.54,"sobretasa":false,"proyecto":null,"cuota_monto":4773687,"tasa":0.02657,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"5511-69","terreno":"PARQUE NORTE LOTE 13","vigente":"SI","ciudad":"Antofagasta","m2_sii":9648.0,"avaluo":1224641494,"uf_m2":3.19,"sobretasa":false,"proyecto":null,"cuota_monto":8123126,"tasa":0.02653,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"16228-1","terreno":"P.ZUCOVIC LT 2A-2B-1","vigente":"SI","ciudad":"Antofagasta","m2_sii":7344.0,"avaluo":1484546423,"uf_m2":5.08,"sobretasa":false,"proyecto":"BAHIA BLANCA","cuota_monto":0,"tasa":0,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"301-4","terreno":"MEJILLONES Lt2 m2","vigente":"SI","ciudad":"Antofagasta","m2_sii":5084.0,"avaluo":643551283,"uf_m2":3.18,"sobretasa":false,"proyecto":null,"cuota_monto":4277909,"tasa":0.02659,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-147","terreno":"57 A - 5B 2","vigente":"SI","ciudad":"Santiago","m2_sii":9834.0,"avaluo":5012594465,"uf_m2":12.8,"sobretasa":false,"proyecto":"CANCHAS EL ROSAL","cuota_monto":13173494,"tasa":0.01051,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-582","terreno":"LOTE 1 SUBDIV LIRA","vigente":"SI","ciudad":"Santiago","m2_sii":8383.0,"avaluo":2488980745,"uf_m2":7.46,"sobretasa":false,"proyecto":"Sala de ventas","cuota_monto":7084851,"tasa":0.01139,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-583","terreno":"LOTE 2 SUBDIV LIRA","vigente":"SI","ciudad":"Santiago","m2_sii":10529.0,"avaluo":1174431224,"uf_m2":2.8,"sobretasa":false,"proyecto":"entregado","cuota_monto":5282670,"tasa":0.01799,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-584","terreno":"LOTE 3 SUBDIV LIRA","vigente":"SI","ciudad":"Santiago","m2_sii":21400.0,"avaluo":97808841,"uf_m2":0.11,"sobretasa":false,"proyecto":null,"cuota_monto":56114,"tasa":0.00229,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-145","terreno":"PARCELA 55 C1 El Molino Bendersky Lt.A","vigente":"SI","ciudad":"Santiago","m2_sii":58100.0,"avaluo":142753867,"uf_m2":0.06,"sobretasa":false,"proyecto":null,"cuota_monto":229506,"tasa":0.00643,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"1195-539","terreno":"Homecenter 57-a B2 Strip center lt A2","vigente":"SI","ciudad":"Santiago","m2_sii":10000.0,"avaluo":9366197629,"uf_m2":23.52,"sobretasa":false,"proyecto":"Rentas El Rosal","cuota_monto":25508996,"tasa":0.01089,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"2610-003","terreno":"PARCELA 51-A Transan Will","vigente":"SI","ciudad":"Santiago","m2_sii":38000.0,"avaluo":163658746,"uf_m2":0.11,"sobretasa":false,"proyecto":null,"cuota_monto":126268,"tasa":0.00309,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"2610-10","terreno":"PARCELA 52 I LAS VERTIENTES","vigente":"SI","ciudad":"Santiago","m2_sii":64000.0,"avaluo":1903377171,"uf_m2":0.75,"sobretasa":false,"proyecto":"CANCHAS MICHIMALONGO","cuota_monto":5293866,"tasa":0.01113,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"2610-11","terreno":"PARCELA 52-A Inv. Pichilemu","vigente":"SI","ciudad":"Santiago","m2_sii":40000.0,"avaluo":198188168,"uf_m2":0.12,"sobretasa":false,"proyecto":null,"cuota_monto":163055,"tasa":0.00329,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"2585-44","terreno":"PARCELA 28-A","vigente":"SI","ciudad":"Santiago","m2_sii":224724.0,"avaluo":6320187888,"uf_m2":0.71,"sobretasa":false,"proyecto":"Barrio Oeste","cuota_monto":17294918,"tasa":0.01095,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3794-21","terreno":"Reserva Propietario 1","vigente":"SI","ciudad":"Santiago","m2_sii":428.0,"avaluo":167728424,"uf_m2":9.84,"sobretasa":false,"proyecto":"Lote 3A","cuota_monto":1121620,"tasa":0.02675,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3794-22","terreno":"Reserva Propietario 2","vigente":"SI","ciudad":"Santiago","m2_sii":490.0,"avaluo":187851064,"uf_m2":9.63,"sobretasa":false,"proyecto":null,"cuota_monto":1254803,"tasa":0.02672,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3130-009","terreno":"CAMINO GUANACO Lt. 1.8 - 1.9","vigente":"SI","ciudad":"Santiago","m2_sii":204536.0,"avaluo":19598459666,"uf_m2":2.41,"sobretasa":false,"proyecto":null,"cuota_monto":55696279,"tasa":0.01137,"fecha_tarea":null,"detalle_tarea":null,"estatus":null},{"rol":"3890-2","terreno":"GOLONDRINAS 180 (INACAP)","vigente":"SI","ciudad":"Talcahuano","m2_sii":6955.0,"avaluo":907441754,"uf_m2":3.28,"sobretasa":false,"proyecto":null,"cuota_monto":3302751,"tasa":0.01456,"fecha_tarea":null,"detalle_tarea":null,"estatus":null}];</script>
+<!-- INITIAL_DATA removido por seguridad: los datos viven en Supabase -->
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef } = React;
@@ -335,53 +336,62 @@ const { useState, useEffect, useCallback, useRef } = React;
 // SUPABASE CLIENT
 // ─────────────────────────────────────────────────────
 class SupabaseClient {
-  constructor(url, key) {
+  constructor(url, anonKey) {
     this.url = url.replace(/\/$/, "");
-    this.key = key;
-    this.h = {"Content-Type":"application/json","apikey":key,"Authorization":"Bearer "+key};
+    this.anonKey = anonKey;
+    this.key = anonKey; // kept for backward-compat
+    this.authToken = null;
+  }
+  setAuthToken(token) {
+    this.authToken = token || null;
+  }
+  _h(extra={}) {
+    const bearer = this.authToken || this.anonKey;
+    return {"Content-Type":"application/json","apikey":this.anonKey,"Authorization":"Bearer "+bearer,...extra};
   }
   async select(table, filter="") {
-    const res = await fetch(`${this.url}/rest/v1/${table}${filter?"?"+filter:""}`, {headers:this.h});
+    const res = await fetch(`${this.url}/rest/v1/${table}${filter?"?"+filter:""}`, {headers:this._h()});
     if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     return res.json();
   }
   async insert(table, body) {
     const res = await fetch(`${this.url}/rest/v1/${table}`, {
-      method:"POST", headers:{...this.h,"Prefer":"return=representation"}, body:JSON.stringify(body)
+      method:"POST", headers:this._h({"Prefer":"return=representation"}), body:JSON.stringify(body)
     });
     if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     return res.json();
   }
   async upsert(table, body) {
     const res = await fetch(`${this.url}/rest/v1/${table}`, {
-      method:"POST", headers:{...this.h,"Prefer":"resolution=merge-duplicates,return=minimal"}, body:JSON.stringify(body)
+      method:"POST", headers:this._h({"Prefer":"resolution=merge-duplicates,return=minimal"}), body:JSON.stringify(body)
     });
     if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     return true;
   }
   async patch(table, filter, body) {
     const res = await fetch(`${this.url}/rest/v1/${table}?${filter}`, {
-      method:"PATCH", headers:{...this.h,"Prefer":"return=minimal"}, body:JSON.stringify(body)
+      method:"PATCH", headers:this._h({"Prefer":"return=minimal"}), body:JSON.stringify(body)
     });
     if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     return true;
   }
   async del(table, filter) {
-    const res = await fetch(`${this.url}/rest/v1/${table}?${filter}`, {method:"DELETE", headers:this.h});
+    const res = await fetch(`${this.url}/rest/v1/${table}?${filter}`, {method:"DELETE", headers:this._h()});
     if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     return true;
   }
   async uploadFile(bucket, path, file) {
+    const bearer = this.authToken || this.anonKey;
     const res = await fetch(`${this.url}/storage/v1/object/${bucket}/${path}`, {
       method:"POST",
-      headers:{"apikey":this.key,"Authorization":"Bearer "+this.key,"Content-Type":file.type||"application/octet-stream","x-upsert":"true"},
+      headers:{"apikey":this.anonKey,"Authorization":"Bearer "+bearer,"Content-Type":file.type||"application/octet-stream","x-upsert":"true"},
       body:file
     });
     if(!res.ok) throw new Error(`Upload ${res.status}: ${await res.text()}`);
     return `${this.url}/storage/v1/object/public/${bucket}/${path}`;
   }
   async test() {
-    const res = await fetch(`${this.url}/rest/v1/terrenos?limit=1`, {headers:this.h});
+    const res = await fetch(`${this.url}/rest/v1/terrenos?limit=1`, {headers:this._h()});
     if(res.status===401) throw new Error("API Key inválida.");
     if(!res.ok&&res.status!==404&&res.status!==406) throw new Error(`Error HTTP ${res.status}`);
     return true;
@@ -395,6 +405,30 @@ let db = null;
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const today = () => new Date().toISOString().slice(0,10);
 const soon30 = () => { const d=new Date(); d.setDate(d.getDate()+30); return d.toISOString().slice(0,10); };
+
+// File upload validation
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_UPLOAD_MIMES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain","text/csv",
+  "image/png","image/jpeg","image/jpg","image/gif","image/webp","image/heic","image/heif"
+]);
+const ALLOWED_UPLOAD_EXTS = new Set(["pdf","doc","docx","xls","xlsx","ppt","pptx","txt","csv","png","jpg","jpeg","gif","webp","heic","heif"]);
+const validateUploadFile = (file) => {
+  if(!file) return "Archivo inválido.";
+  if(file.size > MAX_UPLOAD_BYTES) return `Archivo demasiado grande: ${(file.size/1024/1024).toFixed(1)} MB. Máximo permitido: 10 MB.`;
+  const ext = (file.name.split(".").pop()||"").toLowerCase();
+  const mimeOk = file.type && ALLOWED_UPLOAD_MIMES.has(file.type);
+  const extOk = ALLOWED_UPLOAD_EXTS.has(ext);
+  if(!mimeOk && !extOk) return `Tipo de archivo no permitido (.${ext}). Se permiten: PDF, Word, Excel, PowerPoint, imágenes y texto.`;
+  return null; // OK
+};
 
 const fmtDate = d => {
   if(!d) return "—";
@@ -709,6 +743,8 @@ function SubtareasSection({bitacoraId, terrenoRol, subtareas, archivosSub, onRef
   };
 
   const uploadSubFile=async(subId,file)=>{
+    const err = validateUploadFile(file);
+    if(err){ alert(err); return; }
     setUploading(u=>({...u,[subId]:true}));
     try{
       const ext=file.name.split(".").pop()||"bin";
@@ -1739,6 +1775,8 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
   };
 
   const uploadFile = async (entryId, file) => {
+    const err = validateUploadFile(file);
+    if(err){ alert(err); return; }
     setUploading(u=>({...u,[entryId]:true}));
     try{
       const ext = file.name.split(".").pop()||"bin";
@@ -2583,20 +2621,36 @@ function Root() {
     db = new SupabaseClient('https://hpztcgooeuwacyvniyle.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwenRjZ29vZXV3YWN5dm5peWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODI1ODgsImV4cCI6MjA5MDQ1ODU4OH0.AdJMDIjXfXHGB697u3xyobEfkCM2IePX6lDYTbWtSF0');
     initSupabaseAuth('https://hpztcgooeuwacyvniyle.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwenRjZ29vZXV3YWN5dm5peWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODI1ODgsImV4cCI6MjA5MDQ1ODU4OH0.AdJMDIjXfXHGB697u3xyobEfkCM2IePX6lDYTbWtSF0');
     if(supabaseAuth){
+      // Keep db.authToken synced with the active session (handles refresh + logout)
+      supabaseAuth.auth.onAuthStateChange((_event, session)=>{
+        db.setAuthToken(session?.access_token || null);
+      });
       supabaseAuth.auth.getSession().then((res)=>{
         const session = res.data && res.data.session;
-        if(session && session.user){setUser(session.user);setPhase('app');}
-        else{setPhase('auth');}
+        if(session && session.user){
+          db.setAuthToken(session.access_token);
+          setUser(session.user);
+          setPhase('app');
+        } else {
+          setPhase('auth');
+        }
       }).catch(()=>setPhase('auth'));
     } else {
       setTimeout(()=>setPhase('auth'), 500);
     }
   },[]);
 
-  const handleAuthed=(u)=>{setUser(u);setPhase('app');};
+  const handleAuthed=async(u)=>{
+    try{
+      const {data} = await supabaseAuth.auth.getSession();
+      if(data?.session?.access_token) db.setAuthToken(data.session.access_token);
+    }catch{}
+    setUser(u);setPhase('app');
+  };
 
   const handleLogout=async()=>{
     if(supabaseAuth) await supabaseAuth.auth.signOut();
+    db.setAuthToken(null);
     setUser(null);setPhase('auth');
   };
 
