@@ -73,6 +73,26 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 .ms-clear:hover{background:var(--red-lt)}
 .ms-empty{padding:10px;color:var(--ink3);font-size:11px;text-align:center}
 
+.audit-bell-wrap{position:relative;display:flex;align-items:center}
+.audit-bell-btn{background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;border-radius:6px;transition:background 0.15s;position:relative;line-height:1}
+.audit-bell-btn:hover{background:var(--bg2)}
+.audit-badge{position:absolute;top:0;right:2px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:8px;padding:1px 4px;min-width:14px;text-align:center;line-height:14px}
+.audit-panel{position:absolute;top:calc(100% + 8px);right:0;width:380px;background:var(--white);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-lg);z-index:300;max-height:480px;overflow:hidden;display:flex;flex-direction:column}
+.audit-panel-head{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.audit-panel-head h4{font-size:13px;font-weight:700;color:var(--ink);margin:0}
+.audit-list{overflow-y:auto;flex:1}
+.audit-list::-webkit-scrollbar{width:4px}
+.audit-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.audit-entry{padding:10px 16px;border-bottom:1px solid var(--line);transition:background 0.1s}
+.audit-entry:last-child{border-bottom:none}
+.audit-entry:hover{background:var(--bg)}
+.audit-entry-who{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;gap:8px}
+.audit-who-name{font-size:11px;font-weight:700;color:var(--teal)}
+.audit-when{font-size:10px;color:var(--ink3);white-space:nowrap}
+.audit-entry-proj{font-size:10px;color:var(--ink3);margin-bottom:2px}
+.audit-entry-desc{font-size:12px;color:var(--ink2);line-height:1.4}
+.audit-empty{padding:28px;text-align:center;color:var(--ink3);font-size:12px}
+
 .dash-subtabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line)}
 .dash-subtab{padding:9px 16px;border:none;background:none;font-size:13px;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;font-weight:500}
 .dash-subtab:hover{color:var(--ink2)}
@@ -418,6 +438,17 @@ class SupabaseClient {
   }
 }
 let db = null;
+
+// ─────────────────────────────────────────────────────
+// AUDIT LOG (historial de cambios)
+// ─────────────────────────────────────────────────────
+const emailToNameAudit = (email) => {
+  if(!email) return null;
+  const local = String(email).split("@")[0];
+  return local.split(".").map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(" ");
+};
+// Stub inicial; se reemplaza cuando el componente App se monta
+let logAudit = async () => {};
 
 // ─────────────────────────────────────────────────────
 // UTILITIES
@@ -911,11 +942,14 @@ function SubtareasSection({bitacoraId, terrenoRol, subtareas, archivosSub, onRef
   const setEF=(k,v)=>setEditForm(f=>({...f,[k]:v}));
   const dotCol=st=>st==='Finalizada'?'var(--green)':st==='En Proceso'?'var(--teal)':'var(--ink3)';
 
+  const _proj = terrenoRol ? `Terreno ${terrenoRol}` : "";
+
   const addSub=async()=>{
     if(!form.descripcion.trim()) return;
     setAddBusy(true);
     try{
       await db.insert("subtareas",[{bitacora_id:bitacoraId,descripcion:form.descripcion.trim(),fecha:form.fecha,estatus:form.estatus,responsable:form.responsable||null}]);
+      logAudit("nueva_subtarea",`Nueva subtarea en bitácora (${terrenoRol}): "${form.descripcion.trim().slice(0,80)}${form.descripcion.trim().length>80?"…":""}"`,_proj);
       setForm({descripcion:'',fecha:today(),estatus:'Pendiente',responsable:''});
       setShowAdd(false); onRefresh();
     }catch(e){alert("Error: "+e.message);}
@@ -925,14 +959,18 @@ function SubtareasSection({bitacoraId, terrenoRol, subtareas, archivosSub, onRef
   const saveSub=async(sub)=>{
     try{
       await db.patch("subtareas","id=eq."+sub.id,{descripcion:editForm.descripcion,fecha:editForm.fecha,estatus:editForm.estatus,responsable:editForm.responsable||null});
+      logAudit("editar_subtarea",`Editó subtarea en bitácora (${terrenoRol}): "${String(editForm.descripcion||"").slice(0,80)}${(editForm.descripcion||"").length>80?"…":""}"`,_proj);
       setEditId(null); onRefresh();
     }catch(e){alert("Error: "+e.message);}
   };
 
   const delSub=async(sub)=>{
     if(!confirm("¿Eliminar subtarea?")) return;
-    try{await db.del("subtareas","id=eq."+sub.id);onRefresh();}
-    catch(e){alert("Error: "+e.message);}
+    try{
+      await db.del("subtareas","id=eq."+sub.id);
+      logAudit("eliminar_subtarea",`Eliminó subtarea en bitácora (${terrenoRol}): "${String(sub.descripcion||"").slice(0,80)}${(sub.descripcion||"").length>80?"…":""}"`,_proj);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
   };
 
   const uploadSubFile=async(subId,file)=>{
@@ -944,6 +982,7 @@ function SubtareasSection({bitacoraId, terrenoRol, subtareas, archivosSub, onRef
       const path=`${terrenoRol.replace(/\//g,"-")}/sub/${subId}/${uid()}.${ext}`;
       const url=await db.uploadFile("terrenos-archivos",path,file);
       await db.insert("archivos_subtareas",[{subtarea_id:subId,nombre:file.name,url,tipo:file.type,tamano:file.size}]);
+      logAudit("subir_archivo_subtarea",`Adjuntó archivo "${file.name}" a una subtarea (${terrenoRol})`,_proj);
       onRefresh();
     }catch(e){alert("Error al subir: "+e.message);}
     setUploading(u=>({...u,[subId]:false}));
@@ -951,8 +990,11 @@ function SubtareasSection({bitacoraId, terrenoRol, subtareas, archivosSub, onRef
 
   const delSubFile=async(a)=>{
     if(!confirm("¿Eliminar archivo?")) return;
-    try{await db.del("archivos_subtareas","id=eq."+a.id);onRefresh();}
-    catch(e){alert("Error: "+e.message);}
+    try{
+      await db.del("archivos_subtareas","id=eq."+a.id);
+      logAudit("eliminar_archivo_subtarea",`Eliminó archivo "${a.nombre||"sin nombre"}" de una subtarea (${terrenoRol})`,_proj);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
   };
 
   return (
@@ -1403,6 +1445,7 @@ function InfoTab({terreno, onUpdated}) {
         uf_m2:parseFloat(form.uf_m2)||0, sobretasa:form.sobretasa,
         proyecto:form.proyecto||null, responsable:form.responsable||null, notas:form.notas||null
       });
+      logAudit("editar_terreno",`Editó información del terreno "${form.terreno||terreno.terreno}"`,`${form.terreno||terreno.terreno} · ${terreno.rol}`);
       onUpdated({...form});
       setEditing(false);
     }catch(e){alert("Error: "+e.message);}
@@ -1537,6 +1580,8 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
   const anioRef = useRef(anio);
   useEffect(()=>{anioRef.current=anio;},[anio]);
 
+  const _proj = `${terreno.terreno||terreno.rol} · ${terreno.rol}`;
+
   const genCuotas = async () => {
     setGenBusy(true);
     const baseMonto = parseInt(terreno._cuota_monto)||0;
@@ -1548,6 +1593,7 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
     }));
     try{
       await db.upsert("cuotas", rows);
+      logAudit("generar_cuotas",`Generó las 4 cuotas de ${anio} en "${terreno.terreno||terreno.rol}"`,_proj);
       onRefresh();
     }catch(e){alert("Error: "+e.message);}
     setGenBusy(false);
@@ -1557,33 +1603,46 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
     setSaving(s=>({...s,[c.id]:true}));
     try{
       await db.patch("cuotas","id=eq."+c.id, {pagado:paid, fecha_pago:paid?(payDates[c.id]||today()):null});
+      logAudit(paid?"marcar_cuota_pagada":"marcar_cuota_impaga",`${paid?"Marcó como pagada":"Marcó como impaga"} la ${cuotaDisplayLabel(c)} de ${c.anio} en "${terreno.terreno||terreno.rol}"`,_proj);
       onRefresh();
     }catch(e){alert("Error: "+e.message);}
     setSaving(s=>({...s,[c.id]:false}));
   };
 
   const updateMonto = async (c, monto) => {
-    try{ await db.patch("cuotas","id=eq."+c.id, {monto:parseInt(monto)||0}); onRefresh(); }
-    catch(e){alert("Error: "+e.message);}
+    try{
+      await db.patch("cuotas","id=eq."+c.id, {monto:parseInt(monto)||0});
+      logAudit("editar_monto_cuota",`Editó monto de ${cuotaDisplayLabel(c)} ${c.anio} en "${terreno.terreno||terreno.rol}" a ${fmtCLP(parseInt(monto)||0)}`,_proj);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
   };
 
   const updateVenc = async (c, fecha) => {
     if(!fecha || fecha===c.fecha_vencimiento) return;
-    try{ await db.patch("cuotas","id=eq."+c.id, {fecha_vencimiento:fecha}); onRefresh(); }
-    catch(e){alert("Error: "+e.message);}
+    try{
+      await db.patch("cuotas","id=eq."+c.id, {fecha_vencimiento:fecha});
+      logAudit("editar_fecha_venc",`Editó fecha de vencimiento de ${cuotaDisplayLabel(c)} ${c.anio} en "${terreno.terreno||terreno.rol}" → ${fmtDate(fecha)}`,_proj);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
   };
 
   const updateFechaPago = async (c, fecha) => {
     if(fecha===c.fecha_pago) return;
-    try{ await db.patch("cuotas","id=eq."+c.id, {fecha_pago:fecha||null}); onRefresh(); }
-    catch(e){alert("Error: "+e.message);}
+    try{
+      await db.patch("cuotas","id=eq."+c.id, {fecha_pago:fecha||null});
+      logAudit("editar_fecha_pago",`Editó fecha de pago de ${cuotaDisplayLabel(c)} ${c.anio} en "${terreno.terreno||terreno.rol}" → ${fecha?fmtDate(fecha):"sin fecha"}`,_proj);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
   };
 
   const deleteCuota = async (c) => {
     const lbl = cuotaDisplayLabel(c);
     if(!confirm(`¿Eliminar "${lbl}" de ${c.anio}?`)) return;
-    try{ await db.del("cuotas","id=eq."+c.id); onRefresh(); }
-    catch(e){alert("Error: "+e.message);}
+    try{
+      await db.del("cuotas","id=eq."+c.id);
+      logAudit("eliminar_cuota",`Eliminó ${lbl} de ${c.anio} en "${terreno.terreno||terreno.rol}"`,_proj);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
   };
 
   const addManual = async () => {
@@ -1600,6 +1659,7 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
         pagado:addForm.pagado,
         fecha_pago:addForm.pagado?(addForm.fecha_pago||today()):null
       }]);
+      logAudit("agregar_cuota_extra",`Agregó cuota extra de ${fmtCLP(parseInt(addForm.monto)||0)} en "${terreno.terreno||terreno.rol}" (vence ${fmtDate(addForm.fecha_vencimiento)})`,_proj);
       setShowAdd(false);
       setAddForm({anio:anio, numero:"extra", monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
       onRefresh();
@@ -1827,6 +1887,8 @@ function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
   const totalContrib = cuotas.reduce((s,c)=>s+(parseInt(c.monto)||0),0);
   const neto = totalContrib - totalDev;
 
+  const _proj = `${terreno.terreno||terreno.rol} · ${terreno.rol}`;
+
   const add = async () => {
     if(!form.fecha){alert("Debes elegir la fecha");return;}
     if(!form.monto||parseInt(form.monto)<=0){alert("Ingresa un monto válido");return;}
@@ -1837,6 +1899,7 @@ function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
         monto:parseInt(form.monto)||0,
         motivo:form.motivo.trim()||null, notas:form.notas.trim()||null
       }]);
+      logAudit("nueva_devolucion",`Nueva devolución de ${fmtCLP(parseInt(form.monto)||0)} en "${terreno.terreno||terreno.rol}"${form.motivo.trim()?` — ${form.motivo.trim()}`:""}`,_proj);
       setForm({fecha:today(), monto:"", motivo:"", notas:""});
       setShowAdd(false);
       onRefresh();
@@ -1852,6 +1915,7 @@ function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
         motivo:editForm.motivo?.trim()||null,
         notas:editForm.notas?.trim()||null
       });
+      logAudit("editar_devolucion",`Editó devolución (${fmtCLP(parseInt(editForm.monto)||0)}) en "${terreno.terreno||terreno.rol}"`,_proj);
       setEditingId(null);
       onRefresh();
     }catch(e){alert("Error: "+e.message);}
@@ -1859,8 +1923,11 @@ function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
 
   const del = async (d) => {
     if(!confirm("¿Eliminar esta devolución?")) return;
-    try{ await db.del("devoluciones","id=eq."+d.id); onRefresh(); }
-    catch(e){alert("Error: "+e.message);}
+    try{
+      await db.del("devoluciones","id=eq."+d.id);
+      logAudit("eliminar_devolucion",`Eliminó devolución de ${fmtCLP(parseInt(d.monto)||0)} en "${terreno.terreno||terreno.rol}"`,_proj);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
   };
 
   return (
@@ -1967,6 +2034,8 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const setEF = (k,v) => setEditForm(f=>({...f,[k]:v}));
 
+  const _proj = `${terreno.terreno||terreno.rol} · ${terreno.rol}`;
+
   const addEntry = async () => {
     if(!form.detalle.trim()) return;
     setAddBusy(true);
@@ -1976,6 +2045,7 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
         estatus:form.estatus, responsable:form.responsable?.trim()||null,
         prioridad:form.prioridad||"Media"
       }]);
+      logAudit("nueva_bitacora",`Nueva entrada de bitácora en "${terreno.terreno||terreno.rol}": "${form.detalle.trim().slice(0,80)}${form.detalle.trim().length>80?"…":""}"`,_proj);
       setForm({fecha:today(),detalle:"",estatus:"Pendiente",responsable:"",prioridad:"Media"});
       setShowAdd(false);
       onRefresh();
@@ -1990,6 +2060,7 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
         responsable:editForm.responsable?.trim()||null,
         prioridad:editForm.prioridad||"Media"
       });
+      logAudit("editar_bitacora",`Editó entrada de bitácora en "${terreno.terreno||terreno.rol}": "${String(editForm.detalle||"").slice(0,80)}${(editForm.detalle||"").length>80?"…":""}"`,_proj);
       setEditingId(null);
       onRefresh();
     }catch(e){alert("Error: "+e.message);}
@@ -1997,8 +2068,11 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
 
   const deleteEntry = async (entry) => {
     if(!confirm("¿Eliminar esta entrada y todos sus archivos adjuntos?")) return;
-    try{ await db.del("bitacora","id=eq."+entry.id); onRefresh(); }
-    catch(e){alert("Error: "+e.message);}
+    try{
+      await db.del("bitacora","id=eq."+entry.id);
+      logAudit("eliminar_bitacora",`Eliminó entrada de bitácora en "${terreno.terreno||terreno.rol}": "${String(entry.detalle||"").slice(0,80)}${(entry.detalle||"").length>80?"…":""}"`,_proj);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
   };
 
   const uploadFile = async (entryId, file) => {
@@ -2010,6 +2084,7 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
       const path = `${terreno.rol.replace(/\//g,"-")}/${entryId}/${uid()}.${ext}`;
       const url = await db.uploadFile("terrenos-archivos", path, file);
       await db.insert("archivos",[{bitacora_id:entryId, nombre:file.name, url, tipo:file.type, tamano:file.size}]);
+      logAudit("subir_archivo",`Adjuntó archivo "${file.name}" a una entrada de bitácora en "${terreno.terreno||terreno.rol}"`,_proj);
       onRefresh();
     }catch(e){alert("Error al subir archivo: "+e.message);}
     setUploading(u=>({...u,[entryId]:false}));
@@ -2017,8 +2092,11 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
 
   const deleteFile = async (a) => {
     if(!confirm("¿Eliminar este archivo?")) return;
-    try{ await db.del("archivos","id=eq."+a.id); onRefresh(); }
-    catch(e){alert("Error: "+e.message);}
+    try{
+      await db.del("archivos","id=eq."+a.id);
+      logAudit("eliminar_archivo",`Eliminó archivo "${a.nombre||"sin nombre"}" de bitácora en "${terreno.terreno||terreno.rol}"`,_proj);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
   };
 
   const sorted = [...bitacora].sort((a,b)=>b.fecha.localeCompare(a.fecha));
@@ -2185,6 +2263,7 @@ function NewTerrenoModal({onClose, onCreated}) {
         sobretasa:form.sobretasa, proyecto:form.proyecto||null,
         responsable:form.responsable||null, notas:form.notas||null
       }]);
+      logAudit("nuevo_terreno",`Creó terreno "${form.terreno.trim()}" (${form.ciudad})`,`${form.terreno.trim()} · ${form.rol.trim()}`);
       onCreated();onClose();
     }catch(e){alert("Error: "+e.message);}
     setSaving(false);
@@ -2264,6 +2343,10 @@ function App({user, onLogout}) {
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditUnread, setAuditUnread] = useState(0);
+  const [showAudit, setShowAudit] = useState(false);
+  const auditRef = useRef(null);
   const [openCities, setOpenCities] = useState({});
 
   const loadAll = useCallback(async () => {
@@ -2390,6 +2473,50 @@ function App({user, onLogout}) {
   },[]);
 
   const refreshAll = () => { loadDetail(selRol); loadAll(); };
+
+  // ── Audit log ──
+  const loadAuditLogs = useCallback(async () => {
+    if(!db) return;
+    try{
+      const rows = await db.select("audit_log","order=created_at.desc&limit=40");
+      setAuditLogs(rows||[]);
+    }catch(e){console.error("Audit load",e);}
+  }, []);
+
+  useEffect(() => {
+    // Replace the global stub with a closure over current user
+    logAudit = async (actionType, description, projectName="") => {
+      if(!db) return;
+      try{
+        await db.insert("audit_log",[{
+          user_email: (user && user.email) || "",
+          user_name: emailToNameAudit((user && user.email) || "") || "",
+          project_name: projectName || "",
+          action_type: actionType || "",
+          description: description || ""
+        }]);
+        setAuditUnread(n=>n+1);
+        loadAuditLogs();
+      }catch(e){console.error("Audit insert",e);}
+    };
+  }, [user, loadAuditLogs]);
+
+  useEffect(() => {
+    if(!db) return;
+    loadAuditLogs();
+    const t = setInterval(()=>{ if(db) loadAuditLogs(); }, 30000);
+    return () => clearInterval(t);
+  }, [loadAuditLogs]);
+
+  // Close audit panel on outside click
+  useEffect(() => {
+    if(!showAudit) return;
+    const handler = (e) => {
+      if(auditRef.current && !auditRef.current.contains(e.target)) setShowAudit(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showAudit]);
 
   const exportJSON = async () => {
     setExportBusy(true);
@@ -2548,6 +2675,38 @@ function App({user, onLogout}) {
             <span style={{fontSize:12,color:"var(--ink3)"}}>
               {terrenos.length} terrenos · {allCuotas.filter(c=>!c.pagado&&c.fecha_vencimiento&&c.fecha_vencimiento<today()).length} cuotas vencidas
             </span>
+            <div className="audit-bell-wrap" ref={auditRef}>
+              <button className="audit-bell-btn" onClick={()=>{setShowAudit(s=>!s); setAuditUnread(0);}} title="Historial de cambios">
+                🔔
+                {auditUnread>0 && <span className="audit-badge">{auditUnread>99?"99+":auditUnread}</span>}
+              </button>
+              {showAudit && (
+                <div className="audit-panel">
+                  <div className="audit-panel-head">
+                    <h4>🔔 Historial de cambios</h4>
+                    <button className="btn btn-ghost btn-xs" onClick={()=>setShowAudit(false)}>✕</button>
+                  </div>
+                  <div className="audit-list">
+                    {auditLogs.length===0 ? (
+                      <div className="audit-empty">Sin cambios registrados aún.</div>
+                    ) : auditLogs.map((e,i)=>{
+                      const dt = new Date(e.created_at);
+                      const when = isNaN(dt) ? "—" : dt.toLocaleString("es-CL",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"});
+                      return (
+                        <div key={e.id||i} className="audit-entry">
+                          <div className="audit-entry-who">
+                            <span className="audit-who-name">👤 {e.user_name||e.user_email||"Usuario"}</span>
+                            <span className="audit-when">{when}</span>
+                          </div>
+                          {e.project_name && <div className="audit-entry-proj">📁 {e.project_name}</div>}
+                          <div className="audit-entry-desc">{e.description}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -2739,6 +2898,7 @@ function ChangePasswordModal({onClose}) {
     try{
       const {error:e} = await supabaseAuth.auth.updateUser({password:newPw});
       if(e) throw e;
+      try{ const s = await supabaseAuth.auth.getSession(); const email = s?.data?.session?.user?.email||""; logAudit("cambio_password",`${email||"El usuario"} cambió su contraseña`,""); }catch{}
       setSuccess(true);
       setTimeout(()=>onClose(), 2000);
     }catch(e){
