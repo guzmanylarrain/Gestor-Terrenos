@@ -27,9 +27,11 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 
 /* ── SIDEBAR ── */
 .sidebar{width:258px;flex-shrink:0;background:#1c1a17;color:#d8d4cc;display:flex;flex-direction:column;overflow:hidden}
-.sidebar-brand{padding:18px 16px 13px;border-bottom:1px solid rgba(255,255,255,0.07)}
-.sidebar-brand h1{font-size:13.5px;color:#f0eeea;line-height:1.35}
+.sidebar-brand{padding:14px 16px 13px;border-bottom:1px solid rgba(255,255,255,0.07)}
+.sidebar-brand h1{font-size:12.5px;color:#f0eeea;line-height:1.35;margin-top:8px}
 .sidebar-brand span{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:#5a5750}
+.sidebar-logo-wrap{background:#f5f3ef;border-radius:8px;padding:8px 12px;display:inline-block;line-height:0}
+.sidebar-logo-wrap img{height:28px;display:block}
 .sidebar-search{padding:8px 10px 4px}
 .sidebar-search input{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);border-radius:6px;padding:6px 10px;font-size:12px;color:#d8d4cc;outline:none;transition:border 0.14s}
 .sidebar-search input:focus{border-color:rgba(26,95,110,0.6)}
@@ -322,6 +324,8 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 .auth-logo{text-align:center;margin-bottom:28px}
 .auth-logo h1{font-size:22px;color:var(--ink);margin-bottom:4px}
 .auth-logo p{font-size:12px;color:var(--ink3);text-transform:uppercase;letter-spacing:2px}
+.auth-logo-wrap{background:#f5f3ef;border-radius:10px;padding:12px 20px;margin:0 auto 16px;display:inline-block;line-height:0}
+.auth-logo-wrap img{max-width:180px;height:auto;display:block}
 .auth-divider{height:1px;background:var(--line);margin:20px 0}
 .auth-error{background:var(--red-lt);border:1px solid rgba(192,57,43,0.25);border-radius:7px;padding:10px 13px;font-size:13px;color:var(--red);margin-bottom:14px}
 .auth-success{background:var(--green-lt);border:1px solid rgba(26,122,74,0.25);border-radius:7px;padding:10px 13px;font-size:13px;color:var(--green);margin-bottom:14px}
@@ -2443,13 +2447,7 @@ function App({user, onLogout}) {
       cityMap[t.ciudad].push(t);
     });
 
-  const hasBadge = (rol) => {
-    const overdue = allCuotas.some(c=>c.terreno_rol===rol&&!c.pagado&&c.fecha_vencimiento&&c.fecha_vencimiento<today());
-    const pending = allBitacora.some(b=>b.terreno_rol===rol&&(b.estatus==="Pendiente"||b.estatus==="En Proceso"));
-    if(overdue) return "var(--red)";
-    if(pending) return "var(--amber)";
-    return "var(--teal)";
-  };
+  const hasBadge = (_rol) => "#5a5750"; // Punto gris neutro para todos (sin semáforo)
 
   const selectTerreno = (rol) => {
     setSelRol(rol); setActiveTab("info");
@@ -2463,8 +2461,8 @@ function App({user, onLogout}) {
       {/* ─ SIDEBAR ─ */}
       <div className="sidebar">
         <div className="sidebar-brand">
+          <div className="sidebar-logo-wrap"><img src="logo.jpg" alt="Guzmán & Larraín"/></div>
           <h1>Gestor de Terrenos</h1>
-          <span>Guzmán & Larraín</span>
         </div>
         <div className="sidebar-search">
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar terreno o ROL..."/>
@@ -2649,6 +2647,7 @@ function AuthScreen({onAuthed, sbUrl, sbKey}) {
     <div className="auth-screen">
       <div className="auth-card">
         <div className="auth-logo">
+          <div className="auth-logo-wrap"><img src="logo.jpg" alt="Guzmán & Larraín"/></div>
           <h1>Gestor de Terrenos</h1>
           <p>Guzmán & Larraín</p>
         </div>
