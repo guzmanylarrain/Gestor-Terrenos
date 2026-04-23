@@ -715,13 +715,20 @@ function Modal({title, onClose, children, footer, large}) {
 function ContribChart({cuotas, selected, onSelectBar}) {
   const groups = {};
   cuotas.forEach(c=>{
-    const key=`${c.anio}-Q${c.numero}`;
-    if(!groups[key]) groups[key]={key,label:`${c.anio}-Q${c.numero}`,anio:c.anio,numero:c.numero,total:0,paid:0};
+    const isExtra = c.numero>4;
+    const key = isExtra ? `${c.anio}-extras` : `${c.anio}-Q${c.numero}`;
+    const label = isExtra ? `${c.anio}-Extras` : `${c.anio}-Q${c.numero}`;
+    if(!groups[key]) groups[key]={key,label,anio:c.anio,numero:isExtra?null:c.numero,isExtras:isExtra,total:0,paid:0};
     const m=parseInt(c.monto)||0;
     groups[key].total+=m;
     if(c.pagado) groups[key].paid+=m;
   });
-  const data=Object.values(groups).sort((a,b)=>a.anio!==b.anio?a.anio-b.anio:a.numero-b.numero);
+  const data=Object.values(groups).sort((a,b)=>{
+    if(a.anio!==b.anio) return a.anio-b.anio;
+    const aOrd = a.isExtras ? 5 : a.numero;
+    const bOrd = b.isExtras ? 5 : b.numero;
+    return aOrd-bOrd;
+  });
   if(data.length===0) return <div style={{textAlign:"center",padding:"30px",color:"var(--ink3)",fontSize:13}}>Sin datos de cuotas. Genera cuotas en cada terreno para ver la evolución.</div>;
   const maxVal=Math.max(...data.map(d=>d.total),1);
   const barW=40,gap=12,padL=72,padR=20,padT=18,padB=52,chartH=160;
@@ -747,11 +754,11 @@ function ContribChart({cuotas, selected, onSelectBar}) {
           const uH=tH-pH;
           const col=barColor;
           const isCurrentYear=d.anio===new Date().getFullYear();
-          const isSelected = selected && selected.anio===d.anio && selected.numero===d.numero;
+          const isSelected = selected && selected.anio===d.anio && !!selected.isExtras===!!d.isExtras && (d.isExtras || selected.numero===d.numero);
           const dimmed = selected && !isSelected;
           const handleClick = clickable ? ()=>{
             if(isSelected) onSelectBar(null);
-            else onSelectBar({anio:d.anio, numero:d.numero});
+            else onSelectBar(d.isExtras ? {anio:d.anio, isExtras:true} : {anio:d.anio, numero:d.numero});
           } : undefined;
           return <g key={d.key} onClick={handleClick} style={clickable?{cursor:"pointer"}:undefined} opacity={dimmed?0.35:1}>
             {isSelected && <rect x={x-5} y={padT-4} width={barW+10} height={chartH+26} fill="rgba(224,168,0,0.10)" stroke="#e0a800" strokeWidth="1.5" rx="4"/>}
@@ -838,7 +845,11 @@ function SobretasaBreakdown({sobretasaSI, sobretasaNO, cuotas, anio, totalConSob
 function ProyectosBreakdown({terrenos, cuotas, chartFilter, onClearFilter, onSelectTerreno}) {
   const [expanded, setExpanded] = useState({});
   const filtered = chartFilter
-    ? cuotas.filter(c=>c.anio===chartFilter.anio && c.numero===chartFilter.numero)
+    ? cuotas.filter(c=>{
+        if(c.anio !== chartFilter.anio) return false;
+        if(chartFilter.isExtras) return c.numero > 4;
+        return c.numero === chartFilter.numero;
+      })
     : cuotas;
   const terrMap = {};
   terrenos.forEach(t=>{terrMap[t.rol]=t;});
@@ -873,7 +884,7 @@ function ProyectosBreakdown({terrenos, cuotas, chartFilter, onClearFilter, onSel
     <div>
       <h4 style={{margin:0,marginBottom:10,display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,color:"var(--ink2)",fontFamily:"'IBM Plex Sans',sans-serif"}}>
         🏗 Contribuciones por proyecto
-        {chartFilter && <span className="chart-filter-chip">{chartFilter.anio}-Q{chartFilter.numero}</span>}
+        {chartFilter && <span className="chart-filter-chip">{chartFilter.anio}-{chartFilter.isExtras ? "Extras" : `Q${chartFilter.numero}`}</span>}
         {chartFilter && <button className="btn btn-ghost btn-xs" style={{marginLeft:"auto"}} onClick={onClearFilter}>✕ Quitar</button>}
       </h4>
       {rows.length===0 ? (
