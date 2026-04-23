@@ -1447,6 +1447,13 @@ function InfoTab({terreno, onUpdated}) {
   const [saving, setSaving] = useState(false);
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
 
+  // Resincronizar el form cuando cambia el terreno seleccionado
+  // (soluciona el bug de quedar con datos del terreno anterior al navegar).
+  useEffect(() => {
+    setForm({...terreno});
+    setEditing(false);
+  }, [terreno.rol]);
+
   const save = async () => {
     setSaving(true);
     try{
