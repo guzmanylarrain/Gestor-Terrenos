@@ -712,12 +712,12 @@ function Modal({title, onClose, children, footer, large}) {
 // ─────────────────────────────────────────────────────
 // CONTRIB CHART
 // ─────────────────────────────────────────────────────
-function ContribChart({cuotas, selected, onSelectBar}) {
+function ContribChart({cuotas, selectedPeriods=[], onTogglePeriod}) {
   const groups = {};
   cuotas.forEach(c=>{
     const isExtra = c.numero>4;
-    const key = isExtra ? `${c.anio}-extras` : `${c.anio}-Q${c.numero}`;
-    const label = isExtra ? `${c.anio}-Extras` : `${c.anio}-Q${c.numero}`;
+    const key = isExtra ? `${c.anio}-Extras` : `${c.anio}-Q${c.numero}`;
+    const label = key;
     if(!groups[key]) groups[key]={key,label,anio:c.anio,numero:isExtra?null:c.numero,isExtras:isExtra,total:0,paid:0};
     const m=parseInt(c.monto)||0;
     groups[key].total+=m;
@@ -736,7 +736,9 @@ function ContribChart({cuotas, selected, onSelectBar}) {
   const fmtM=v=>{if(v>=1e9)return"$"+(v/1e9).toFixed(1)+"B";if(v>=1e6)return"$"+(v/1e6).toFixed(0)+"M";return"$"+(v/1e3).toFixed(0)+"K";};
   const ticks=[0,0.25,0.5,0.75,1];
   const barColor="#1a5f6e"; // color único (teal) — sólido = pagado, tenue = pendiente
-  const clickable = typeof onSelectBar === "function";
+  const clickable = typeof onTogglePeriod === "function";
+  const selSet = new Set(selectedPeriods||[]);
+  const anyFilter = selSet.size > 0;
   return (
     <div className="chart-scroll">
       <svg viewBox={`0 0 ${totalW} ${chartH+padT+padB}`} style={{minWidth:Math.max(500,totalW),height:chartH+padT+padB,display:"block"}}>
@@ -754,12 +756,9 @@ function ContribChart({cuotas, selected, onSelectBar}) {
           const uH=tH-pH;
           const col=barColor;
           const isCurrentYear=d.anio===new Date().getFullYear();
-          const isSelected = selected && selected.anio===d.anio && !!selected.isExtras===!!d.isExtras && (d.isExtras || selected.numero===d.numero);
-          const dimmed = selected && !isSelected;
-          const handleClick = clickable ? ()=>{
-            if(isSelected) onSelectBar(null);
-            else onSelectBar(d.isExtras ? {anio:d.anio, isExtras:true} : {anio:d.anio, numero:d.numero});
-          } : undefined;
+          const isSelected = selSet.has(d.key);
+          const dimmed = anyFilter && !isSelected;
+          const handleClick = clickable ? ()=>onTogglePeriod(d.key) : undefined;
           return <g key={d.key} onClick={handleClick} style={clickable?{cursor:"pointer"}:undefined} opacity={dimmed?0.35:1}>
             {isSelected && <rect x={x-5} y={padT-4} width={barW+10} height={chartH+26} fill="rgba(224,168,0,0.10)" stroke="#e0a800" strokeWidth="1.5" rx="4"/>}
             {uH>0&&<rect x={x} y={padT+chartH-tH} width={barW} height={uH} fill={col} opacity="0.25" rx="2"/>}
@@ -842,15 +841,10 @@ function SobretasaBreakdown({sobretasaSI, sobretasaNO, cuotas, anio, totalConSob
   );
 }
 
-function ProyectosBreakdown({terrenos, cuotas, chartFilter, onClearFilter, onSelectTerreno}) {
+function ProyectosBreakdown({terrenos, cuotas, selectedPeriods=[], onClearPeriods, onSelectTerreno}) {
   const [expanded, setExpanded] = useState({});
-  const filtered = chartFilter
-    ? cuotas.filter(c=>{
-        if(c.anio !== chartFilter.anio) return false;
-        if(chartFilter.isExtras) return c.numero > 4;
-        return c.numero === chartFilter.numero;
-      })
-    : cuotas;
+  // cuotas ya viene filtrado por los filtros principales (incluido período) — no filtrar de nuevo
+  const filtered = cuotas;
   const terrMap = {};
   terrenos.forEach(t=>{terrMap[t.rol]=t;});
   const byProy = {};
@@ -882,10 +876,12 @@ function ProyectosBreakdown({terrenos, cuotas, chartFilter, onClearFilter, onSel
   };
   return (
     <div>
-      <h4 style={{margin:0,marginBottom:10,display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,color:"var(--ink2)",fontFamily:"'IBM Plex Sans',sans-serif"}}>
+      <h4 style={{margin:0,marginBottom:10,display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,color:"var(--ink2)",fontFamily:"'IBM Plex Sans',sans-serif",flexWrap:"wrap"}}>
         🏗 Contribuciones por proyecto
-        {chartFilter && <span className="chart-filter-chip">{chartFilter.anio}-{chartFilter.isExtras ? "Extras" : `Q${chartFilter.numero}`}</span>}
-        {chartFilter && <button className="btn btn-ghost btn-xs" style={{marginLeft:"auto"}} onClick={onClearFilter}>✕ Quitar</button>}
+        {selectedPeriods.length>0 && selectedPeriods.map(p=>(
+          <span key={p} className="chart-filter-chip">{p}</span>
+        ))}
+        {selectedPeriods.length>0 && <button className="btn btn-ghost btn-xs" style={{marginLeft:"auto"}} onClick={onClearPeriods}>✕ Quitar</button>}
       </h4>
       {rows.length===0 ? (
         <div className="dt-empty">Sin datos</div>
@@ -1122,11 +1118,12 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const [subTab, setSubTab] = useState("principal");
 
   // Principal tab filters (multi-select)
-  const [chartFilter, setChartFilter] = useState(null); // {anio, numero} or null
+  const [filterPeriodos, setFilterPeriodos] = useState([]); // ["2025-Q1","2025-Extras",...]
   const [filterCiudades, setFilterCiudades] = useState([]);
   const [filterProyectos, setFilterProyectos] = useState([]);
   const [filterVigente, setFilterVigente] = useState([]);
   const [filterSobretasa, setFilterSobretasa] = useState([]);
+  const [expandedYears, setExpandedYears] = useState({});
 
   // Tareas tab filters (multi-select)
   const [filterBitaCiudades, setFilterBitaCiudades] = useState([]);
@@ -1141,8 +1138,23 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
 
   // Filter option lists
   const ciudadOpts = [...new Set(visTer.map(t=>t.ciudad).filter(Boolean))].sort();
-  const proyectoOpts = [...new Set(visTer.map(t=>t.proyecto).filter(Boolean))].sort();
+  // Proyecto: CASCADEADO por ciudad — si hay filtro de ciudad, solo proyectos de esas ciudades
+  const terForProyOpts = filterCiudades.length>0
+    ? visTer.filter(t=>filterCiudades.includes(t.ciudad))
+    : visTer;
+  const proyectoOpts = [...new Set(terForProyOpts.map(t=>t.proyecto).filter(Boolean))].sort();
   const respOpts = [...new Set(visBita.map(b=>b.responsable).filter(Boolean))].sort();
+
+  // Periodo options — dinámicas desde cuotas (solo periodos que existen en la data)
+  const periodKey = (c) => c.numero>4 ? `${c.anio}-Extras` : `${c.anio}-Q${c.numero}`;
+  const periodoSet = new Set();
+  visCuotas.forEach(c => periodoSet.add(periodKey(c)));
+  const periodOrd = (p) => {
+    const [y,q] = p.split("-");
+    const qord = q==="Extras" ? 5 : parseInt(q.slice(1));
+    return parseInt(y)*10 + qord;
+  };
+  const periodoOpts = [...periodoSet].sort((a,b)=>periodOrd(a)-periodOrd(b));
 
   // Apply principal filters across all portfolio-derived data
   const filTer = visTer.filter(t =>
@@ -1152,9 +1164,29 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
     && (filterSobretasa.length===0 || filterSobretasa.includes(!!t.sobretasa))
   );
   const filRols = new Set(filTer.map(t=>t.rol));
-  const filCuotas = visCuotas.filter(c=>filRols.has(c.terreno_rol));
-  const filDev = visDev.filter(d=>filRols.has(d.terreno_rol));
+  const selectedPeriodSet = new Set(filterPeriodos);
+  const selectedYearSet = new Set(filterPeriodos.map(p=>parseInt(p.split("-")[0])));
+  const filCuotas = visCuotas.filter(c=>{
+    if(!filRols.has(c.terreno_rol)) return false;
+    if(filterPeriodos.length===0) return true;
+    return selectedPeriodSet.has(periodKey(c));
+  });
+  // Para devoluciones: filtro por año (ya que no tienen trimestre)
+  const filDev = visDev.filter(d=>{
+    if(!filRols.has(d.terreno_rol)) return false;
+    if(filterPeriodos.length===0) return true;
+    const dy = parseInt((d.fecha||"").slice(0,4));
+    return selectedYearSet.has(dy);
+  });
   const filBita = visBita.filter(b=>filRols.has(b.terreno_rol));
+
+  // Auto-deseleccionar proyectos que ya no pertenecen a las ciudades filtradas
+  useEffect(()=>{
+    if(filterCiudades.length===0) return; // sin filtro de ciudad, no tocar proyectos
+    const allowed = new Set(visTer.filter(t=>filterCiudades.includes(t.ciudad)).map(t=>t.proyecto).filter(Boolean));
+    setFilterProyectos(curr => curr.filter(p => allowed.has(p)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterCiudades.join("|")]);
 
   const anio = new Date().getFullYear();
   const contribAnio = filCuotas.filter(c=>c.anio===anio).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
@@ -1162,17 +1194,33 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const netoAnio = contribAnio - devAnio;
 
   const yearlyMap={};
+  const getYearBucket = (y) => {
+    if(!yearlyMap[y]) yearlyMap[y] = {anio:y, contrib:0, dev:0, byTerreno:{}};
+    return yearlyMap[y];
+  };
+  const getTerBucket = (yb, rol) => {
+    if(!yb.byTerreno[rol]) yb.byTerreno[rol] = {rol, contrib:0, dev:0};
+    return yb.byTerreno[rol];
+  };
   filCuotas.forEach(c=>{
-    if(!yearlyMap[c.anio]) yearlyMap[c.anio]={anio:c.anio,contrib:0,dev:0};
-    yearlyMap[c.anio].contrib+=parseInt(c.monto)||0;
+    const yb = getYearBucket(c.anio);
+    const tb = getTerBucket(yb, c.terreno_rol);
+    const m = parseInt(c.monto)||0;
+    yb.contrib += m;
+    tb.contrib += m;
   });
   filDev.forEach(d=>{
     if(!d.fecha) return;
-    const y=parseInt(d.fecha.slice(0,4));
-    if(!yearlyMap[y]) yearlyMap[y]={anio:y,contrib:0,dev:0};
-    yearlyMap[y].dev+=parseInt(d.monto)||0;
+    const y = parseInt(d.fecha.slice(0,4));
+    const yb = getYearBucket(y);
+    const tb = getTerBucket(yb, d.terreno_rol);
+    const m = parseInt(d.monto)||0;
+    yb.dev += m;
+    tb.dev += m;
   });
   const yearly = Object.values(yearlyMap).sort((a,b)=>b.anio-a.anio);
+  const terrMap = {};
+  filTer.forEach(t=>{terrMap[t.rol]=t;});
 
   const totalM2 = filTer.reduce((s,t)=>s+(parseFloat(t.m2_sii)||0),0);
   const totalAvaluo = filTer.reduce((s,t)=>s+(parseInt(t.avaluo)||0),0);
@@ -1194,9 +1242,12 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
     if(t&&byCiudad[t.ciudad]) byCiudad[t.ciudad].imp+=parseInt(c.monto)||0;
   });
 
-  const hasPrincipalFilters = filterCiudades.length||filterProyectos.length||filterVigente.length||filterSobretasa.length;
+  const hasPrincipalFilters = filterPeriodos.length||filterCiudades.length||filterProyectos.length||filterVigente.length||filterSobretasa.length;
   const clearPrincipalFilters = () => {
-    setFilterCiudades([]); setFilterProyectos([]); setFilterVigente([]); setFilterSobretasa([]);
+    setFilterPeriodos([]); setFilterCiudades([]); setFilterProyectos([]); setFilterVigente([]); setFilterSobretasa([]);
+  };
+  const togglePeriodo = (p) => {
+    setFilterPeriodos(curr => curr.includes(p) ? curr.filter(x=>x!==p) : [...curr, p]);
   };
 
   // ── Tareas tab (independent filters) ──
@@ -1237,6 +1288,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
         <>
           <div className="dash-filter-bar">
             <label style={{marginRight:4}}>Portafolio:</label>
+            <MultiSelect label="Período" options={periodoOpts} selected={filterPeriodos} onChange={setFilterPeriodos}/>
             <MultiSelect label="Ciudad" options={ciudadOpts} selected={filterCiudades} onChange={setFilterCiudades}/>
             <MultiSelect label="Proyecto" options={proyectoOpts} selected={filterProyectos} onChange={setFilterProyectos}/>
             <MultiSelect label="Vigente" options={VIGENTE_OPTS} selected={filterVigente} onChange={setFilterVigente}/>
@@ -1282,14 +1334,14 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
               <div className="kpi-sub">Total facturado en cuotas</div>
             </div>
             <div className="kpi-card" style={{borderTopColor:"var(--red)"}}>
-              <div className="kpi-label">Devoluciones {anio}</div>
+              <div className="kpi-label">Devoluciones (caja) {anio}</div>
               <div className="kpi-value" style={{fontSize:16,color:"var(--red)"}}>{fmtCLP(devAnio)}</div>
               <div className="kpi-sub">{filDev.filter(d=>d.fecha&&d.fecha.startsWith(anio+"-")).length} registradas</div>
             </div>
             <div className="kpi-card" style={{borderTopColor:netoAnio>=0?"var(--green)":"var(--red)"}}>
               <div className="kpi-label">Neto {anio}</div>
               <div className="kpi-value" style={{fontSize:16,color:netoAnio>=0?"var(--green)":"var(--red)"}}>{fmtCLP(netoAnio)}</div>
-              <div className="kpi-sub">Contribuciones − Devoluciones</div>
+              <div className="kpi-sub">Contribuciones − Devoluciones (caja)</div>
             </div>
           </div>
 
@@ -1325,39 +1377,66 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
             <div className="chart-and-breakdown">
               <div>
                 <h4>📈 Evolución de contribuciones por año y cuota</h4>
-                <ContribChart cuotas={filCuotas} selected={chartFilter} onSelectBar={setChartFilter}/>
-                <div className="chart-help">Haz clic en una barra para filtrar el desglose de proyectos por ese trimestre.</div>
+                <ContribChart cuotas={filCuotas} selectedPeriods={filterPeriodos} onTogglePeriod={togglePeriodo}/>
+                <div className="chart-help">Haz clic en una o más barras para filtrar el desglose de proyectos (puedes seleccionar varias).</div>
               </div>
               <ProyectosBreakdown
                 terrenos={filTer}
                 cuotas={filCuotas}
-                chartFilter={chartFilter}
-                onClearFilter={()=>setChartFilter(null)}
+                selectedPeriods={filterPeriodos}
+                onClearPeriods={()=>setFilterPeriodos([])}
                 onSelectTerreno={onSelectTerreno}
               />
             </div>
           </div>
 
           <div className="dash-section">
-            <h4>📊 Balance anual — contribuciones vs devoluciones</h4>
+            <h4>📊 Balance anual — contribuciones vs devoluciones (caja)</h4>
             <div className="data-table">
               <div className="dt-head" style={{gridTemplateColumns:"80px 1fr 1fr 1fr"}}>
                 <span>Año</span>
                 <span style={{textAlign:"right"}}>Contribuciones</span>
-                <span style={{textAlign:"right"}}>Devoluciones</span>
+                <span style={{textAlign:"right"}}>Devoluciones (caja)</span>
                 <span style={{textAlign:"right"}}>Neto</span>
               </div>
               {yearly.length===0?(
                 <div className="dt-empty">Sin datos</div>
               ):yearly.map(y=>{
-                const n=y.contrib-y.dev;
+                const n = y.contrib - y.dev;
+                const isOpen = !!expandedYears[y.anio];
+                const terRows = Object.values(y.byTerreno).sort((a,b)=>(b.contrib-b.dev)-(a.contrib-a.dev));
                 return (
-                  <div key={y.anio} className="dt-row" style={{gridTemplateColumns:"80px 1fr 1fr 1fr"}}>
-                    <span style={{fontWeight:700}}>{y.anio}</span>
-                    <span style={{textAlign:"right",color:"var(--teal)",fontWeight:600}}>{fmtCLP(y.contrib)}</span>
-                    <span style={{textAlign:"right",color:"var(--red)",fontWeight:600}}>{y.dev>0?"−":""}{fmtCLP(y.dev)}</span>
-                    <span style={{textAlign:"right",fontWeight:700,color:n>=0?"var(--green)":"var(--red)"}}>{fmtCLP(n)}</span>
-                  </div>
+                  <React.Fragment key={y.anio}>
+                    <div className="dt-row proy-row-clickable"
+                      style={{gridTemplateColumns:"80px 1fr 1fr 1fr"}}
+                      onClick={()=>setExpandedYears(e=>({...e,[y.anio]:!e[y.anio]}))}
+                      title="Click para ver desglose por terreno">
+                      <span style={{fontWeight:700}}>
+                        {y.anio}
+                        {terRows.length>0 && <span className={"proy-expand-arrow"+(isOpen?" open":"")}>▶</span>}
+                      </span>
+                      <span style={{textAlign:"right",color:"var(--teal)",fontWeight:600}}>{fmtCLP(y.contrib)}</span>
+                      <span style={{textAlign:"right",color:"var(--red)",fontWeight:600}}>{y.dev>0?"−":""}{fmtCLP(y.dev)}</span>
+                      <span style={{textAlign:"right",fontWeight:700,color:n>=0?"var(--green)":"var(--red)"}}>{fmtCLP(n)}</span>
+                    </div>
+                    {isOpen && terRows.map(tr=>{
+                      const ter = terrMap[tr.rol];
+                      const tn = tr.contrib - tr.dev;
+                      return (
+                        <div key={y.anio+"-"+tr.rol} className="dt-row proy-subrow"
+                          style={{gridTemplateColumns:"80px 1fr 1fr 1fr"}}
+                          onClick={(e)=>{e.stopPropagation(); onSelectTerreno && onSelectTerreno(tr.rol);}}
+                          title={"Ir a "+(ter?.terreno||tr.rol)}>
+                          <span style={{fontSize:11.5,color:"var(--ink2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                            └ {ter?.terreno||tr.rol} <span style={{color:"var(--ink3)",fontFamily:"monospace",fontSize:10}}>({tr.rol})</span>
+                          </span>
+                          <span style={{textAlign:"right",color:"var(--ink2)",fontSize:11.5,fontWeight:500}}>{fmtCLP(tr.contrib)}</span>
+                          <span style={{textAlign:"right",color:tr.dev>0?"var(--red)":"var(--ink3)",fontSize:11.5,fontWeight:500}}>{tr.dev>0?"−":""}{fmtCLP(tr.dev)}</span>
+                          <span style={{textAlign:"right",fontWeight:600,color:tn>=0?"var(--green)":"var(--red)",fontSize:11.5}}>{fmtCLP(tn)}</span>
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
                 );
               })}
             </div>
@@ -1952,16 +2031,16 @@ function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
     <>
       <div className="bitacora-add-bar">
         <span style={{fontSize:13,color:"var(--ink3)"}}>
-          {sorted.length} {sorted.length===1?"devolución":"devoluciones"}
+          {sorted.length} {sorted.length===1?"devolución (caja)":"devoluciones (caja)"}
         </span>
         <button className="btn btn-primary btn-sm" onClick={()=>setShowAdd(s=>!s)}>
-          {showAdd?"✕ Cancelar":"+ Nueva devolución"}
+          {showAdd?"✕ Cancelar":"+ Nueva devolución (caja)"}
         </button>
       </div>
 
       {showAdd&&(
         <div className="add-entry-box">
-          <div className="title">Nueva devolución</div>
+          <div className="title">Nueva devolución (caja)</div>
           <div className="field-row" style={{marginBottom:10}}>
             <div className="field"><label>Fecha</label>
               <input type="date" value={form.fecha} onChange={e=>setForm(f=>({...f,fecha:e.target.value}))}/>
@@ -1979,14 +2058,14 @@ function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
             <textarea value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} rows={2}/>
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button className="btn btn-primary btn-sm" onClick={add} disabled={addBusy}>{addBusy?"Guardando...":"Guardar devolución"}</button>
+            <button className="btn btn-primary btn-sm" onClick={add} disabled={addBusy}>{addBusy?"Guardando...":"Guardar devolución (caja)"}</button>
           </div>
         </div>
       )}
 
       <div className="cuotas-summary" style={{marginBottom:16}}>
         <div className="sum-item"><div className="sum-label">Total contribuciones</div><div className="sum-val">{fmtCLP(totalContrib)}</div></div>
-        <div className="sum-item"><div className="sum-label">Total devoluciones</div><div className="sum-val red">{fmtCLP(totalDev)}</div></div>
+        <div className="sum-item"><div className="sum-label">Total devoluciones (caja)</div><div className="sum-val red">{fmtCLP(totalDev)}</div></div>
         <div className="sum-item"><div className="sum-label">Neto (contrib. − dev.)</div>
           <div className="sum-val" style={{color:neto>=0?"var(--green)":"var(--red)"}}>{fmtCLP(neto)}</div>
         </div>
@@ -1995,7 +2074,7 @@ function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
       {sorted.length===0 ? (
         <div style={{textAlign:"center",padding:"50px 20px",color:"var(--ink3)"}}>
           <div style={{fontSize:38,marginBottom:14}}>↩️</div>
-          <p>Sin devoluciones registradas para este terreno.</p>
+          <p>Sin devoluciones (caja) registradas para este terreno.</p>
         </div>
       ):(
         <div className="data-table">
@@ -2761,7 +2840,7 @@ function App({user, onLogout}) {
           ):(
             <>
               <div className="tab-nav">
-                {[["info","📋 Información"],["cuotas","💰 Contribuciones"],["devoluciones","↩️ Devoluciones"],["bitacora","📓 Bitácora"]].map(([id,lbl])=>(
+                {[["info","📋 Información"],["cuotas","💰 Contribuciones"],["devoluciones","↩️ Devoluciones (caja)"],["bitacora","📓 Bitácora"]].map(([id,lbl])=>(
                   <button key={id} className={`tab-btn${activeTab===id?" active":""}`} onClick={()=>setActiveTab(id)}>{lbl}</button>
                 ))}
               </div>
