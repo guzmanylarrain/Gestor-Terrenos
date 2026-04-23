@@ -2580,7 +2580,20 @@ function App({user, onLogout}) {
 
   const selTerreno = terrenos.find(t=>t.rol===selRol);
 
-  // Sidebar groups
+  // Sidebar groups — ordenar ciudades de norte a sur (segun CIUDADES) y
+  // terrenos dentro de cada ciudad por ROL (numéricamente, no alfabético).
+  const compareRol = (a, b) => {
+    const pa = String(a.rol||"").split("-").map(x=>parseInt(x,10)||0);
+    const pb = String(b.rol||"").split("-").map(x=>parseInt(x,10)||0);
+    const n = Math.max(pa.length, pb.length);
+    for(let i=0;i<n;i++){
+      const va = pa[i]||0, vb = pb[i]||0;
+      if(va !== vb) return va - vb;
+    }
+    return String(a.rol||"").localeCompare(String(b.rol||""));
+  };
+  const cityRank = {};
+  CIUDADES.forEach((c,i)=>{ cityRank[c] = i; });
   const cityMap={}, cityOrder=[];
   terrenos
     .filter(t=>{
@@ -2591,6 +2604,15 @@ function App({user, onLogout}) {
       if(!cityMap[t.ciudad]){cityMap[t.ciudad]=[];cityOrder.push(t.ciudad);}
       cityMap[t.ciudad].push(t);
     });
+  // Reordenar ciudades: las listadas en CIUDADES siguen ese orden, el resto al final (alfabético)
+  cityOrder.sort((a,b)=>{
+    const ra = cityRank[a]!==undefined ? cityRank[a] : 999;
+    const rb = cityRank[b]!==undefined ? cityRank[b] : 999;
+    if(ra !== rb) return ra - rb;
+    return String(a).localeCompare(String(b));
+  });
+  // Ordenar los terrenos de cada ciudad por ROL numérico
+  Object.keys(cityMap).forEach(c=>{ cityMap[c].sort(compareRol); });
 
   const hasBadge = (_rol) => "#5a5750"; // Punto gris neutro para todos (sin semáforo)
 
