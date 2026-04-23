@@ -843,8 +843,12 @@ function SobretasaBreakdown({sobretasaSI, sobretasaNO, cuotas, anio, totalConSob
 
 function ProyectosBreakdown({terrenos, cuotas, selectedPeriods=[], onClearPeriods, onSelectTerreno}) {
   const [expanded, setExpanded] = useState({});
-  // cuotas ya viene filtrado por los filtros principales (incluido período) — no filtrar de nuevo
-  const filtered = cuotas;
+  const filtered = selectedPeriods.length>0
+    ? cuotas.filter(c=>{
+        const key = c.numero>4 ? `${c.anio}-Extras` : `${c.anio}-Q${c.numero}`;
+        return selectedPeriods.includes(key);
+      })
+    : cuotas;
   const terrMap = {};
   terrenos.forEach(t=>{terrMap[t.rol]=t;});
   const byProy = {};
@@ -1145,17 +1149,6 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const proyectoOpts = [...new Set(terForProyOpts.map(t=>t.proyecto).filter(Boolean))].sort();
   const respOpts = [...new Set(visBita.map(b=>b.responsable).filter(Boolean))].sort();
 
-  // Periodo options — dinámicas desde cuotas (solo periodos que existen en la data)
-  const periodKey = (c) => c.numero>4 ? `${c.anio}-Extras` : `${c.anio}-Q${c.numero}`;
-  const periodoSet = new Set();
-  visCuotas.forEach(c => periodoSet.add(periodKey(c)));
-  const periodOrd = (p) => {
-    const [y,q] = p.split("-");
-    const qord = q==="Extras" ? 5 : parseInt(q.slice(1));
-    return parseInt(y)*10 + qord;
-  };
-  const periodoOpts = [...periodoSet].sort((a,b)=>periodOrd(a)-periodOrd(b));
-
   // Apply principal filters across all portfolio-derived data
   const filTer = visTer.filter(t =>
     (filterCiudades.length===0 || filterCiudades.includes(t.ciudad))
@@ -1164,20 +1157,10 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
     && (filterSobretasa.length===0 || filterSobretasa.includes(!!t.sobretasa))
   );
   const filRols = new Set(filTer.map(t=>t.rol));
-  const selectedPeriodSet = new Set(filterPeriodos);
-  const selectedYearSet = new Set(filterPeriodos.map(p=>parseInt(p.split("-")[0])));
-  const filCuotas = visCuotas.filter(c=>{
-    if(!filRols.has(c.terreno_rol)) return false;
-    if(filterPeriodos.length===0) return true;
-    return selectedPeriodSet.has(periodKey(c));
-  });
-  // Para devoluciones: filtro por año (ya que no tienen trimestre)
-  const filDev = visDev.filter(d=>{
-    if(!filRols.has(d.terreno_rol)) return false;
-    if(filterPeriodos.length===0) return true;
-    const dy = parseInt((d.fecha||"").slice(0,4));
-    return selectedYearSet.has(dy);
-  });
+  // filCuotas y filDev solo aplican los filtros principales.
+  // Los períodos seleccionados en el chart SOLO filtran la tabla de proyectos.
+  const filCuotas = visCuotas.filter(c=>filRols.has(c.terreno_rol));
+  const filDev = visDev.filter(d=>filRols.has(d.terreno_rol));
   const filBita = visBita.filter(b=>filRols.has(b.terreno_rol));
 
   // Auto-deseleccionar proyectos que ya no pertenecen a las ciudades filtradas
@@ -1228,8 +1211,9 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const sobretasaSI = filTer.filter(t=>t.sobretasa);
   const sobretasaNO = filTer.filter(t=>!t.sobretasa);
   const rolsConSobre = new Set(sobretasaSI.map(t=>t.rol));
-  const totalConSobre = filCuotas.filter(c=>rolsConSobre.has(c.terreno_rol)).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
-  const totalSinSobre = filCuotas.filter(c=>!rolsConSobre.has(c.terreno_rol)).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  // Totales de sobretasa: SOLO del año en curso (no todos los años)
+  const totalConSobre = filCuotas.filter(c=>c.anio===anio && rolsConSobre.has(c.terreno_rol)).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  const totalSinSobre = filCuotas.filter(c=>c.anio===anio && !rolsConSobre.has(c.terreno_rol)).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
   const pendingBita = filBita.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso");
 
   const byCiudad={};
@@ -1242,9 +1226,9 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
     if(t&&byCiudad[t.ciudad]) byCiudad[t.ciudad].imp+=parseInt(c.monto)||0;
   });
 
-  const hasPrincipalFilters = filterPeriodos.length||filterCiudades.length||filterProyectos.length||filterVigente.length||filterSobretasa.length;
+  const hasPrincipalFilters = filterCiudades.length||filterProyectos.length||filterVigente.length||filterSobretasa.length;
   const clearPrincipalFilters = () => {
-    setFilterPeriodos([]); setFilterCiudades([]); setFilterProyectos([]); setFilterVigente([]); setFilterSobretasa([]);
+    setFilterCiudades([]); setFilterProyectos([]); setFilterVigente([]); setFilterSobretasa([]);
   };
   const togglePeriodo = (p) => {
     setFilterPeriodos(curr => curr.includes(p) ? curr.filter(x=>x!==p) : [...curr, p]);
@@ -1288,7 +1272,6 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
         <>
           <div className="dash-filter-bar">
             <label style={{marginRight:4}}>Portafolio:</label>
-            <MultiSelect label="Período" options={periodoOpts} selected={filterPeriodos} onChange={setFilterPeriodos}/>
             <MultiSelect label="Ciudad" options={ciudadOpts} selected={filterCiudades} onChange={setFilterCiudades}/>
             <MultiSelect label="Proyecto" options={proyectoOpts} selected={filterProyectos} onChange={setFilterProyectos}/>
             <MultiSelect label="Vigente" options={VIGENTE_OPTS} selected={filterVigente} onChange={setFilterVigente}/>
@@ -1393,7 +1376,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
           <div className="dash-section">
             <h4>📊 Balance anual — contribuciones vs devoluciones (caja)</h4>
             <div className="data-table">
-              <div className="dt-head" style={{gridTemplateColumns:"80px 1fr 1fr 1fr"}}>
+              <div className="dt-head" style={{gridTemplateColumns:"minmax(260px,1.4fr) 1fr 1fr 1fr"}}>
                 <span>Año</span>
                 <span style={{textAlign:"right"}}>Contribuciones</span>
                 <span style={{textAlign:"right"}}>Devoluciones (caja)</span>
@@ -1404,11 +1387,14 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
               ):yearly.map(y=>{
                 const n = y.contrib - y.dev;
                 const isOpen = !!expandedYears[y.anio];
-                const terRows = Object.values(y.byTerreno).sort((a,b)=>(b.contrib-b.dev)-(a.contrib-a.dev));
+                // Solo mostrar terrenos con contribuciones o devoluciones (>0)
+                const terRows = Object.values(y.byTerreno)
+                  .filter(t => (t.contrib||0)!==0 || (t.dev||0)!==0)
+                  .sort((a,b)=>(b.contrib-b.dev)-(a.contrib-a.dev));
                 return (
                   <React.Fragment key={y.anio}>
                     <div className="dt-row proy-row-clickable"
-                      style={{gridTemplateColumns:"80px 1fr 1fr 1fr"}}
+                      style={{gridTemplateColumns:"minmax(260px,1.4fr) 1fr 1fr 1fr"}}
                       onClick={()=>setExpandedYears(e=>({...e,[y.anio]:!e[y.anio]}))}
                       title="Click para ver desglose por terreno">
                       <span style={{fontWeight:700}}>
@@ -1422,13 +1408,14 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
                     {isOpen && terRows.map(tr=>{
                       const ter = terrMap[tr.rol];
                       const tn = tr.contrib - tr.dev;
+                      const nombre = ter?.terreno||tr.rol;
                       return (
                         <div key={y.anio+"-"+tr.rol} className="dt-row proy-subrow"
-                          style={{gridTemplateColumns:"80px 1fr 1fr 1fr"}}
+                          style={{gridTemplateColumns:"minmax(260px,1.4fr) 1fr 1fr 1fr"}}
                           onClick={(e)=>{e.stopPropagation(); onSelectTerreno && onSelectTerreno(tr.rol);}}
-                          title={"Ir a "+(ter?.terreno||tr.rol)}>
+                          title={"Ir a "+nombre}>
                           <span style={{fontSize:11.5,color:"var(--ink2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                            └ {ter?.terreno||tr.rol} <span style={{color:"var(--ink3)",fontFamily:"monospace",fontSize:10}}>({tr.rol})</span>
+                            └ {nombre} <span style={{color:"var(--ink3)",fontFamily:"monospace",fontSize:10}}>({tr.rol})</span>
                           </span>
                           <span style={{textAlign:"right",color:"var(--ink2)",fontSize:11.5,fontWeight:500}}>{fmtCLP(tr.contrib)}</span>
                           <span style={{textAlign:"right",color:tr.dev>0?"var(--red)":"var(--ink3)",fontSize:11.5,fontWeight:500}}>{tr.dev>0?"−":""}{fmtCLP(tr.dev)}</span>
