@@ -1570,13 +1570,6 @@ function InfoTab({terreno, onUpdated}) {
               <label>Proyecto asociado</label>
               <input value={form.proyecto||""} onChange={e=>set("proyecto",e.target.value)}/>
             </div>
-            <div className="field" style={{marginBottom:10}}>
-              <label>Responsable</label>
-              <select value={form.responsable||""} onChange={e=>set("responsable",e.target.value||null)}>
-                <option value="">— Sin asignar —</option>
-                {RESPONSABLES.map(r=><option key={r}>{r}</option>)}
-              </select>
-            </div>
             <div className="field" style={{marginBottom:12}}>
               <label>Notas</label>
               <textarea value={form.notas||""} onChange={e=>set("notas",e.target.value)} rows={3}/>
@@ -1592,12 +1585,6 @@ function InfoTab({terreno, onUpdated}) {
             <Row k="Ciudad" v={terreno.ciudad}/>
             <Row k="Vigente" v={terreno.vigente}/>
             <Row k="Proyecto" v={terreno.proyecto||"—"}/>
-            <div className="info-row">
-              <span className="info-key">Responsable</span>
-              <span className={`resp-badge resp-${terreno.responsable?.toLowerCase()||"none"}`}>
-                {terreno.responsable||"Sin asignar"}
-              </span>
-            </div>
             {terreno.notas&&<div style={{padding:"8px 0"}}>
               <div className="info-key" style={{marginBottom:4}}>Notas</div>
               <div style={{fontSize:12.5,color:"var(--ink2)",lineHeight:1.6}}>{terreno.notas}</div>
