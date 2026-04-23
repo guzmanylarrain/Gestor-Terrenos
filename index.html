@@ -735,7 +735,8 @@ function ContribChart({cuotas, selectedPeriods=[], onTogglePeriod}) {
   const totalW=padL+data.length*(barW+gap)-gap+padR;
   const fmtM=v=>{if(v>=1e9)return"$"+(v/1e9).toFixed(1)+"B";if(v>=1e6)return"$"+(v/1e6).toFixed(0)+"M";return"$"+(v/1e3).toFixed(0)+"K";};
   const ticks=[0,0.25,0.5,0.75,1];
-  const barColor="#1a5f6e"; // color único (teal) — sólido = pagado, tenue = pendiente
+  const barColor="#1a5f6e"; // teal — cuotas normales (Q1-Q4)
+  const extrasColor="#b87262"; // rojo tenue — cuotas extras (adicionales a las 4 legales)
   const clickable = typeof onTogglePeriod === "function";
   const selSet = new Set(selectedPeriods||[]);
   const anyFilter = selSet.size > 0;
@@ -754,7 +755,7 @@ function ContribChart({cuotas, selectedPeriods=[], onTogglePeriod}) {
           const tH=(d.total/maxVal)*chartH;
           const pH=(d.paid/maxVal)*chartH;
           const uH=tH-pH;
-          const col=barColor;
+          const col = d.isExtras ? extrasColor : barColor;
           const isCurrentYear=d.anio===new Date().getFullYear();
           const isSelected = selSet.has(d.key);
           const dimmed = anyFilter && !isSelected;
@@ -769,10 +770,12 @@ function ContribChart({cuotas, selectedPeriods=[], onTogglePeriod}) {
           </g>;
         })}
         <line x1={padL} y1={padT+chartH} x2={totalW-padR} y2={padT+chartH} stroke="var(--ink3)" strokeWidth="1.5"/>
-        <rect x={padL} y={padT+chartH+26} width="10" height="10" fill="var(--teal)" rx="2"/>
+        <rect x={padL} y={padT+chartH+26} width="10" height="10" fill={barColor} rx="2"/>
         <text x={padL+14} y={padT+chartH+35} fontSize="10" fill="var(--ink3)">Pagado</text>
-        <rect x={padL+72} y={padT+chartH+26} width="10" height="10" fill="var(--teal)" opacity="0.25" rx="2" stroke="var(--teal)" strokeWidth="1"/>
-        <text x={padL+86} y={padT+chartH+35} fontSize="10" fill="var(--ink3)">Pendiente</text>
+        <rect x={padL+70} y={padT+chartH+26} width="10" height="10" fill={barColor} opacity="0.25" rx="2" stroke={barColor} strokeWidth="1"/>
+        <text x={padL+84} y={padT+chartH+35} fontSize="10" fill="var(--ink3)">Pendiente</text>
+        <rect x={padL+155} y={padT+chartH+26} width="10" height="10" fill={extrasColor} rx="2"/>
+        <text x={padL+169} y={padT+chartH+35} fontSize="10" fill="var(--ink3)">Extras</text>
       </svg>
     </div>
   );
