@@ -1,0 +1,48 @@
+name: Keep Supabase alive
+
+# Hace una llamada periódica a la REST API de Supabase para que el
+# contador de inactividad nunca llegue a 7 días y el proyecto no
+# se pause automáticamente en el plan Free.
+#
+# Por qué este archivo:
+#   Supabase pausa proyectos del plan Free tras 7 días sin actividad.
+#   Cualquier request HTTP a la REST API cuenta como actividad,
+#   independientemente de si devuelve datos o no (con RLS activo
+#   anon recibe array vacío, pero igual cuenta como ping).
+#
+# Frecuencia: cada 5 días (margen de 2 días bajo el límite de 7).
+# Costo: 0. GitHub Actions es gratis para repos públicos.
+
+on:
+  schedule:
+    - cron: '0 12 */5 * *'   # 12:00 UTC cada 5 días
+  workflow_dispatch:          # Permite ejecutarlo manualmente desde la UI de GitHub
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          SUPABASE_URL="https://hpztcgooeuwacyvniyle.supabase.co"
+          # Anon key (pública, ya está en index.html — no es un secreto)
+          ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwenRjZ29vZXV3YWN5dm5peWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODI1ODgsImV4cCI6MjA5MDQ1ODU4OH0.AdJMDIjXfXHGB697u3xyobEfkCM2IePX6lDYTbWtSF0"
+          echo "Pinging Supabase at $(date -u +'%Y-%m-%dT%H:%M:%SZ')..."
+          # Una request simple a la REST API. Con RLS activo, anon recibe
+          # un array vacío pero el request igual cuenta como actividad
+          # contra el contador de inactividad del proyecto.
+          HTTP_STATUS=$(curl -s -o /tmp/resp.txt -w "%{http_code}" \
+            -H "apikey: $ANON_KEY" \
+            -H "Authorization: Bearer $ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/terrenos?select=rol&limit=1")
+          echo "HTTP status: $HTTP_STATUS"
+          echo "Response body:"
+          cat /tmp/resp.txt
+          echo ""
+          # Aceptamos 200 (OK), 401 (auth issue pero registró actividad)
+          # y 404 (RLS bloqueó, pero también registró actividad)
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "401" ] && [ "$HTTP_STATUS" != "404" ] && [ "$HTTP_STATUS" != "406" ]; then
+            echo "::error::Status HTTP inesperado: $HTTP_STATUS"
+            exit 1
+          fi
+          echo "✓ Ping exitoso. Proyecto Supabase marcado como activo."
