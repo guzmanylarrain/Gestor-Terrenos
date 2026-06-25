@@ -2784,13 +2784,7 @@ function App({user, onLogout}) {
       setTerrenos(t); setAllCuotas(c); setAllBitacora(b); setAllDevoluciones(d);
       loadUfClp();
       setSyncStatus("ok");
-      // Auto-open first city
-      if(t.length>0){
-        setOpenCities(prev=>{
-          if(Object.keys(prev).length>0) return prev;
-          return {[t[0].ciudad]:true};
-        });
-      }
+      // Al cargar, todas las ciudades quedan cerradas (no se auto-abre ninguna)
     }catch(e){setSyncStatus("error");}
     setLoading(false);
   }, []);
