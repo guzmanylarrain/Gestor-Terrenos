@@ -1459,13 +1459,16 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
                       const ter = terrMap[tr.rol];
                       const tn = tr.contrib - tr.dev;
                       const nombre = ter?.terreno||tr.rol;
+                      const hasSobretasa = !!ter?.sobretasa;
                       return (
                         <div key={y.anio+"-"+tr.rol} className="dt-row proy-subrow"
                           style={{gridTemplateColumns:"minmax(260px,1.4fr) 1fr 1fr 1fr"}}
                           onClick={(e)=>{e.stopPropagation(); onSelectTerreno && onSelectTerreno(tr.rol);}}
-                          title={"Ir a "+nombre}>
+                          title={"Ir a "+nombre+(hasSobretasa?" (con sobretasa)":"")}>
                           <span style={{fontSize:11.5,color:"var(--ink2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                            └ {nombre} <span style={{color:"var(--ink3)",fontFamily:"monospace",fontSize:10}}>({tr.rol})</span>
+                            └ {nombre}
+                            {hasSobretasa && <span title="Con sobretasa" style={{display:"inline-block",marginLeft:6,minWidth:14,padding:"0 4px",fontSize:9.5,fontWeight:700,color:"#fff",background:"var(--red)",borderRadius:3,textAlign:"center",lineHeight:"14px",verticalAlign:"middle"}}>S</span>}
+                            <span style={{color:"var(--ink3)",fontFamily:"monospace",fontSize:10,marginLeft:6}}>({tr.rol})</span>
                           </span>
                           <span style={{textAlign:"right",color:"var(--ink2)",fontSize:11.5,fontWeight:500}}>{fmtCLP(tr.contrib)}</span>
                           <span style={{textAlign:"right",color:tr.dev>0?"var(--red)":"var(--ink3)",fontSize:11.5,fontWeight:500}}>{tr.dev>0?"−":""}{fmtCLP(tr.dev)}</span>
