@@ -9,6 +9,7 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.2/babel.min.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2.104.0/dist/umd/supabase.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -2684,6 +2685,7 @@ function App({user, onLogout}) {
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
+  const [excelBusy, setExcelBusy] = useState(false);
   const [ufClp, setUfClp] = useState(40027); // Valor inicial; se carga desde app_config
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditUnread, setAuditUnread] = useState(0);
@@ -2922,6 +2924,83 @@ function App({user, onLogout}) {
     setExportBusy(false);
   };
 
+  const exportExcel = () => {
+    if(typeof XLSX === "undefined"){ alert("La librería de Excel aún no cargó. Refresca la página e intenta de nuevo."); return; }
+    setExcelBusy(true);
+    try{
+      const terr = [...terrenos].sort((a,b)=>(a.ciudad||"").localeCompare(b.ciudad||"")||(a.rol||"").localeCompare(b.rol||""));
+      const terrByRol = {}; terr.forEach(t=>{terrByRol[t.rol]=t;});
+      const anioActual = new Date().getFullYear();
+      const ufm2 = (t)=>{
+        const av = parseInt(t.avaluo)||0, m2 = parseFloat(t.m2_sii)||0;
+        return (av>0 && m2>0 && ufClp>0) ? Math.round((av/ufClp/m2)*100)/100 : "";
+      };
+      const wb = XLSX.utils.book_new();
+
+      // Hoja 1 — Resumen
+      const totM2 = terr.reduce((s,t)=>s+(parseFloat(t.m2_sii)||0),0);
+      const totAv = terr.reduce((s,t)=>s+(parseInt(t.avaluo)||0),0);
+      const conSob = terr.filter(t=>t.sobretasa).length;
+      const contribAnio = allCuotas.filter(c=>c.anio===anioActual).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+      const devAnioVal = allDevoluciones.filter(d=>(d.fecha||"").startsWith(anioActual+"-")).reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+      const resumen = [
+        ["Gestor de Terrenos — Guzmán & Larraín"],
+        ["Exportado", new Date().toLocaleString("es-CL")],
+        ["Tasa UF usada (CLP)", ufClp],
+        [],
+        ["Indicador","Valor"],
+        ["Cantidad de terrenos", terr.length],
+        ["Superficie total (m²)", Math.round(totM2)],
+        ["Avalúo fiscal total (CLP)", totAv],
+        ["Terrenos con sobretasa", conSob],
+        ["Terrenos sin sobretasa", terr.length-conSob],
+        ["Contribuciones "+anioActual+" (CLP)", contribAnio],
+        ["Devoluciones "+anioActual+" (CLP)", devAnioVal],
+        ["Neto "+anioActual+" (CLP)", contribAnio-devAnioVal],
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), "Resumen");
+
+      // Hoja 2 — Terrenos
+      const terrRows = [["ROL","Terreno","Ciudad","Proyecto","Vigente","M² SII","Avalúo fiscal (CLP)","UF/m²","Sobretasa"]];
+      terr.forEach(t=>{
+        terrRows.push([t.rol, t.terreno||"", t.ciudad||"", t.proyecto||"", t.vigente||"", parseFloat(t.m2_sii)||0, parseInt(t.avaluo)||0, ufm2(t), t.sobretasa?"Sí":"No"]);
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(terrRows), "Terrenos");
+
+      // Hoja 3 — Contribuciones
+      const cuRows = [["ROL","Terreno","Ciudad","Año","Cuota","Monto (CLP)","Vencimiento","Pagado","Fecha pago"]];
+      [...allCuotas].sort((a,b)=>(a.terreno_rol||"").localeCompare(b.terreno_rol||"")||b.anio-a.anio||(a.numero-b.numero)).forEach(c=>{
+        const t = terrByRol[c.terreno_rol]||{};
+        const cuotaLbl = c.numero>4 ? "Extra" : c.numero+"ª";
+        cuRows.push([c.terreno_rol, t.terreno||"", t.ciudad||"", c.anio, cuotaLbl, parseInt(c.monto)||0, c.fecha_vencimiento||"", c.pagado?"Sí":"No", c.fecha_pago||""]);
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cuRows), "Contribuciones");
+
+      // Hoja 4 — Devoluciones
+      const dvRows = [["ROL","Terreno","Ciudad","Fecha","Monto (CLP)","Motivo","Notas"]];
+      [...allDevoluciones].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).forEach(d=>{
+        const t = terrByRol[d.terreno_rol]||{};
+        dvRows.push([d.terreno_rol, t.terreno||"", t.ciudad||"", d.fecha||"", parseInt(d.monto)||0, d.motivo||"", d.notas||""]);
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dvRows), "Devoluciones");
+
+      // Hoja 5 — Balance anual
+      const balMap = {};
+      allCuotas.forEach(c=>{ const y=c.anio; if(!balMap[y])balMap[y]={anio:y,contrib:0,dev:0}; balMap[y].contrib+=parseInt(c.monto)||0; });
+      allDevoluciones.forEach(d=>{ if(!d.fecha)return; const y=parseInt(d.fecha.slice(0,4)); if(!balMap[y])balMap[y]={anio:y,contrib:0,dev:0}; balMap[y].dev+=parseInt(d.monto)||0; });
+      const balRows = [["Año","Contribuciones (CLP)","Devoluciones (CLP)","Neto (CLP)"]];
+      Object.values(balMap).sort((a,b)=>b.anio-a.anio).forEach(y=>{ balRows.push([y.anio, y.contrib, y.dev, y.contrib-y.dev]); });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(balRows), "Balance anual");
+
+      const stamp = new Date().toISOString().slice(0,10);
+      XLSX.writeFile(wb, "gestor-terrenos-"+stamp+".xlsx");
+      logAudit("exportar_excel", "Exportó el dashboard a Excel", "");
+    }catch(e){
+      alert("Error al exportar Excel: "+e.message);
+    }
+    setExcelBusy(false);
+  };
+
   const selTerreno = terrenos.find(t=>t.rol===selRol);
 
   // Sidebar groups — ordenar ciudades de norte a sur (segun CIUDADES) y
@@ -3059,6 +3138,9 @@ function App({user, onLogout}) {
             <span style={{fontSize:12,color:"var(--ink3)"}}>
               {terrenos.length} terrenos · {allCuotas.filter(c=>!c.pagado&&c.fecha_vencimiento&&c.fecha_vencimiento<today()).length} cuotas vencidas
             </span>
+            <button className="btn btn-outline btn-sm" onClick={exportExcel} disabled={excelBusy} title="Exportar la información a Excel (.xlsx)">
+              {excelBusy ? "⏳ Generando..." : "📊 Exportar Excel"}
+            </button>
             <div className="audit-bell-wrap" ref={auditRef}>
               <button className="audit-bell-btn" onClick={()=>{setShowAudit(s=>!s); setAuditUnread(0);}} title="Historial de cambios">
                 🔔
