@@ -1303,6 +1303,24 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
     if(t&&byCiudad[t.ciudad]) byCiudad[t.ciudad].imp+=parseInt(c.monto)||0;
   });
 
+  // ── Cuotas vencidas (alerta) → usa el set con ocultos para no perder deuda histórica ──
+  const hoy = today();
+  const diasVencida = (fv) => { try{ return Math.max(0, Math.floor((new Date(hoy) - new Date(fv))/86400000)); }catch{ return 0; } };
+  const overdueCuotas = filCuotasMoney
+    .filter(c => !c.pagado && c.fecha_vencimiento && c.fecha_vencimiento < hoy)
+    .map(c => {
+      const t = terrMap[c.terreno_rol] || {};
+      return {
+        ...c,
+        _nombre: t.terreno || c.terreno_rol,
+        _proyecto: (t.proyecto && String(t.proyecto).trim()) || (t.terreno || c.terreno_rol),
+        _dias: diasVencida(c.fecha_vencimiento),
+        _periodo: c.numero>4 ? `${c.anio}-Extra` : `${c.anio}-Q${c.numero}`
+      };
+    })
+    .sort((a,b) => b._dias - a._dias);
+  const overdueTotal = overdueCuotas.reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+
   const hasPrincipalFilters = filterCiudades.length||filterProyectos.length||filterVigente.length||filterSobretasa.length;
   const clearPrincipalFilters = () => {
     setFilterCiudades([]); setFilterProyectos([]); setFilterVigente([]); setFilterSobretasa([]);
@@ -1508,6 +1526,48 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
                 );
               })}
             </div>
+          </div>
+
+          {/* ── Alerta: cuotas de contribuciones vencidas, detalle por terreno ── */}
+          <div className="dash-section">
+            <h4 style={overdueCuotas.length>0?{color:"var(--red)"}:undefined}>
+              {overdueCuotas.length>0 ? "⚠️" : "✅"} Cuotas vencidas — detalle por terreno
+              {overdueCuotas.length>0 && (
+                <span style={{marginLeft:8,fontSize:11,fontWeight:600,color:"#fff",background:"var(--red)",padding:"1px 9px",borderRadius:10}}>
+                  {overdueCuotas.length} · {fmtCLP(overdueTotal)}
+                </span>
+              )}
+            </h4>
+            {overdueCuotas.length===0 ? (
+              <div className="dt-empty" style={{color:"var(--green)"}}>✓ Sin cuotas vencidas. Todas las contribuciones al día.</div>
+            ) : (
+              <div className="data-table">
+                <div className="dt-head" style={{gridTemplateColumns:"minmax(220px,1.4fr) 1fr 110px 90px 120px"}}>
+                  <span>Terreno · ROL</span><span>Proyecto</span><span>Período</span><span style={{textAlign:"center"}}>Días</span><span style={{textAlign:"right"}}>Monto</span>
+                </div>
+                {overdueCuotas.map(c=>(
+                  <div key={c.id} className="dt-row proy-row-clickable" style={{gridTemplateColumns:"minmax(220px,1.4fr) 1fr 110px 90px 120px"}}
+                    onClick={()=>onSelectTerreno && onSelectTerreno(c.terreno_rol)}
+                    title={"Ir a "+c._nombre}>
+                    <span style={{minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      <span style={{fontWeight:600,fontSize:11.5}}>{c._nombre}</span>
+                      <span style={{color:"var(--ink3)",fontFamily:"monospace",fontSize:10,marginLeft:6}}>({c.terreno_rol})</span>
+                    </span>
+                    <span style={{color:"var(--ink3)",fontSize:11.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c._proyecto}</span>
+                    <span style={{fontSize:11.5,color:"var(--ink2)"}}>{c._periodo}</span>
+                    <span style={{textAlign:"center"}}>
+                      <span style={{fontSize:10.5,fontWeight:600,color:"#fff",background:c._dias>180?"var(--red)":"var(--amber)",padding:"1px 7px",borderRadius:9}}>{c._dias}d</span>
+                    </span>
+                    <span style={{textAlign:"right",fontWeight:600,color:"var(--red)",fontSize:12}}>{fmtCLP(c.monto)}</span>
+                  </div>
+                ))}
+                <div className="dt-row" style={{gridTemplateColumns:"minmax(220px,1.4fr) 1fr 110px 90px 120px",background:"var(--bg2)",fontWeight:700}}>
+                  <span>TOTAL VENCIDO</span><span></span><span></span>
+                  <span style={{textAlign:"center"}}>{overdueCuotas.length}</span>
+                  <span style={{textAlign:"right",color:"var(--red)"}}>{fmtCLP(overdueTotal)}</span>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
