@@ -1328,6 +1328,11 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const togglePeriodo = (p) => {
     setFilterPeriodos(curr => curr.includes(p) ? curr.filter(x=>x!==p) : [...curr, p]);
   };
+  // Conversión CLP → UF (la tasa la maneja el usuario en la barra de arriba)
+  const fmtUF = (clp) => {
+    if(!ufClp || ufClp<=0) return "";
+    return Math.round((parseFloat(clp)||0)/ufClp).toLocaleString("es-CL")+" UF";
+  };
 
   // ── Tareas tab (independent filters) ──
   const bitaFiltered = visBita.filter(b=>{
@@ -1387,17 +1392,17 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
             <div className="kpi-card teal">
               <div className="kpi-label">Avalúo fiscal global</div>
               <div className="kpi-value" style={{fontSize:15}}>{fmtCLP(totalAvaluo)}</div>
-              <div className="kpi-sub">Según SII · {anio}</div>
+              <div className="kpi-sub">({fmtUF(totalAvaluo)}) · Según SII · {anio}</div>
             </div>
             <div className="kpi-card" style={{borderTopColor:"var(--red)"}}>
               <div className="kpi-label">Con sobretasa</div>
               <div className="kpi-value" style={{color:"var(--red)"}}>{sobretasaSI.length}</div>
-              <div className="kpi-sub">Cuotas {anio}: {fmtCLP(totalConSobre)}</div>
+              <div className="kpi-sub">Cuotas {anio}: {fmtCLP(totalConSobre)} ({fmtUF(totalConSobre)})</div>
             </div>
             <div className="kpi-card good">
               <div className="kpi-label">Sin sobretasa</div>
               <div className="kpi-value">{sobretasaNO.length}</div>
-              <div className="kpi-sub">Cuotas {anio}: {fmtCLP(totalSinSobre)}</div>
+              <div className="kpi-sub">Cuotas {anio}: {fmtCLP(totalSinSobre)} ({fmtUF(totalSinSobre)})</div>
             </div>
             <div className={`kpi-card${pendingBita.length>0?" warning":""}`}>
               <div className="kpi-label">Tareas en bitácora</div>
@@ -1410,17 +1415,17 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
             <div className="kpi-card teal">
               <div className="kpi-label">Contribuciones {anio}</div>
               <div className="kpi-value" style={{fontSize:16}}>{fmtCLP(contribAnio)}</div>
-              <div className="kpi-sub">Total facturado en cuotas</div>
+              <div className="kpi-sub">({fmtUF(contribAnio)}) · Total facturado en cuotas</div>
             </div>
             <div className="kpi-card" style={{borderTopColor:"var(--red)"}}>
               <div className="kpi-label">Devoluciones (caja) {anio}</div>
               <div className="kpi-value" style={{fontSize:16,color:"var(--red)"}}>{fmtCLP(devAnio)}</div>
-              <div className="kpi-sub">{filDevMoney.filter(d=>d.fecha&&d.fecha.startsWith(anio+"-")).length} registradas</div>
+              <div className="kpi-sub">({fmtUF(devAnio)}) · {filDevMoney.filter(d=>d.fecha&&d.fecha.startsWith(anio+"-")).length} registradas</div>
             </div>
             <div className="kpi-card" style={{borderTopColor:netoAnio>=0?"var(--green)":"var(--red)"}}>
               <div className="kpi-label">Neto {anio}</div>
               <div className="kpi-value" style={{fontSize:16,color:netoAnio>=0?"var(--green)":"var(--red)"}}>{fmtCLP(netoAnio)}</div>
-              <div className="kpi-sub">Contribuciones − Devoluciones (caja)</div>
+              <div className="kpi-sub">({fmtUF(netoAnio)}) · Contribuciones − Devoluciones (caja)</div>
             </div>
           </div>
 
