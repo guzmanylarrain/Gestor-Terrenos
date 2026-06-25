@@ -2743,6 +2743,7 @@ function App({user, onLogout}) {
   const [subtareas, setSubtareas] = useState({});
   const [archivosSub, setArchivosSub] = useState({});
   const [hiddenRols, setHiddenRols] = useState(()=>new Set(JSON.parse(localStorage.getItem('hiddenRols')||'[]')));
+  const hideDirtyRef = useRef(false); // true mientras hay un cambio de ocultos guardándose
   const [showHidden, setShowHidden] = useState(false);
   const [activeTab, setActiveTab] = useState("info");
   const [search, setSearch] = useState("");
@@ -2760,9 +2761,28 @@ function App({user, onLogout}) {
 
   const loadUfClp = useCallback(async () => {
     try{
-      const rows = await db.select("app_config","id=eq.main&select=uf_clp");
-      if(rows && rows[0] && rows[0].uf_clp){ setUfClp(parseFloat(rows[0].uf_clp)||40027); }
-    }catch(e){ console.warn("No se pudo cargar UF del app_config"); }
+      const rows = await db.select("app_config","id=eq.main&select=uf_clp,hidden_rols");
+      if(rows && rows[0]){
+        if(rows[0].uf_clp){ setUfClp(parseFloat(rows[0].uf_clp)||40027); }
+        // Lista de ocultos COMPARTIDA (en DB). Solo se sobreescribe el estado
+        // si el usuario no tiene una edición pendiente sin guardar.
+        if(Array.isArray(rows[0].hidden_rols) && !hideDirtyRef.current){
+          const serverSet = rows[0].hidden_rols;
+          const localArr = JSON.parse(localStorage.getItem('hiddenRols')||'[]');
+          // Migración una sola vez: si el servidor está vacío pero este navegador
+          // ya tenía ocultos, los subimos para no perderlos al pasar a compartido.
+          if(serverSet.length===0 && localArr.length>0 && localStorage.getItem('hiddenMigrated')!=='1'){
+            localStorage.setItem('hiddenMigrated','1');
+            db.patch("app_config","id=eq.main", {hidden_rols: localArr, updated_at: new Date().toISOString()}).catch(()=>{});
+            setHiddenRols(new Set(localArr));
+          } else {
+            localStorage.setItem('hiddenMigrated','1');
+            setHiddenRols(new Set(serverSet));
+            localStorage.setItem('hiddenRols', JSON.stringify(serverSet));
+          }
+        }
+      }
+    }catch(e){ console.warn("No se pudo cargar config del app_config"); }
   }, []);
 
   const saveUfClp = async (newUf) => {
@@ -2887,13 +2907,23 @@ function App({user, onLogout}) {
 
   const toggleHide=useCallback((rol,e)=>{
     e.stopPropagation();
+    hideDirtyRef.current = true;
     setHiddenRols(prev=>{
       const next=new Set(prev);
-      if(next.has(rol)) next.delete(rol); else next.add(rol);
-      localStorage.setItem('hiddenRols',JSON.stringify([...next]));
+      const wasHidden = next.has(rol);
+      if(wasHidden) next.delete(rol); else next.add(rol);
+      const arr=[...next];
+      localStorage.setItem('hiddenRols',JSON.stringify(arr));
+      // Guardar la lista COMPARTIDA en la base de datos (afecta a todos los usuarios)
+      db.patch("app_config","id=eq.main", {hidden_rols: arr, updated_at: new Date().toISOString(), updated_by: (user && user.email) || ""})
+        .then(()=>{
+          logAudit(wasHidden?"mostrar_terreno":"ocultar_terreno", `${wasHidden?"Mostró":"Ocultó"} el terreno ${rol} (para todos los usuarios)`, rol);
+          hideDirtyRef.current = false;
+        })
+        .catch(err=>{ hideDirtyRef.current = false; alert("Error al guardar lista de ocultos: "+err.message); });
       return next;
     });
-  },[]);
+  },[user]);
 
   const refreshAll = () => { loadDetail(selRol); loadAll(); };
 
@@ -2927,9 +2957,11 @@ function App({user, onLogout}) {
   useEffect(() => {
     if(!db) return;
     loadAuditLogs();
-    const t = setInterval(()=>{ if(db) loadAuditLogs(); }, 30000);
+    // Cada 30s refresca historial + config compartida (UF y lista de ocultos)
+    // para que los cambios de otros usuarios se propaguen.
+    const t = setInterval(()=>{ if(db){ loadAuditLogs(); loadUfClp(); } }, 30000);
     return () => clearInterval(t);
-  }, [loadAuditLogs]);
+  }, [loadAuditLogs, loadUfClp]);
 
   // Close audit panel on outside click
   useEffect(() => {
