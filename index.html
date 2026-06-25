@@ -146,6 +146,14 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 
 /* ── INFO ── */
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.info-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin-top:14px}
+.isum-line{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12px}
+.isum-line:last-child{border-bottom:none}
+.isum-empty{padding:18px 4px;text-align:center;color:var(--ink3);font-size:12px}
+.isum-totals{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.isum-tot{display:flex;flex-direction:column}
+.isum-tot-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink3)}
+.isum-tot-val{font-size:13px;font-weight:600}
 .info-card{background:var(--white);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow);border:1px solid var(--line)}
 .info-card h4{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink3);font-weight:600;margin-bottom:14px;font-family:'IBM Plex Sans',sans-serif}
 .info-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
@@ -1579,7 +1587,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
 // ─────────────────────────────────────────────────────
 // INFO TAB
 // ─────────────────────────────────────────────────────
-function InfoTab({terreno, ufClp=40027, onUpdated}) {
+function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[], onUpdated}) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({...terreno});
   const [saving, setSaving] = useState(false);
@@ -1654,7 +1662,19 @@ function InfoTab({terreno, ufClp=40027, onUpdated}) {
     </>
   );
 
+  // ── Resúmenes (solo lectura) para mostrar bajo las tarjetas ──
+  const sumAnio = new Date().getFullYear();
+  const cuotasAnio = [...cuotas].filter(c=>c.anio===sumAnio).sort((a,b)=>(a.numero||0)-(b.numero||0));
+  const cuPaid = cuotasAnio.filter(c=>c.pagado).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  const cuTotal = cuotasAnio.reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  const cuPending = cuTotal - cuPaid;
+  const cuOverdue = cuotasAnio.filter(c=>!c.pagado && cuotaStatus(c)==="vencida").reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  const devsSorted = [...devoluciones].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const devTotal = devoluciones.reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+  const bitaSorted = [...bitacora].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+
   return (
+    <>
     <div className="info-grid">
       <div className="info-card">
         <h4>Datos del terreno</h4>
@@ -1808,6 +1828,84 @@ function InfoTab({terreno, ufClp=40027, onUpdated}) {
         )}
       </div>
     </div>
+
+    {/* ── Resumen de Contribuciones / Devoluciones / Bitácora (solo lectura) ── */}
+    <div className="info-summary-grid">
+      {/* Contribuciones */}
+      <div className="info-card">
+        <h4>💰 Contribuciones {sumAnio}</h4>
+        {cuotasAnio.length===0 ? (
+          <div className="isum-empty">Sin cuotas registradas para {sumAnio}.</div>
+        ) : (
+          <>
+            {cuotasAnio.map(c=>{
+              const st = cuotaStatus(c);
+              const stTxt = st==="pagada"?"✓ Pagada":st==="vencida"?"⚠ Vencida":st==="proxima"?"⏰ Próxima":"Pendiente";
+              return (
+                <div key={c.id} className="isum-line">
+                  <span style={{color:"var(--ink2)"}}>{cuotaDisplayLabel(c)}</span>
+                  <span style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span className={`cuota-status-chip st-${st}`}>{stTxt}</span>
+                    <span style={{fontWeight:600,minWidth:78,textAlign:"right"}}>{fmtCLP(c.monto)}</span>
+                  </span>
+                </div>
+              );
+            })}
+            <div className="isum-totals">
+              <div className="isum-tot"><span className="isum-tot-lbl">Total {sumAnio}</span><span className="isum-tot-val">{fmtCLP(cuTotal)}</span></div>
+              <div className="isum-tot"><span className="isum-tot-lbl">Pagado</span><span className="isum-tot-val" style={{color:"var(--green)"}}>{fmtCLP(cuPaid)}</span></div>
+              <div className="isum-tot"><span className="isum-tot-lbl">Por pagar</span><span className="isum-tot-val">{fmtCLP(cuPending)}</span></div>
+              {cuOverdue>0 && <div className="isum-tot"><span className="isum-tot-lbl">Vencido</span><span className="isum-tot-val" style={{color:"var(--red)"}}>{fmtCLP(cuOverdue)}</span></div>}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Devoluciones */}
+      <div className="info-card">
+        <h4>↩️ Devoluciones (caja)</h4>
+        {devsSorted.length===0 ? (
+          <div className="isum-empty">Sin devoluciones registradas.</div>
+        ) : (
+          <>
+            {devsSorted.slice(0,4).map(d=>(
+              <div key={d.id} className="isum-line">
+                <span style={{color:"var(--ink2)",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  <span style={{color:"var(--ink3)",fontSize:11}}>{fmtDate(d.fecha)}</span>{d.motivo?" · "+d.motivo:""}
+                </span>
+                <span style={{fontWeight:600,color:"var(--red)",minWidth:78,textAlign:"right"}}>−{fmtCLP(d.monto)}</span>
+              </div>
+            ))}
+            <div className="isum-totals" style={{gridTemplateColumns:"1fr"}}>
+              <div className="isum-tot"><span className="isum-tot-lbl">Total devoluciones {devsSorted.length>4?`(${devsSorted.length} registros)`:""}</span><span className="isum-tot-val" style={{color:"var(--red)"}}>−{fmtCLP(devTotal)}</span></div>
+            </div>
+            {devsSorted.length>4 && <div style={{fontSize:10.5,color:"var(--ink3)",marginTop:8,fontStyle:"italic"}}>Mostrando las 4 más recientes · ver todas en la pestaña Devoluciones</div>}
+          </>
+        )}
+      </div>
+
+      {/* Bitácora */}
+      <div className="info-card">
+        <h4>📓 Bitácora</h4>
+        {bitaSorted.length===0 ? (
+          <div className="isum-empty">Sin entradas en la bitácora.</div>
+        ) : (
+          bitaSorted.map(b=>(
+            <div key={b.id} className="isum-line" style={{alignItems:"flex-start"}}>
+              <span style={{color:"var(--ink2)",minWidth:0,flex:1}}>
+                <span style={{color:"var(--ink3)",fontSize:11}}>{fmtDate(b.fecha)}</span>
+                <span style={{marginLeft:6}}>{b.detalle}</span>
+              </span>
+              <span style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+                {b.prioridad && <span className={`prio-chip prio-${b.prioridad.toLowerCase()}`}>{b.prioridad}</span>}
+                <span className={`estatus-chip est-${b.estatus==="En Proceso"?"proceso":(b.estatus||"").toLowerCase()}`}>{b.estatus}</span>
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+    </>
   );
 }
 
@@ -3013,7 +3111,7 @@ function App({user, onLogout}) {
               </div>
 
               {activeTab==="info"&&(
-                <InfoTab terreno={selTerreno} ufClp={ufClp} onUpdated={updated=>{
+                <InfoTab terreno={selTerreno} ufClp={ufClp} cuotas={cuotas} devoluciones={devoluciones} bitacora={bitacora} onUpdated={updated=>{
                   setTerrenos(ts=>ts.map(t=>t.rol===updated.rol?{...t,...updated}:t));
                   loadAll();
                 }}/>
