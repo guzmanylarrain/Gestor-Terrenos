@@ -2532,17 +2532,12 @@ function NewTerrenoModal({onClose, onCreated}) {
         <div className="field"><label>Proyecto asociado</label><input value={form.proyecto} onChange={e=>set("proyecto",e.target.value)} placeholder="ej: Las Vicuñas"/></div>
       </div>
       <div className="field-row">
-        <div className="field"><label>Responsable</label>
-          <select value={form.responsable} onChange={e=>set("responsable",e.target.value)}>
-            <option value="">— Sin asignar —</option>
-            {RESPONSABLES.map(r=><option key={r}>{r}</option>)}
-          </select>
-        </div>
         <div className="field"><label>Sobretasa</label>
           <select value={form.sobretasa?"Si":"No"} onChange={e=>set("sobretasa",e.target.value==="Si")}>
             <option>No</option><option>Si</option>
           </select>
         </div>
+        <div className="field"></div>
       </div>
       <div className="field"><label>Notas</label><textarea value={form.notas} onChange={e=>set("notas",e.target.value)} rows={2} placeholder="Observaciones adicionales..."/></div>
     </Modal>
