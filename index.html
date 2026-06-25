@@ -1212,6 +1212,21 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const filDev = visDev.filter(d=>filRols.has(d.terreno_rol));
   const filBita = visBita.filter(b=>filRols.has(b.terreno_rol));
 
+  // ── Datos de PLATA (contribuciones / devoluciones) ──
+  // A diferencia de los datos de portafolio (m², avalúo, sobretasa), las
+  // contribuciones y devoluciones SÍ incluyen terrenos ocultos, porque ese
+  // historial financiero existió aunque el terreno ya no esté activo
+  // (ej: un terreno "madre" que se subdividió y se ocultó).
+  const filTerMoney = terrenos.filter(t =>
+    (filterCiudades.length===0 || filterCiudades.includes(t.ciudad))
+    && (filterProyectos.length===0 || filterProyectos.includes(t.proyecto))
+    && (filterVigente.length===0 || filterVigente.includes(t.vigente))
+    && (filterSobretasa.length===0 || filterSobretasa.includes(!!t.sobretasa))
+  );
+  const filRolsMoney = new Set(filTerMoney.map(t=>t.rol));
+  const filCuotasMoney = allCuotas.filter(c=>filRolsMoney.has(c.terreno_rol));
+  const filDevMoney = allDevoluciones.filter(d=>filRolsMoney.has(d.terreno_rol));
+
   // Auto-deseleccionar proyectos que ya no pertenecen a las ciudades filtradas
   useEffect(()=>{
     if(filterCiudades.length===0) return; // sin filtro de ciudad, no tocar proyectos
@@ -1221,8 +1236,9 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   }, [filterCiudades.join("|")]);
 
   const anio = new Date().getFullYear();
-  const contribAnio = filCuotas.filter(c=>c.anio===anio).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
-  const devAnio = filDev.filter(d=>d.fecha&&d.fecha.startsWith(anio+"-")).reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+  // Tarjetas Contribuciones / Devoluciones / Neto → incluyen ocultos
+  const contribAnio = filCuotasMoney.filter(c=>c.anio===anio).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+  const devAnio = filDevMoney.filter(d=>d.fecha&&d.fecha.startsWith(anio+"-")).reduce((s,d)=>s+(parseInt(d.monto)||0),0);
   const netoAnio = contribAnio - devAnio;
 
   const yearlyMap={};
@@ -1234,14 +1250,15 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
     if(!yb.byTerreno[rol]) yb.byTerreno[rol] = {rol, contrib:0, dev:0};
     return yb.byTerreno[rol];
   };
-  filCuotas.forEach(c=>{
+  // Balance anual (incluye ocultos)
+  filCuotasMoney.forEach(c=>{
     const yb = getYearBucket(c.anio);
     const tb = getTerBucket(yb, c.terreno_rol);
     const m = parseInt(c.monto)||0;
     yb.contrib += m;
     tb.contrib += m;
   });
-  filDev.forEach(d=>{
+  filDevMoney.forEach(d=>{
     if(!d.fecha) return;
     const y = parseInt(d.fecha.slice(0,4));
     const yb = getYearBucket(y);
@@ -1251,8 +1268,9 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
     tb.dev += m;
   });
   const yearly = Object.values(yearlyMap).sort((a,b)=>b.anio-a.anio);
+  // terrMap incluye ocultos para resolver nombres en el desglose del balance
   const terrMap = {};
-  filTer.forEach(t=>{terrMap[t.rol]=t;});
+  filTerMoney.forEach(t=>{terrMap[t.rol]=t;});
 
   const totalM2 = filTer.reduce((s,t)=>s+(parseFloat(t.m2_sii)||0),0);
   const totalAvaluo = filTer.reduce((s,t)=>s+(parseInt(t.avaluo)||0),0);
@@ -1265,13 +1283,14 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const totalSinSobre = filCuotas.filter(c=>c.anio===anio && !rolsConSobre.has(c.terreno_rol)).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
   const pendingBita = filBita.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso");
 
+  // Contribuciones por ciudad → incluye ocultos (es desglose de contribuciones)
   const byCiudad={};
-  filTer.forEach(t=>{
+  filTerMoney.forEach(t=>{
     if(!byCiudad[t.ciudad]) byCiudad[t.ciudad]={n:0,imp:0};
     byCiudad[t.ciudad].n++;
   });
-  filCuotas.filter(c=>c.anio===anio).forEach(c=>{
-    const t=filTer.find(x=>x.rol===c.terreno_rol);
+  filCuotasMoney.filter(c=>c.anio===anio).forEach(c=>{
+    const t=filTerMoney.find(x=>x.rol===c.terreno_rol);
     if(t&&byCiudad[t.ciudad]) byCiudad[t.ciudad].imp+=parseInt(c.monto)||0;
   });
 
@@ -1369,7 +1388,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
             <div className="kpi-card" style={{borderTopColor:"var(--red)"}}>
               <div className="kpi-label">Devoluciones (caja) {anio}</div>
               <div className="kpi-value" style={{fontSize:16,color:"var(--red)"}}>{fmtCLP(devAnio)}</div>
-              <div className="kpi-sub">{filDev.filter(d=>d.fecha&&d.fecha.startsWith(anio+"-")).length} registradas</div>
+              <div className="kpi-sub">{filDevMoney.filter(d=>d.fecha&&d.fecha.startsWith(anio+"-")).length} registradas</div>
             </div>
             <div className="kpi-card" style={{borderTopColor:netoAnio>=0?"var(--green)":"var(--red)"}}>
               <div className="kpi-label">Neto {anio}</div>
@@ -1410,12 +1429,12 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
             <div className="chart-and-breakdown">
               <div>
                 <h4>📈 Evolución de contribuciones por año y cuota</h4>
-                <ContribChart cuotas={filCuotas} selectedPeriods={filterPeriodos} onTogglePeriod={togglePeriodo}/>
+                <ContribChart cuotas={filCuotasMoney} selectedPeriods={filterPeriodos} onTogglePeriod={togglePeriodo}/>
                 <div className="chart-help">Haz clic en una o más barras para filtrar el desglose de proyectos (puedes seleccionar varias).</div>
               </div>
               <ProyectosBreakdown
-                terrenos={filTer}
-                cuotas={filCuotas}
+                terrenos={filTerMoney}
+                cuotas={filCuotasMoney}
                 selectedPeriods={filterPeriodos}
                 onClearPeriods={()=>setFilterPeriodos([])}
                 onSelectTerreno={onSelectTerreno}
