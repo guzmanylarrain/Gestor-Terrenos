@@ -3019,73 +3019,105 @@ function App({user, onLogout}) {
     if(typeof XLSX === "undefined"){ alert("La librería de Excel aún no cargó. Refresca la página e intenta de nuevo."); return; }
     setExcelBusy(true);
     try{
-      const terr = [...terrenos].sort((a,b)=>(a.ciudad||"").localeCompare(b.ciudad||"")||(a.rol||"").localeCompare(b.rol||""));
-      const terrByRol = {}; terr.forEach(t=>{terrByRol[t.rol]=t;});
       const anioActual = new Date().getFullYear();
-      const ufm2 = (t)=>{
-        const av = parseInt(t.avaluo)||0, m2 = parseFloat(t.m2_sii)||0;
-        return (av>0 && m2>0 && ufClp>0) ? Math.round((av/ufClp/m2)*100)/100 : "";
-      };
+      const hoyStr = today();
+      const terr = [...terrenos].sort((a,b)=>(a.ciudad||"").localeCompare(b.ciudad||"")||(a.rol||"").localeCompare(b.rol||""));
+      const ufOf = (clp)=> (ufClp&&ufClp>0) ? Math.round((parseFloat(clp)||0)/ufClp) : "";
+
+      // Índices por terreno
+      const cuotasByRol={}, devByRol={}, bitaByRol={};
+      allCuotas.forEach(c=>{ (cuotasByRol[c.terreno_rol]=cuotasByRol[c.terreno_rol]||[]).push(c); });
+      allDevoluciones.forEach(d=>{ (devByRol[d.terreno_rol]=devByRol[d.terreno_rol]||[]).push(d); });
+      allBitacora.forEach(b=>{ (bitaByRol[b.terreno_rol]=bitaByRol[b.terreno_rol]||[]).push(b); });
+
       const wb = XLSX.utils.book_new();
 
-      // Hoja 1 — Resumen
+      // ═══════════ HOJA 1 — RESUMEN ═══════════
       const totM2 = terr.reduce((s,t)=>s+(parseFloat(t.m2_sii)||0),0);
       const totAv = terr.reduce((s,t)=>s+(parseInt(t.avaluo)||0),0);
       const conSob = terr.filter(t=>t.sobretasa).length;
       const contribAnio = allCuotas.filter(c=>c.anio===anioActual).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
       const devAnioVal = allDevoluciones.filter(d=>(d.fecha||"").startsWith(anioActual+"-")).reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+      const vencidasAll = allCuotas.filter(c=>!c.pagado && c.fecha_vencimiento && c.fecha_vencimiento<hoyStr);
+      const vencidoTotal = vencidasAll.reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+
       const resumen = [
         ["Gestor de Terrenos — Guzmán & Larraín"],
         ["Exportado", new Date().toLocaleString("es-CL")],
         ["Tasa UF usada (CLP)", ufClp],
         [],
-        ["Indicador","Valor"],
-        ["Cantidad de terrenos", terr.length],
-        ["Superficie total (m²)", Math.round(totM2)],
-        ["Avalúo fiscal total (CLP)", totAv],
-        ["Terrenos con sobretasa", conSob],
-        ["Terrenos sin sobretasa", terr.length-conSob],
-        ["Contribuciones "+anioActual+" (CLP)", contribAnio],
-        ["Devoluciones "+anioActual+" (CLP)", devAnioVal],
-        ["Neto "+anioActual+" (CLP)", contribAnio-devAnioVal],
+        ["INDICADORES GLOBALES", "CLP", "UF"],
+        ["Cantidad de terrenos", terr.length, ""],
+        ["Superficie total (m²)", Math.round(totM2), ""],
+        ["Avalúo fiscal total", totAv, ufOf(totAv)],
+        ["Terrenos con sobretasa", conSob, ""],
+        ["Terrenos sin sobretasa", terr.length-conSob, ""],
+        ["Contribuciones "+anioActual, contribAnio, ufOf(contribAnio)],
+        ["Devoluciones "+anioActual, devAnioVal, ufOf(devAnioVal)],
+        ["Neto "+anioActual, contribAnio-devAnioVal, ufOf(contribAnio-devAnioVal)],
+        ["Cuotas vencidas (N°)", vencidasAll.length, ""],
+        ["Monto total vencido", vencidoTotal, ufOf(vencidoTotal)],
+        [],
+        ["BALANCE POR AÑO"],
+        ["Año","Contribuciones (CLP)","Devoluciones (CLP)","Neto (CLP)"],
       ];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), "Resumen");
-
-      // Hoja 2 — Terrenos
-      const terrRows = [["ROL","Terreno","Ciudad","Proyecto","Vigente","M² SII","Avalúo fiscal (CLP)","UF/m²","Sobretasa"]];
-      terr.forEach(t=>{
-        terrRows.push([t.rol, t.terreno||"", t.ciudad||"", t.proyecto||"", t.vigente||"", parseFloat(t.m2_sii)||0, parseInt(t.avaluo)||0, ufm2(t), t.sobretasa?"Sí":"No"]);
-      });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(terrRows), "Terrenos");
-
-      // Hoja 3 — Contribuciones
-      const cuRows = [["ROL","Terreno","Ciudad","Año","Cuota","Monto (CLP)","Vencimiento","Pagado","Fecha pago"]];
-      [...allCuotas].sort((a,b)=>(a.terreno_rol||"").localeCompare(b.terreno_rol||"")||b.anio-a.anio||(a.numero-b.numero)).forEach(c=>{
-        const t = terrByRol[c.terreno_rol]||{};
-        const cuotaLbl = c.numero>4 ? "Extra" : c.numero+"ª";
-        cuRows.push([c.terreno_rol, t.terreno||"", t.ciudad||"", c.anio, cuotaLbl, parseInt(c.monto)||0, c.fecha_vencimiento||"", c.pagado?"Sí":"No", c.fecha_pago||""]);
-      });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cuRows), "Contribuciones");
-
-      // Hoja 4 — Devoluciones
-      const dvRows = [["ROL","Terreno","Ciudad","Fecha","Monto (CLP)","Motivo","Notas"]];
-      [...allDevoluciones].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).forEach(d=>{
-        const t = terrByRol[d.terreno_rol]||{};
-        dvRows.push([d.terreno_rol, t.terreno||"", t.ciudad||"", d.fecha||"", parseInt(d.monto)||0, d.motivo||"", d.notas||""]);
-      });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dvRows), "Devoluciones");
-
-      // Hoja 5 — Balance anual
       const balMap = {};
       allCuotas.forEach(c=>{ const y=c.anio; if(!balMap[y])balMap[y]={anio:y,contrib:0,dev:0}; balMap[y].contrib+=parseInt(c.monto)||0; });
       allDevoluciones.forEach(d=>{ if(!d.fecha)return; const y=parseInt(d.fecha.slice(0,4)); if(!balMap[y])balMap[y]={anio:y,contrib:0,dev:0}; balMap[y].dev+=parseInt(d.monto)||0; });
-      const balRows = [["Año","Contribuciones (CLP)","Devoluciones (CLP)","Neto (CLP)"]];
-      Object.values(balMap).sort((a,b)=>b.anio-a.anio).forEach(y=>{ balRows.push([y.anio, y.contrib, y.dev, y.contrib-y.dev]); });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(balRows), "Balance anual");
+      Object.values(balMap).sort((a,b)=>b.anio-a.anio).forEach(y=>{ resumen.push([y.anio, y.contrib, y.dev, y.contrib-y.dev]); });
+      resumen.push([]);
+      resumen.push(["CONTRIBUCIONES "+anioActual+" POR CIUDAD"]);
+      resumen.push(["Ciudad","Terrenos","Contribuciones (CLP)"]);
+      const ciudadMap = {};
+      terr.forEach(t=>{ if(!ciudadMap[t.ciudad])ciudadMap[t.ciudad]={n:0,imp:0}; ciudadMap[t.ciudad].n++; });
+      allCuotas.filter(c=>c.anio===anioActual).forEach(c=>{ const t=terr.find(x=>x.rol===c.terreno_rol); if(t&&ciudadMap[t.ciudad])ciudadMap[t.ciudad].imp+=parseInt(c.monto)||0; });
+      Object.entries(ciudadMap).sort((a,b)=>b[1].imp-a[1].imp).forEach(([city,d])=>{ resumen.push([city, d.n, d.imp]); });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), "Resumen");
+
+      // ═══════════ HOJA 2 — BASE (una fila por terreno) ═══════════
+      const baseHeader = [
+        "ROL","Terreno","Ciudad","Proyecto","Vigente","Sobretasa",
+        "M² SII","M² Sitio eriazo","M² Terreno construido",
+        "Avalúo fiscal (CLP)","Avalúo Sitio eriazo (CLP)","Avalúo Terreno construido (CLP)","UF/m²",
+        "Contribuciones totales (CLP)","Contribuciones totales (UF)","Pagado total (CLP)","Por pagar (CLP)","Vencido (CLP)","N° cuotas vencidas",
+        "Contribuciones "+anioActual+" (CLP)",
+        "Devoluciones totales (CLP)","N° devoluciones",
+        "Neto (Contrib − Dev) (CLP)",
+        "Último pago","Próximo vencimiento impago","Tareas bitácora pendientes"
+      ];
+      const baseRows = [baseHeader];
+      terr.forEach(t=>{
+        const cs = cuotasByRol[t.rol]||[];
+        const ds = devByRol[t.rol]||[];
+        const bs = bitaByRol[t.rol]||[];
+        const contribTotal = cs.reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+        const pagadoTotal = cs.filter(c=>c.pagado).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+        const porPagar = contribTotal - pagadoTotal;
+        const vencidas = cs.filter(c=>!c.pagado && c.fecha_vencimiento && c.fecha_vencimiento<hoyStr);
+        const vencidoMonto = vencidas.reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+        const contribAnioT = cs.filter(c=>c.anio===anioActual).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
+        const devTotal = ds.reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+        const ultimoPago = cs.filter(c=>c.fecha_pago).map(c=>c.fecha_pago).sort().pop() || "";
+        const proxVenc = cs.filter(c=>!c.pagado && c.fecha_vencimiento).map(c=>c.fecha_vencimiento).sort()[0] || "";
+        const pendBita = bs.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso").length;
+        const m2 = parseFloat(t.m2_sii)||0, av = parseInt(t.avaluo)||0;
+        const ufm2 = (m2>0&&av>0&&ufClp>0) ? Math.round((av/ufClp/m2)*100)/100 : "";
+        baseRows.push([
+          t.rol, t.terreno||"", t.ciudad||"", t.proyecto||"", t.vigente||"", t.sobretasa?"Sí":"No",
+          m2, (t.m2_sii_eriazo!=null?parseFloat(t.m2_sii_eriazo):""), (t.m2_sii_construido!=null?parseFloat(t.m2_sii_construido):""),
+          av, (t.avaluo_eriazo!=null?parseInt(t.avaluo_eriazo):""), (t.avaluo_construido!=null?parseInt(t.avaluo_construido):""), ufm2,
+          contribTotal, ufOf(contribTotal), pagadoTotal, porPagar, vencidoMonto, vencidas.length,
+          contribAnioT,
+          devTotal, ds.length,
+          contribTotal-devTotal,
+          ultimoPago, proxVenc, pendBita
+        ]);
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(baseRows), "Base");
 
       const stamp = new Date().toISOString().slice(0,10);
       XLSX.writeFile(wb, "gestor-terrenos-"+stamp+".xlsx");
-      logAudit("exportar_excel", "Exportó el dashboard a Excel", "");
+      logAudit("exportar_excel", "Exportó la información a Excel (Resumen + Base)", "");
     }catch(e){
       alert("Error al exportar Excel: "+e.message);
     }
