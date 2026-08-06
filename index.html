@@ -184,6 +184,11 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 .cuota-card.proxima{border-top-color:var(--amber)}
 .cuota-card.pendiente{border-top-color:var(--line)}
 .cuota-num{font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:8px}
+.cuota-title-input{font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:8px;width:100%;background:transparent;border:1px solid transparent;border-radius:4px;padding:2px 4px;outline:none;transition:border 0.14s,background 0.14s;font-family:'IBM Plex Sans',sans-serif}
+.cuota-title-input:hover{border-color:var(--line);background:var(--bg)}
+.cuota-title-input:focus{border-color:var(--teal);background:var(--white)}
+.cuota-title-input::placeholder{color:var(--ink2);opacity:1}
+.cuota-title-input:focus::placeholder{color:var(--ink3)}
 .cuota-status-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:600;margin-bottom:10px}
 .st-pagada{background:var(--green-lt);color:var(--green)}
 .st-vencida{background:var(--red-lt);color:var(--red)}
@@ -532,7 +537,7 @@ const CUOTA_DATES = {1:"04-30", 2:"06-30", 3:"09-30", 4:"11-28"};
 const CUOTA_LABELS = {1:"1ª Cuota — Abril", 2:"2ª Cuota — Junio", 3:"3ª Cuota — Septiembre", 4:"4ª Cuota — Noviembre"};
 const CUOTA_SHORT  = {1:"1ª", 2:"2ª", 3:"3ª", 4:"4ª"};
 const MES_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-const cuotaDisplayLabel = (c) => {
+const cuotaDefaultLabel = (c) => {
   if(c.numero>=1 && c.numero<=4) return CUOTA_LABELS[c.numero] || ("Cuota "+c.numero);
   if(c.fecha_vencimiento){
     const mes = parseInt(String(c.fecha_vencimiento).slice(5,7),10)-1;
@@ -540,6 +545,8 @@ const cuotaDisplayLabel = (c) => {
   }
   return "Cuota extra";
 };
+// Nombre personalizado si existe; si no, el label por defecto
+const cuotaDisplayLabel = (c) => (c.nombre && String(c.nombre).trim()) || cuotaDefaultLabel(c);
 const cuotaDisplayShort = (c) => c.numero>=1 && c.numero<=4 ? (CUOTA_SHORT[c.numero]||c.numero) : "Extra";
 const RESPONSABLES = ["Domingo Mackenna","Mauricio González","Rodrigo Ibarra","Solange Faúndez"];
 const BITACORA_RESPONSABLES = ["Solange Faúndez","Rodrigo Ibarra"];
@@ -1984,7 +1991,7 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
   const [payDates, setPayDates] = useState({});
   const [genBusy, setGenBusy] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
-  const [addForm, setAddForm] = useState({anio:new Date().getFullYear(), numero:"1", monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
+  const [addForm, setAddForm] = useState({anio:new Date().getFullYear(), numero:"1", nombre:"", monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
   const [addBusy, setAddBusy] = useState(false);
   const [editingVenc, setEditingVenc] = useState({});
 
@@ -2057,6 +2064,17 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
     }catch(e){alert("Error: "+e.message);}
   };
 
+  const updateNombre = async (c, nombre) => {
+    const clean = (nombre||"").trim();
+    const final = clean || null; // vacío → vuelve al nombre por defecto
+    if((c.nombre||null) === final) return;
+    try{
+      await db.patch("cuotas","id=eq."+c.id, {nombre: final});
+      logAudit("editar_nombre_cuota",`Renombró cuota de ${c.anio} en "${terreno.terreno||terreno.rol}" → "${final||cuotaDefaultLabel(c)}"`,_proj);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
+  };
+
   const addManual = async () => {
     if(!addForm.fecha_vencimiento){alert("Debes elegir la fecha de vencimiento");return;}
     const targetAnio = anio; // siempre fijo al año visto
@@ -2066,14 +2084,15 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
     try{
       await db.insert("cuotas",[{
         terreno_rol:terreno.rol, anio:targetAnio, numero:finalNumero,
+        nombre:(addForm.nombre||"").trim()||null,
         monto:parseInt(addForm.monto)||0, tasa:0,
         fecha_vencimiento:addForm.fecha_vencimiento,
         pagado:addForm.pagado,
         fecha_pago:addForm.pagado?(addForm.fecha_pago||today()):null
       }]);
-      logAudit("agregar_cuota_extra",`Agregó cuota extra de ${fmtCLP(parseInt(addForm.monto)||0)} en "${terreno.terreno||terreno.rol}" (vence ${fmtDate(addForm.fecha_vencimiento)})`,_proj);
+      logAudit("agregar_cuota_extra",`Agregó cuota extra${(addForm.nombre||"").trim()?` "${addForm.nombre.trim()}"`:""} de ${fmtCLP(parseInt(addForm.monto)||0)} en "${terreno.terreno||terreno.rol}" (vence ${fmtDate(addForm.fecha_vencimiento)})`,_proj);
       setShowAdd(false);
-      setAddForm({anio:anio, numero:"extra", monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
+      setAddForm({anio:anio, numero:"extra", nombre:"", monto:"", fecha_vencimiento:"", pagado:false, fecha_pago:""});
       onRefresh();
     }catch(e){alert("Error: "+e.message);}
     setAddBusy(false);
@@ -2107,6 +2126,11 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
       {showAdd&&(
         <div className="add-entry-box">
           <div className="title">Agregar cuota extra — {anio}</div>
+          <div className="field" style={{marginBottom:10}}>
+            <label>Nombre (opcional)</label>
+            <input type="text" value={addForm.nombre||""} onChange={e=>setAddForm(f=>({...f,nombre:e.target.value}))}
+              placeholder={'Si lo dejas vacío queda "Extra — {Mes}"'}/>
+          </div>
           <div className="field-row" style={{marginBottom:10}}>
             <div className="field"><label>Monto ($CLP)</label>
               <input type="text" inputMode="numeric"
@@ -2157,7 +2181,7 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
               const st = cuotaStatus(c);
               return (
                 <div key={n} className={`cuota-card ${st}`}>
-                  <div className="cuota-num">{CUOTA_LABELS[n]}</div>
+                  <CuotaTitleInput cuota={c} onSave={v=>updateNombre(c,v)}/>
                   <span className={`cuota-status-chip st-${st}`}>
                     {st==="pagada"?"✓ Pagada":st==="vencida"?"⚠ Vencida":st==="proxima"?"⏰ Próxima":"Pendiente"}
                   </span>
@@ -2208,7 +2232,7 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
                   const st = cuotaStatus(c);
                   return (
                     <div key={c.id} className={`cuota-card ${st}`}>
-                      <div className="cuota-num">{cuotaDisplayLabel(c)}</div>
+                      <CuotaTitleInput cuota={c} onSave={v=>updateNombre(c,v)}/>
                       <span className={`cuota-status-chip st-${st}`}>
                         {st==="pagada"?"✓ Pagada":st==="vencida"?"⚠ Vencida":st==="proxima"?"⏰ Próxima":"Pendiente"}
                       </span>
@@ -2260,6 +2284,21 @@ function CuotasTab({terreno, cuotas, onRefresh}) {
         </>
       )}
     </>
+  );
+}
+
+// Título editable de la cuota: muestra el nombre personalizado o el default.
+// Vacío al guardar → vuelve al nombre por defecto.
+function CuotaTitleInput({cuota, onSave}) {
+  const [v, setV] = useState(cuota.nombre||"");
+  useEffect(()=>setV(cuota.nombre||""),[cuota.id, cuota.nombre]);
+  return (
+    <input type="text" className="cuota-title-input" value={v}
+      placeholder={cuotaDefaultLabel(cuota)}
+      title="Haz clic para renombrar esta cuota"
+      onChange={e=>setV(e.target.value)}
+      onKeyDown={e=>{ if(e.key==="Enter") e.target.blur(); }}
+      onBlur={()=>{ if((v||"").trim() !== (cuota.nombre||"")) onSave(v); }}/>
   );
 }
 
