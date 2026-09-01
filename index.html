@@ -3017,8 +3017,12 @@ function App({user, onLogout}) {
     loadAuditLogs();
     // Cada 30s refresca historial + config compartida (UF y lista de ocultos)
     // para que los cambios de otros usuarios se propaguen.
-    const t = setInterval(()=>{ if(db){ loadAuditLogs(); loadUfClp(); } }, 30000);
-    return () => clearInterval(t);
+    // Se mantiene el refresco cada 30 s, pero solo con la pestana visible: una pestana
+    // olvidada ya no consulta la base toda la noche.
+    const t = setInterval(()=>{ if(db && !document.hidden){ loadAuditLogs(); loadUfClp(); } }, 30000);
+    const onVis = ()=>{ if(db && !document.hidden){ loadAuditLogs(); loadUfClp(); } };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", onVis); };
   }, [loadAuditLogs, loadUfClp]);
 
   // Close audit panel on outside click
