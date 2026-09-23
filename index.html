@@ -1708,6 +1708,15 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
   const ufm2Con = (avCon!==null && m2Con!==null && m2Con>0 && ufClp>0) ? (avCon/ufClp)/m2Con : null;
   const hasUfBreak = ufm2Eri!==null || ufm2Con!==null;
   const fmtUF = (v) => v===null || v===undefined ? "—" : Number(v).toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2})+" UF";
+  // Equivalente en UF de un monto en pesos, con la tasa UF vigente de la pagina.
+  // Al venir ufClp por props, se recalcula solo cuando alguien edita la UF.
+  // Devuelve null si no hay tasa o el monto es 0, para no mostrar un parentesis vacio.
+  const clpEnUF = (clp) => {
+    const n = parseFloat(clp)||0;
+    if(!(ufClp>0) || n<=0) return null;
+    return Math.round(n/ufClp).toLocaleString("es-CL")+" UF";
+  };
+  const avTotalUF = clpEnUF(avTotal);
 
   const save = async () => {
     setSaving(true);
@@ -1884,7 +1893,7 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
             />
             <ExpandRow
               k="Avalúo fiscal"
-              v={fmtCLP(avTotal)}
+              v={<>{fmtCLP(avTotal)}{avTotalUF && <span style={{marginLeft:6,color:"var(--ink3)",fontWeight:400}}>({avTotalUF})</span>}</>}
               expanded={expandAv}
               onToggle={()=>setExpandAv(x=>!x)}
               hasBreak={hasAvBreak}
