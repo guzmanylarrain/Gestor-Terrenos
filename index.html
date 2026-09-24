@@ -1546,6 +1546,14 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
       && (filterBitaEstado.length===0 || filterBitaEstado.includes(b.estatus));
   });
 
+  // Lista de abajo: sin filtro de estatus muestra las activas (Pendiente / En Proceso); con
+  // filtro, muestra exactamente los estatus elegidos (incluida Finalizada). Sin tope de filas,
+  // para que siempre calce con los conteos de arriba.
+  const bitaLista = filterBitaEstado.length>0
+    ? bitaFiltered
+    : bitaFiltered.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso");
+  const bitaOtrosFiltros = filterBitaCiudades.length||filterBitaResp.length;
+
   const respMap={};
   bitaFiltered.forEach(b=>{
     const r=b.responsable||'Sin asignar';
@@ -1842,16 +1850,16 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
           </div>
 
           <div className="dash-section">
-            <h4>📓 Bitácora — tareas activas{hasBitaFilters?" — filtrado":""}</h4>
+            <h4>📓 Bitácora — {filterBitaEstado.length>0?filterBitaEstado.join(" / "):"tareas activas"}{bitaOtrosFiltros?" — filtrado":""} <span style={{fontWeight:400,color:"var(--ink3)",fontSize:11.5}}>({bitaLista.length})</span></h4>
             <div className="data-table">
-              {bitaFiltered.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso").length===0?(
-                <div className="dt-empty">✓ Sin tareas pendientes</div>
+              {bitaLista.length===0?(
+                <div className="dt-empty">{filterBitaEstado.length>0?"Sin tareas con ese estatus":"✓ Sin tareas pendientes"}</div>
               ):(
                 <>
                   <div className="dt-head" style={{gridTemplateColumns:"150px 1fr 90px 110px 110px"}}>
                     <span>Terreno · ROL</span><span>Detalle</span><span style={{textAlign:"center"}}>Prioridad</span><span>Estatus</span><span>Responsable</span>
                   </div>
-                  {bitaFiltered.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso").slice(0,12).map(b=>{
+                  {bitaLista.map(b=>{
                     const t=visTer.find(x=>x.rol===b.terreno_rol);
                     return (
                       <div key={b.id} className="dt-row" style={{gridTemplateColumns:"150px 1fr 90px 110px 110px",cursor:"pointer"}} onClick={()=>onSelectTerreno(b.terreno_rol)}>
