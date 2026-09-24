@@ -509,6 +509,14 @@ const fmtDate = d => {
   const [y,m,dy] = s.split("-");
   return `${dy}/${m}/${y}`;
 };
+// ── Devoluciones: en proceso vs concretadas ──
+// Una devolución "en proceso" (concretada === false) todavía no entra a caja: no suma en ningún
+// total "(caja)" ni en el Neto. Las registradas antes de existir este dato cuentan como
+// concretadas (la columna trae true por defecto).
+const devConcretada = d => d.concretada !== false;
+// Fecha en que la plata entró a caja. Si falta (registros antiguos), se usa la fecha original.
+const devFechaCaja = d => d.fecha_concretada || d.fecha;
+
 const fmtCLP = n => {
   if(!n && n!==0) return "—";
   const v = Math.round(Number(n));
@@ -801,6 +809,176 @@ function ContribChart({cuotas, selectedPeriods=[], onTogglePeriod}) {
         <rect x={padL+155} y={padT+chartH+26} width="10" height="10" fill={extrasColor} rx="2"/>
         <text x={padL+169} y={padT+chartH+35} fontSize="10" fill="var(--ink3)">Extras</text>
       </svg>
+    </div>
+  );
+}
+
+// Evolución de devoluciones por AÑO DE INICIO. Se lee igual que ContribChart: la barra es el
+// total iniciado ese año; la parte sólida es lo ya concretado y la transparente lo que sigue en
+// proceso, así que cada barra se va "llenando" a medida que las devoluciones se concretan.
+function DevolChart({devoluciones, selectedYears=[], onToggleYear}) {
+  const groups = {};
+  devoluciones.forEach(d=>{
+    if(!d.fecha) return;
+    const anio = parseInt(d.fecha.slice(0,4));
+    if(!groups[anio]) groups[anio]={anio,total:0,paid:0};
+    const m=parseInt(d.monto)||0;
+    groups[anio].total+=m;
+    if(devConcretada(d)) groups[anio].paid+=m;
+  });
+  const data=Object.values(groups).sort((a,b)=>a.anio-b.anio);
+  if(data.length===0) return <div style={{textAlign:"center",padding:"30px",color:"var(--ink3)",fontSize:13}}>Sin devoluciones registradas.</div>;
+  const maxVal=Math.max(...data.map(d=>d.total),1);
+  // Hay pocas barras (una por año): se reparten a lo ancho en vez de amontonarse a la izquierda.
+  const barW=48,padL=72,padR=20,padT=18,padB=52,chartH=160;
+  const plotW=Math.max(data.length*(barW+12),400);
+  const slot=plotW/data.length;
+  const totalW=padL+plotW+padR;
+  const fmtM=v=>{if(v>=1e9)return"$"+(v/1e9).toFixed(1)+"B";if(v>=1e6)return"$"+(v/1e6).toFixed(0)+"M";return"$"+(v/1e3).toFixed(0)+"K";};
+  const ticks=[0,0.25,0.5,0.75,1];
+  const col="#c0392b"; // rojo de devoluciones (var(--red))
+  const clickable = typeof onToggleYear === "function";
+  const selSet = new Set(selectedYears||[]);
+  const anyFilter = selSet.size > 0;
+  return (
+    <div className="chart-scroll">
+      <svg viewBox={`0 0 ${totalW} ${chartH+padT+padB}`} style={{minWidth:Math.max(500,totalW),height:chartH+padT+padB,display:"block"}}>
+        {ticks.map(p=>{
+          const y=padT+chartH*(1-p);
+          return <g key={p}>
+            <line x1={padL} y1={y} x2={totalW-padR} y2={y} stroke="var(--line)" strokeWidth="1"/>
+            <text x={padL-6} y={y+4} textAnchor="end" fontSize="10" fill="var(--ink3)">{fmtM(maxVal*p)}</text>
+          </g>;
+        })}
+        {data.map((d,i)=>{
+          const x=padL+i*slot+(slot-barW)/2;
+          const tH=(d.total/maxVal)*chartH;
+          const pH=(d.paid/maxVal)*chartH;
+          const uH=tH-pH;
+          const isCurrentYear=d.anio===new Date().getFullYear();
+          const isSelected = selSet.has(d.anio);
+          const dimmed = anyFilter && !isSelected;
+          const handleClick = clickable ? ()=>onToggleYear(d.anio) : undefined;
+          return <g key={d.anio} onClick={handleClick} style={clickable?{cursor:"pointer"}:undefined} opacity={dimmed?0.35:1}>
+            {isSelected && <rect x={x-5} y={padT-4} width={barW+10} height={chartH+26} fill="rgba(224,168,0,0.10)" stroke="#e0a800" strokeWidth="1.5" rx="4"/>}
+            {uH>0&&<rect x={x} y={padT+chartH-tH} width={barW} height={uH} fill={col} opacity="0.25" rx="2"/>}
+            {pH>0&&<rect x={x} y={padT+chartH-pH} width={barW} height={pH} fill={col} rx="2"/>}
+            <rect x={x} y={padT+chartH-tH} width={barW} height={tH} fill="none" stroke={col} strokeWidth="1" rx="2" opacity="0.7"/>
+            <text x={x+barW/2} y={padT+chartH-tH-4} textAnchor="middle" fontSize="9" fill="var(--ink3)">{fmtM(d.total)}</text>
+            <text x={x+barW/2} y={padT+chartH+15} textAnchor="middle" fontSize="9.5" fill={isCurrentYear?"var(--teal)":"var(--ink2)"} fontWeight={isCurrentYear?"600":"400"}>{d.anio}</text>
+          </g>;
+        })}
+        <line x1={padL} y1={padT+chartH} x2={totalW-padR} y2={padT+chartH} stroke="var(--ink3)" strokeWidth="1.5"/>
+        <rect x={padL} y={padT+chartH+26} width="10" height="10" fill={col} rx="2"/>
+        <text x={padL+14} y={padT+chartH+35} fontSize="10" fill="var(--ink3)">Concretada</text>
+        <rect x={padL+85} y={padT+chartH+26} width="10" height="10" fill={col} opacity="0.25" rx="2" stroke={col} strokeWidth="1"/>
+        <text x={padL+99} y={padT+chartH+35} fontSize="10" fill="var(--ink3)">En proceso</text>
+      </svg>
+    </div>
+  );
+}
+
+// Devoluciones por proyecto, al lado de DevolChart. Si hay años seleccionados en el gráfico,
+// solo cuenta las devoluciones iniciadas en esos años.
+function DevolProyectosBreakdown({terrenos, devoluciones, selectedYears=[], onClearYears, onSelectTerreno}) {
+  const [expanded, setExpanded] = useState({});
+  const filtered = selectedYears.length>0
+    ? devoluciones.filter(d=>d.fecha && selectedYears.includes(parseInt(d.fecha.slice(0,4))))
+    : devoluciones;
+  const terrMap = {};
+  terrenos.forEach(t=>{terrMap[t.rol]=t;});
+  const byProy = {};
+  filtered.forEach(d=>{
+    const t = terrMap[d.terreno_rol];
+    // Si no hay proyecto, usar el nombre del terreno (o el rol como fallback)
+    const proy = (t && t.proyecto && String(t.proyecto).trim())
+                 || (t && t.terreno && String(t.terreno).trim())
+                 || d.terreno_rol;
+    if(!byProy[proy]) byProy[proy] = {proyecto:proy, terrenos:{}, ok:0, proc:0};
+    if(!byProy[proy].terrenos[d.terreno_rol]){
+      byProy[proy].terrenos[d.terreno_rol] = {rol:d.terreno_rol, nombre:(t&&t.terreno)||d.terreno_rol, ok:0, proc:0};
+    }
+    const m = parseInt(d.monto)||0;
+    const k = devConcretada(d) ? "ok" : "proc";
+    byProy[proy][k] += m;
+    byProy[proy].terrenos[d.terreno_rol][k] += m;
+  });
+  const rows = Object.values(byProy)
+    .map(r => ({...r, total:r.ok+r.proc, terrArr: Object.values(r.terrenos).sort((a,b)=>(b.ok+b.proc)-(a.ok+a.proc))}))
+    .sort((a,b)=>b.total-a.total);
+  const totOk = rows.reduce((s,r)=>s+r.ok,0);
+  const totProc = rows.reduce((s,r)=>s+r.proc,0);
+  const grandTerrenos = new Set(filtered.map(d=>d.terreno_rol)).size;
+  const canNavigate = typeof onSelectTerreno === "function";
+  const handleRowClick = (r) => {
+    if(!canNavigate) return;
+    if(r.terrArr.length === 1) onSelectTerreno(r.terrArr[0].rol);
+    else setExpanded(e=>({...e, [r.proyecto]: !e[r.proyecto]}));
+  };
+  const cols = "1fr 44px 108px 100px";
+  const monto = (v, ok) => v>0
+    ? <span style={{textAlign:"right",fontWeight:ok?600:500,color:ok?"var(--red)":"var(--ink3)",fontSize:12}}>{fmtCLP(v)}</span>
+    : <span style={{textAlign:"right",color:"var(--ink3)",fontSize:12}}>—</span>;
+  return (
+    <div>
+      <h4 style={{margin:0,marginBottom:10,display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,color:"var(--ink2)",fontFamily:"'IBM Plex Sans',sans-serif",flexWrap:"wrap"}}>
+        🏗 Devoluciones por proyecto
+        {selectedYears.length>0 && [...selectedYears].sort().map(y=>(
+          <span key={y} className="chart-filter-chip">{y}</span>
+        ))}
+        {selectedYears.length>0 && <button className="btn btn-ghost btn-xs" style={{marginLeft:"auto"}} onClick={onClearYears}>✕ Quitar</button>}
+      </h4>
+      {rows.length===0 ? (
+        <div className="dt-empty">Sin datos</div>
+      ) : (
+        <>
+          <div className="proy-table-wrap">
+            <div className="dt-head" style={{gridTemplateColumns:cols,position:"sticky",top:0,background:"var(--white)",zIndex:1}}>
+              <span>Proyecto</span>
+              <span style={{textAlign:"center"}}>Terr.</span>
+              <span style={{textAlign:"right"}}>Concretado</span>
+              <span style={{textAlign:"right"}}>En proceso</span>
+            </div>
+            {rows.map(r=>{
+              const isMulti = r.terrArr.length > 1;
+              const isOpen = !!expanded[r.proyecto];
+              return (
+                <React.Fragment key={r.proyecto}>
+                  <div className={"dt-row"+(canNavigate?" proy-row-clickable":"")}
+                    style={{gridTemplateColumns:cols}}
+                    onClick={()=>handleRowClick(r)}
+                    title={canNavigate ? (isMulti ? "Click para ver "+r.terrArr.length+" terrenos" : "Click para ir a "+r.terrArr[0].nombre) : undefined}>
+                    <span style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {r.proyecto}
+                      {isMulti && <span className={"proy-expand-arrow"+(isOpen?" open":"")}>▶</span>}
+                    </span>
+                    <span style={{textAlign:"center",color:"var(--ink3)",fontSize:12}}>{r.terrArr.length}</span>
+                    {monto(r.ok, true)}
+                    {monto(r.proc, false)}
+                  </div>
+                  {isMulti && isOpen && r.terrArr.map(t=>(
+                    <div key={t.rol} className={"dt-row proy-subrow"}
+                      style={{gridTemplateColumns:cols}}
+                      onClick={(e)=>{e.stopPropagation(); canNavigate && onSelectTerreno(t.rol);}}
+                      title={"Ir a "+t.nombre}>
+                      <span style={{fontSize:11.5,color:"var(--ink2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>└ {t.nombre} <span style={{color:"var(--ink3)",fontFamily:"monospace",fontSize:10}}>({t.rol})</span></span>
+                      <span></span>
+                      {monto(t.ok, true)}
+                      {monto(t.proc, false)}
+                    </div>
+                  ))}
+                </React.Fragment>
+              );
+            })}
+          </div>
+          <div className="dt-row" style={{gridTemplateColumns:cols,background:"var(--bg2)",fontWeight:700,borderRadius:"0 0 6px 6px",marginTop:-1,border:"1px solid var(--line)",borderTop:"none",padding:"8px 10px"}}>
+            <span style={{fontSize:12}}>TOTAL {rows.length} proyecto{rows.length===1?"":"s"}</span>
+            <span style={{textAlign:"center",fontSize:12}}>{grandTerrenos}</span>
+            <span style={{textAlign:"right",fontSize:12,color:"var(--red)"}}>{fmtCLP(totOk)}</span>
+            <span style={{textAlign:"right",fontSize:12,color:"var(--ink3)"}}>{fmtCLP(totProc)}</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1202,6 +1380,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const [filterVigente, setFilterVigente] = useState([]);
   const [filterSobretasa, setFilterSobretasa] = useState([]);
   const [expandedYears, setExpandedYears] = useState({});
+  const [filterDevAnios, setFilterDevAnios] = useState([]); // años seleccionados en el gráfico de devoluciones
 
   // Tareas tab filters (multi-select)
   const [filterBitaCiudades, setFilterBitaCiudades] = useState([]);
@@ -1263,7 +1442,12 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const anio = new Date().getFullYear();
   // Tarjetas Contribuciones / Devoluciones / Neto → incluyen ocultos
   const contribAnio = filCuotasMoney.filter(c=>c.anio===anio).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
-  const devAnio = filDevMoney.filter(d=>d.fecha&&d.fecha.startsWith(anio+"-")).reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+  // Devoluciones en caja del año: solo las concretadas, según la fecha en que se concretaron.
+  const devAnioList = filDevMoney.filter(d=>devConcretada(d) && (devFechaCaja(d)||"").startsWith(anio+"-"));
+  const devAnio = devAnioList.reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+  // En proceso: todavía no entran a caja (no suman al Neto); se muestran como potencial.
+  const devEnProceso = filDevMoney.filter(d=>!devConcretada(d));
+  const devEnProcesoTotal = devEnProceso.reduce((s,d)=>s+(parseInt(d.monto)||0),0);
   const netoAnio = contribAnio - devAnio;
 
   const yearlyMap={};
@@ -1284,8 +1468,9 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
     tb.contrib += m;
   });
   filDevMoney.forEach(d=>{
-    if(!d.fecha) return;
-    const y = parseInt(d.fecha.slice(0,4));
+    // Balance en caja: solo concretadas, en el año en que se concretaron.
+    if(!devConcretada(d) || !devFechaCaja(d)) return;
+    const y = parseInt(devFechaCaja(d).slice(0,4));
     const yb = getYearBucket(y);
     const tb = getTerBucket(yb, d.terreno_rol);
     const m = parseInt(d.monto)||0;
@@ -1343,6 +1528,9 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   };
   const togglePeriodo = (p) => {
     setFilterPeriodos(curr => curr.includes(p) ? curr.filter(x=>x!==p) : [...curr, p]);
+  };
+  const toggleDevAnio = (y) => {
+    setFilterDevAnios(curr => curr.includes(y) ? curr.filter(x=>x!==y) : [...curr, y]);
   };
   // Conversión CLP → UF (la tasa la maneja el usuario en la barra de arriba)
   const fmtUF = (clp) => {
@@ -1436,7 +1624,12 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
             <div className="kpi-card" style={{borderTopColor:"var(--red)"}}>
               <div className="kpi-label">Devoluciones (caja) {anio}</div>
               <div className="kpi-value" style={{fontSize:16,color:"var(--red)"}}>{fmtCLP(devAnio)}</div>
-              <div className="kpi-sub">({fmtUF(devAnio)}) · {filDevMoney.filter(d=>d.fecha&&d.fecha.startsWith(anio+"-")).length} registradas</div>
+              <div className="kpi-sub">({fmtUF(devAnio)}) · {devAnioList.length} concretada{devAnioList.length===1?"":"s"}</div>
+              <div className="kpi-sub" style={{marginTop:3}}>
+                {devEnProceso.length>0
+                  ? <>En proceso: <b style={{color:"var(--amber)"}}>{fmtCLP(devEnProcesoTotal)}</b> ({devEnProceso.length}) · Potencial: <b style={{color:"var(--ink2)"}}>{fmtCLP(devAnio+devEnProcesoTotal)}</b></>
+                  : "Sin devoluciones en proceso"}
+              </div>
             </div>
             <div className="kpi-card" style={{borderTopColor:netoAnio>=0?"var(--green)":"var(--red)"}}>
               <div className="kpi-label">Neto {anio}</div>
@@ -1485,6 +1678,23 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
                 cuotas={filCuotasMoney}
                 selectedPeriods={filterPeriodos}
                 onClearPeriods={()=>setFilterPeriodos([])}
+                onSelectTerreno={onSelectTerreno}
+              />
+            </div>
+          </div>
+
+          <div className="chart-card">
+            <div className="chart-and-breakdown">
+              <div>
+                <h4>↩️ Devoluciones por año de inicio</h4>
+                <DevolChart devoluciones={filDevMoney} selectedYears={filterDevAnios} onToggleYear={toggleDevAnio}/>
+                <div className="chart-help">Cada barra es lo iniciado ese año: sólido = concretado, transparente = en proceso. Haz clic en una o más barras para filtrar el desglose de proyectos.</div>
+              </div>
+              <DevolProyectosBreakdown
+                terrenos={filTerMoney}
+                devoluciones={filDevMoney}
+                selectedYears={filterDevAnios}
+                onClearYears={()=>setFilterDevAnios([])}
                 onSelectTerreno={onSelectTerreno}
               />
             </div>
@@ -1765,7 +1975,9 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
   const cuPending = cuTotal - cuPaid;
   const cuOverdue = cuotasAnio.filter(c=>!c.pagado && cuotaStatus(c)==="vencida").reduce((s,c)=>s+(parseInt(c.monto)||0),0);
   const devsSorted = [...devoluciones].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
-  const devTotal = devoluciones.reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+  const devTotal = devoluciones.filter(devConcretada).reduce((s,d)=>s+(parseInt(d.monto)||0),0); // caja
+  const devProceso = devoluciones.filter(d=>!devConcretada(d));
+  const devProcesoTotal = devProceso.reduce((s,d)=>s+(parseInt(d.monto)||0),0);
   const bitaSorted = [...bitacora].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
 
   return (
@@ -1958,21 +2170,28 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
 
       {/* Devoluciones */}
       <div className="info-card">
-        <h4>↩️ Devoluciones (caja)</h4>
+        <h4>↩️ Devoluciones</h4>
         {devsSorted.length===0 ? (
           <div className="isum-empty">Sin devoluciones registradas.</div>
         ) : (
           <>
-            {devsSorted.slice(0,4).map(d=>(
-              <div key={d.id} className="isum-line">
-                <span style={{color:"var(--ink2)",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                  <span style={{color:"var(--ink3)",fontSize:11}}>{fmtDate(d.fecha)}</span>{d.motivo?" · "+d.motivo:""}
-                </span>
-                <span style={{fontWeight:600,color:"var(--red)",minWidth:78,textAlign:"right"}}>−{fmtCLP(d.monto)}</span>
-              </div>
-            ))}
+            {devsSorted.slice(0,4).map(d=>{
+              const ok = devConcretada(d);
+              return (
+                <div key={d.id} className="isum-line">
+                  <span style={{color:"var(--ink2)",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    <span style={{color:"var(--ink3)",fontSize:11}}>{fmtDate(d.fecha)}</span>{d.motivo?" · "+d.motivo:""}
+                  </span>
+                  <span style={{display:"flex",alignItems:"center",gap:8}}>
+                    {!ok && <span className="cuota-status-chip st-proxima" style={{marginBottom:0}}>⏳ En proceso</span>}
+                    <span style={{fontWeight:600,color:ok?"var(--red)":"var(--ink3)",minWidth:78,textAlign:"right"}}>−{fmtCLP(d.monto)}</span>
+                  </span>
+                </div>
+              );
+            })}
             <div className="isum-totals" style={{gridTemplateColumns:"1fr"}}>
-              <div className="isum-tot"><span className="isum-tot-lbl">Total devoluciones {devsSorted.length>4?`(${devsSorted.length} registros)`:""}</span><span className="isum-tot-val" style={{color:"var(--red)"}}>−{fmtCLP(devTotal)}</span></div>
+              <div className="isum-tot"><span className="isum-tot-lbl">Total concretado (caja) {devsSorted.length>4?`(${devsSorted.length} registros)`:""}</span><span className="isum-tot-val" style={{color:"var(--red)"}}>−{fmtCLP(devTotal)}</span></div>
+              {devProceso.length>0 && <div className="isum-tot"><span className="isum-tot-lbl">En proceso ({devProceso.length}) · aún no en caja</span><span className="isum-tot-val" style={{color:"var(--amber)"}}>−{fmtCLP(devProcesoTotal)}</span></div>}
             </div>
             {devsSorted.length>4 && <div style={{fontSize:10.5,color:"var(--ink3)",marginTop:8,fontStyle:"italic"}}>Mostrando las 4 más recientes · ver todas en la pestaña Devoluciones</div>}
           </>
@@ -2352,46 +2571,97 @@ function MontoInput({value, onSave}) {
 // DEVOLUCIONES TAB
 // ─────────────────────────────────────────────────────
 function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
+  // Una devolución puede registrarse apenas se inicia el trámite ("en proceso") y marcarse
+  // como concretada cuando la plata entra. Solo las concretadas suman a caja y al neto.
+  const nuevoForm = () => ({fecha:today(), monto:"", motivo:"", notas:"", concretada:false, fecha_concretada:today()});
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({fecha:today(), monto:"", motivo:"", notas:""});
+  const [form, setForm] = useState(nuevoForm);
   const [addBusy, setAddBusy] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  // Devolución que se está marcando como concretada (mini formulario: monto final + fecha)
+  const [concId, setConcId] = useState(null);
+  const [concForm, setConcForm] = useState({monto:"", fecha_concretada:today()});
+  const [concBusy, setConcBusy] = useState(false);
 
   const sorted = [...devoluciones].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
-  const totalDev = sorted.reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+  const totalDev = sorted.filter(devConcretada).reduce((s,d)=>s+(parseInt(d.monto)||0),0); // caja
+  const enProceso = sorted.filter(d=>!devConcretada(d));
+  const totalProceso = enProceso.reduce((s,d)=>s+(parseInt(d.monto)||0),0);
   const totalContrib = cuotas.reduce((s,c)=>s+(parseInt(c.monto)||0),0);
   const neto = totalContrib - totalDev;
 
   const _proj = `${terreno.terreno||terreno.rol} · ${terreno.rol}`;
+  const _nom = terreno.terreno||terreno.rol;
 
   const add = async () => {
-    if(!form.fecha){alert("Debes elegir la fecha");return;}
+    if(!form.fecha){alert("Debes elegir la fecha de inicio");return;}
     if(!form.monto||parseInt(form.monto)<=0){alert("Ingresa un monto válido");return;}
+    if(form.concretada){
+      if(!form.fecha_concretada){alert("Indica la fecha en que se concretó");return;}
+      if(form.fecha_concretada<form.fecha){alert("La fecha de concreción no puede ser anterior a la fecha de inicio");return;}
+    }
     setAddBusy(true);
     try{
       await db.insert("devoluciones",[{
         terreno_rol:terreno.rol, fecha:form.fecha,
         monto:parseInt(form.monto)||0,
-        motivo:form.motivo.trim()||null, notas:form.notas.trim()||null
+        motivo:form.motivo.trim()||null, notas:form.notas.trim()||null,
+        concretada:!!form.concretada,
+        fecha_concretada:form.concretada?form.fecha_concretada:null
       }]);
-      logAudit("nueva_devolucion",`Nueva devolución de ${fmtCLP(parseInt(form.monto)||0)} en "${terreno.terreno||terreno.rol}"${form.motivo.trim()?` — ${form.motivo.trim()}`:""}`,_proj);
-      setForm({fecha:today(), monto:"", motivo:"", notas:""});
+      logAudit("nueva_devolucion",`Nueva devolución ${form.concretada?"concretada":"en proceso"} de ${fmtCLP(parseInt(form.monto)||0)} en "${_nom}"${form.motivo.trim()?` — ${form.motivo.trim()}`:""}`,_proj);
+      setForm(nuevoForm());
       setShowAdd(false);
       onRefresh();
     }catch(e){alert("Error: "+e.message);}
     setAddBusy(false);
   };
 
+  const abrirConcretar = (d) => {
+    setEditingId(null);
+    setConcId(d.id);
+    setConcForm({monto:String(parseInt(d.monto)||""), fecha_concretada:today()});
+  };
+
+  const concretar = async (d) => {
+    const monto = parseInt(concForm.monto)||0;
+    if(monto<=0){alert("Ingresa un monto válido");return;}
+    if(!concForm.fecha_concretada){alert("Indica la fecha en que se concretó");return;}
+    if(concForm.fecha_concretada<d.fecha){alert("La fecha de concreción no puede ser anterior a la fecha de inicio ("+fmtDate(d.fecha)+")");return;}
+    setConcBusy(true);
+    try{
+      await db.patch("devoluciones","id=eq."+d.id, {concretada:true, fecha_concretada:concForm.fecha_concretada, monto});
+      const antes = parseInt(d.monto)||0;
+      logAudit("concretar_devolucion",`Marcó como concretada la devolución de ${fmtCLP(monto)} en "${_nom}"${monto!==antes?` (monto ajustado desde ${fmtCLP(antes)})`:""}`,_proj);
+      setConcId(null);
+      onRefresh();
+    }catch(e){alert("Error: "+e.message);}
+    setConcBusy(false);
+  };
+
+  const abrirEditar = (d) => {
+    setConcId(null);
+    setEditingId(d.id);
+    setEditForm({...d, concretada:devConcretada(d), fecha_concretada:d.fecha_concretada||(devConcretada(d)?d.fecha:today())});
+  };
+
   const saveEdit = async (d) => {
+    if(!editForm.fecha){alert("Debes elegir la fecha de inicio");return;}
+    if(editForm.concretada){
+      if(!editForm.fecha_concretada){alert("Indica la fecha en que se concretó");return;}
+      if(editForm.fecha_concretada<editForm.fecha){alert("La fecha de concreción no puede ser anterior a la fecha de inicio");return;}
+    }
     try{
       await db.patch("devoluciones","id=eq."+d.id, {
         fecha:editForm.fecha,
         monto:parseInt(editForm.monto)||0,
         motivo:editForm.motivo?.trim()||null,
-        notas:editForm.notas?.trim()||null
+        notas:editForm.notas?.trim()||null,
+        concretada:!!editForm.concretada,
+        fecha_concretada:editForm.concretada?editForm.fecha_concretada:null
       });
-      logAudit("editar_devolucion",`Editó devolución (${fmtCLP(parseInt(editForm.monto)||0)}) en "${terreno.terreno||terreno.rol}"`,_proj);
+      logAudit("editar_devolucion",`Editó devolución (${fmtCLP(parseInt(editForm.monto)||0)}${editForm.concretada?"":", en proceso"}) en "${_nom}"`,_proj);
       setEditingId(null);
       onRefresh();
     }catch(e){alert("Error: "+e.message);}
@@ -2401,32 +2671,54 @@ function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
     if(!confirm("¿Eliminar esta devolución?")) return;
     try{
       await db.del("devoluciones","id=eq."+d.id);
-      logAudit("eliminar_devolucion",`Eliminó devolución de ${fmtCLP(parseInt(d.monto)||0)} en "${terreno.terreno||terreno.rol}"`,_proj);
+      logAudit("eliminar_devolucion",`Eliminó devolución de ${fmtCLP(parseInt(d.monto)||0)} en "${_nom}"`,_proj);
       onRefresh();
     }catch(e){alert("Error: "+e.message);}
   };
+
+  // Etiqueta para las casillas de verificación (la de .field label es en mayúsculas chicas)
+  const chkLbl = {display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:12.5,color:"var(--ink2)",fontWeight:500,textTransform:"none",letterSpacing:0};
+  const chkBox = {width:"auto",padding:0,margin:0,cursor:"pointer"};
+  const cols = "100px 120px 150px 1fr 205px";
 
   return (
     <>
       <div className="bitacora-add-bar">
         <span style={{fontSize:13,color:"var(--ink3)"}}>
-          {sorted.length} {sorted.length===1?"devolución (caja)":"devoluciones (caja)"}
+          {sorted.length} {sorted.length===1?"devolución":"devoluciones"}
+          {enProceso.length>0 && <> · <b style={{color:"var(--amber)"}}>{enProceso.length} en proceso</b></>}
         </span>
         <button className="btn btn-primary btn-sm" onClick={()=>setShowAdd(s=>!s)}>
-          {showAdd?"✕ Cancelar":"+ Nueva devolución (caja)"}
+          {showAdd?"✕ Cancelar":"+ Nueva devolución"}
         </button>
       </div>
 
       {showAdd&&(
         <div className="add-entry-box">
-          <div className="title">Nueva devolución (caja)</div>
+          <div className="title">Nueva devolución</div>
           <div className="field-row" style={{marginBottom:10}}>
-            <div className="field"><label>Fecha</label>
+            <div className="field"><label>Fecha de inicio</label>
               <input type="date" value={form.fecha} onChange={e=>setForm(f=>({...f,fecha:e.target.value}))}/>
             </div>
             <div className="field"><label>Monto ($CLP)</label>
               <input type="number" value={form.monto} onChange={e=>setForm(f=>({...f,monto:e.target.value}))} placeholder="0"/>
             </div>
+          </div>
+          <div className="field" style={{marginBottom:10}}>
+            <label style={chkLbl}>
+              <input type="checkbox" style={chkBox} checked={form.concretada}
+                onChange={e=>{const v=e.target.checked; setForm(f=>({...f,concretada:v,fecha_concretada:v?f.fecha:f.fecha_concretada}));}}/>
+              Ya se concretó (la plata ya entró)
+            </label>
+            {form.concretada ? (
+              <div className="field" style={{marginTop:6,maxWidth:220}}><label>Fecha de concreción</label>
+                <input type="date" value={form.fecha_concretada} onChange={e=>setForm(f=>({...f,fecha_concretada:e.target.value}))}/>
+              </div>
+            ) : (
+              <div style={{fontSize:11.5,color:"var(--ink3)",marginTop:4}}>
+                Quedará <b style={{color:"var(--amber)"}}>en proceso</b>: se ve como potencial y no suma a caja hasta que la marques como concretada.
+              </div>
+            )}
           </div>
           <div className="field" style={{marginBottom:10}}>
             <label>Motivo</label>
@@ -2437,15 +2729,16 @@ function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
             <textarea value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} rows={2}/>
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button className="btn btn-primary btn-sm" onClick={add} disabled={addBusy}>{addBusy?"Guardando...":"Guardar devolución (caja)"}</button>
+            <button className="btn btn-primary btn-sm" onClick={add} disabled={addBusy}>{addBusy?"Guardando...":"Guardar devolución"}</button>
           </div>
         </div>
       )}
 
       <div className="cuotas-summary" style={{marginBottom:16}}>
         <div className="sum-item"><div className="sum-label">Total contribuciones</div><div className="sum-val">{fmtCLP(totalContrib)}</div></div>
-        <div className="sum-item"><div className="sum-label">Total devoluciones (caja)</div><div className="sum-val red">{fmtCLP(totalDev)}</div></div>
-        <div className="sum-item"><div className="sum-label">Neto (contrib. − dev.)</div>
+        <div className="sum-item"><div className="sum-label">Devoluciones concretadas (caja)</div><div className="sum-val red">{fmtCLP(totalDev)}</div></div>
+        <div className="sum-item"><div className="sum-label">En proceso (potencial)</div><div className="sum-val amber">{fmtCLP(totalProceso)}</div></div>
+        <div className="sum-item"><div className="sum-label">Neto (contrib. − dev. caja)</div>
           <div className="sum-val" style={{color:neto>=0?"var(--green)":"var(--red)"}}>{fmtCLP(neto)}</div>
         </div>
       </div>
@@ -2453,19 +2746,27 @@ function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
       {sorted.length===0 ? (
         <div style={{textAlign:"center",padding:"50px 20px",color:"var(--ink3)"}}>
           <div style={{fontSize:38,marginBottom:14}}>↩️</div>
-          <p>Sin devoluciones (caja) registradas para este terreno.</p>
+          <p>Sin devoluciones registradas para este terreno.</p>
         </div>
       ):(
         <div className="data-table">
-          <div className="dt-head" style={{gridTemplateColumns:"110px 130px 1fr 160px",columnGap:"20px"}}>
-            <span>Fecha</span><span style={{textAlign:"right"}}>Monto</span><span>Motivo / Notas</span><span style={{textAlign:"right"}}>Acciones</span>
+          <div className="dt-head" style={{gridTemplateColumns:cols,columnGap:"16px"}}>
+            <span>Inicio</span><span style={{textAlign:"right"}}>Monto</span><span>Estado</span><span>Motivo / Notas</span><span style={{textAlign:"right"}}>Acciones</span>
           </div>
           {sorted.map(d=>{
-            const isEd = editingId===d.id;
-            return isEd ? (
-              <div key={d.id} className="dt-row" style={{gridTemplateColumns:"110px 130px 1fr 160px",columnGap:"20px",alignItems:"start",padding:"10px 12px"}}>
-                <input type="date" value={editForm.fecha||""} onChange={e=>setEditForm(f=>({...f,fecha:e.target.value}))}/>
+            const ok = devConcretada(d);
+            if(editingId===d.id) return (
+              <div key={d.id} className="dt-row" style={{gridTemplateColumns:cols,columnGap:"16px",alignItems:"start",padding:"10px 12px"}}>
+                <input type="date" value={editForm.fecha||""} onChange={e=>setEditForm(f=>({...f,fecha:e.target.value}))} title="Fecha de inicio"/>
                 <input type="number" value={editForm.monto||""} onChange={e=>setEditForm(f=>({...f,monto:e.target.value}))} style={{textAlign:"right"}}/>
+                <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                  <label style={chkLbl}>
+                    <input type="checkbox" style={chkBox} checked={!!editForm.concretada}
+                      onChange={e=>{const v=e.target.checked; setEditForm(f=>({...f,concretada:v,fecha_concretada:v?(f.fecha_concretada||today()):f.fecha_concretada}));}}/>
+                    Concretada
+                  </label>
+                  {editForm.concretada && <input type="date" value={editForm.fecha_concretada||""} onChange={e=>setEditForm(f=>({...f,fecha_concretada:e.target.value}))} title="Fecha de concreción"/>}
+                </div>
                 <div style={{display:"flex",flexDirection:"column",gap:4}}>
                   <input value={editForm.motivo||""} onChange={e=>setEditForm(f=>({...f,motivo:e.target.value}))} placeholder="Motivo"/>
                   <textarea value={editForm.notas||""} onChange={e=>setEditForm(f=>({...f,notas:e.target.value}))} rows={2} placeholder="Notas"/>
@@ -2475,19 +2776,48 @@ function DevolucionesTab({terreno, devoluciones, cuotas, onRefresh}) {
                   <button className="btn btn-ghost btn-xs" onClick={()=>setEditingId(null)}>Cancelar</button>
                 </div>
               </div>
-            ) : (
-              <div key={d.id} className="dt-row" style={{gridTemplateColumns:"110px 130px 1fr 160px",columnGap:"20px"}}>
-                <span>{fmtDate(d.fecha)}</span>
-                <span style={{textAlign:"right",fontWeight:600,color:"var(--red)"}}>−{fmtCLP(d.monto)}</span>
-                <span style={{color:"var(--ink2)",fontSize:12}}>
-                  {d.motivo||"—"}
-                  {d.notas&&<div style={{fontSize:11,color:"var(--ink3)",marginTop:2}}>{d.notas}</div>}
-                </span>
-                <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
-                  <button className="btn btn-outline btn-xs" onClick={()=>{setEditingId(d.id);setEditForm({...d});}}>✏️ Editar</button>
-                  <button className="btn btn-danger btn-xs" onClick={()=>del(d)}>🗑</button>
+            );
+            return (
+              <React.Fragment key={d.id}>
+                <div className="dt-row" style={{gridTemplateColumns:cols,columnGap:"16px"}}>
+                  <span>{fmtDate(d.fecha)}</span>
+                  <span style={{textAlign:"right",fontWeight:600,color:ok?"var(--red)":"var(--ink3)"}} title={ok?undefined:"Aún no entra a caja"}>−{fmtCLP(d.monto)}</span>
+                  <span style={{display:"flex",flexDirection:"column",gap:2,alignItems:"flex-start"}}>
+                    {ok ? (
+                      <>
+                        <span className="cuota-status-chip st-pagada" style={{marginBottom:0}}>✓ Concretada</span>
+                        <span style={{fontSize:10.5,color:"var(--ink3)"}}>el {fmtDate(devFechaCaja(d))}</span>
+                      </>
+                    ) : (
+                      <span className="cuota-status-chip st-proxima" style={{marginBottom:0}}>⏳ En proceso</span>
+                    )}
+                  </span>
+                  <span style={{color:"var(--ink2)",fontSize:12}}>
+                    {d.motivo||"—"}
+                    {d.notas&&<div style={{fontSize:11,color:"var(--ink3)",marginTop:2}}>{d.notas}</div>}
+                  </span>
+                  <div style={{display:"flex",gap:6,justifyContent:"flex-end",flexWrap:"wrap"}}>
+                    {!ok && concId!==d.id && <button className="btn btn-primary btn-xs" onClick={()=>abrirConcretar(d)} title="Marcar como concretada">✓ Concretar</button>}
+                    <button className="btn btn-outline btn-xs" onClick={()=>abrirEditar(d)}>✏️ Editar</button>
+                    <button className="btn btn-danger btn-xs" onClick={()=>del(d)}>🗑</button>
+                  </div>
                 </div>
-              </div>
+                {concId===d.id && (
+                  <div className="dt-row" style={{display:"flex",flexWrap:"wrap",alignItems:"flex-end",gap:14,background:"var(--green-lt)",padding:"10px 12px"}}>
+                    <div style={{fontSize:12.5,fontWeight:600,color:"var(--green)",alignSelf:"center"}}>✓ Marcar como concretada</div>
+                    <div className="field"><label>Monto final ($CLP)</label>
+                      <input type="number" value={concForm.monto} onChange={e=>setConcForm(f=>({...f,monto:e.target.value}))} style={{width:150,textAlign:"right"}}/>
+                    </div>
+                    <div className="field"><label>Fecha de concreción</label>
+                      <input type="date" value={concForm.fecha_concretada} onChange={e=>setConcForm(f=>({...f,fecha_concretada:e.target.value}))}/>
+                    </div>
+                    <div style={{display:"flex",gap:6,marginLeft:"auto"}}>
+                      <button className="btn btn-primary btn-xs" onClick={()=>concretar(d)} disabled={concBusy}>{concBusy?"Guardando...":"Confirmar"}</button>
+                      <button className="btn btn-ghost btn-xs" onClick={()=>setConcId(null)}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
+              </React.Fragment>
             );
           })}
         </div>
@@ -3135,7 +3465,9 @@ function App({user, onLogout}) {
       const totAv = terr.reduce((s,t)=>s+(parseInt(t.avaluo)||0),0);
       const conSob = terr.filter(t=>t.sobretasa).length;
       const contribAnio = allCuotas.filter(c=>c.anio===anioActual).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
-      const devAnioVal = allDevoluciones.filter(d=>(d.fecha||"").startsWith(anioActual+"-")).reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+      // Caja: solo devoluciones concretadas, según la fecha en que se concretaron.
+      const devAnioVal = allDevoluciones.filter(d=>devConcretada(d) && (devFechaCaja(d)||"").startsWith(anioActual+"-")).reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+      const devProcesoVal = allDevoluciones.filter(d=>!devConcretada(d)).reduce((s,d)=>s+(parseInt(d.monto)||0),0);
       const vencidasAll = allCuotas.filter(c=>!c.pagado && c.fecha_vencimiento && c.fecha_vencimiento<hoyStr);
       const vencidoTotal = vencidasAll.reduce((s,c)=>s+(parseInt(c.monto)||0),0);
 
@@ -3151,17 +3483,18 @@ function App({user, onLogout}) {
         ["Terrenos con sobretasa", conSob, ""],
         ["Terrenos sin sobretasa", terr.length-conSob, ""],
         ["Contribuciones "+anioActual, contribAnio, ufOf(contribAnio)],
-        ["Devoluciones "+anioActual, devAnioVal, ufOf(devAnioVal)],
+        ["Devoluciones (caja) "+anioActual, devAnioVal, ufOf(devAnioVal)],
         ["Neto "+anioActual, contribAnio-devAnioVal, ufOf(contribAnio-devAnioVal)],
+        ["Devoluciones en proceso (aún no en caja)", devProcesoVal, ufOf(devProcesoVal)],
         ["Cuotas vencidas (N°)", vencidasAll.length, ""],
         ["Monto total vencido", vencidoTotal, ufOf(vencidoTotal)],
         [],
         ["BALANCE POR AÑO"],
-        ["Año","Contribuciones (CLP)","Devoluciones (CLP)","Neto (CLP)"],
+        ["Año","Contribuciones (CLP)","Devoluciones caja (CLP)","Neto (CLP)"],
       ];
       const balMap = {};
       allCuotas.forEach(c=>{ const y=c.anio; if(!balMap[y])balMap[y]={anio:y,contrib:0,dev:0}; balMap[y].contrib+=parseInt(c.monto)||0; });
-      allDevoluciones.forEach(d=>{ if(!d.fecha)return; const y=parseInt(d.fecha.slice(0,4)); if(!balMap[y])balMap[y]={anio:y,contrib:0,dev:0}; balMap[y].dev+=parseInt(d.monto)||0; });
+      allDevoluciones.forEach(d=>{ if(!devConcretada(d)||!devFechaCaja(d))return; const y=parseInt(devFechaCaja(d).slice(0,4)); if(!balMap[y])balMap[y]={anio:y,contrib:0,dev:0}; balMap[y].dev+=parseInt(d.monto)||0; });
       Object.values(balMap).sort((a,b)=>b.anio-a.anio).forEach(y=>{ resumen.push([y.anio, y.contrib, y.dev, y.contrib-y.dev]); });
       resumen.push([]);
       resumen.push(["CONTRIBUCIONES "+anioActual+" POR CIUDAD"]);
@@ -3179,7 +3512,7 @@ function App({user, onLogout}) {
         "Avalúo fiscal (CLP)","Avalúo Sitio eriazo (CLP)","Avalúo Terreno construido (CLP)","UF/m²",
         "Contribuciones totales (CLP)","Contribuciones totales (UF)","Pagado total (CLP)","Por pagar (CLP)","Vencido (CLP)","N° cuotas vencidas",
         "Contribuciones "+anioActual+" (CLP)",
-        "Devoluciones totales (CLP)","N° devoluciones",
+        "Devoluciones concretadas (CLP)","N° devoluciones concretadas","Devoluciones en proceso (CLP)",
         "Neto (Contrib − Dev) (CLP)",
         "Último pago","Próximo vencimiento impago","Tareas bitácora pendientes"
       ];
@@ -3194,7 +3527,9 @@ function App({user, onLogout}) {
         const vencidas = cs.filter(c=>!c.pagado && c.fecha_vencimiento && c.fecha_vencimiento<hoyStr);
         const vencidoMonto = vencidas.reduce((s,c)=>s+(parseInt(c.monto)||0),0);
         const contribAnioT = cs.filter(c=>c.anio===anioActual).reduce((s,c)=>s+(parseInt(c.monto)||0),0);
-        const devTotal = ds.reduce((s,d)=>s+(parseInt(d.monto)||0),0);
+        const dsOk = ds.filter(devConcretada);
+        const devTotal = dsOk.reduce((s,d)=>s+(parseInt(d.monto)||0),0); // caja
+        const devProc = ds.filter(d=>!devConcretada(d)).reduce((s,d)=>s+(parseInt(d.monto)||0),0);
         const ultimoPago = cs.filter(c=>c.fecha_pago).map(c=>c.fecha_pago).sort().pop() || "";
         const proxVenc = cs.filter(c=>!c.pagado && c.fecha_vencimiento).map(c=>c.fecha_vencimiento).sort()[0] || "";
         const pendBita = bs.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso").length;
@@ -3206,7 +3541,7 @@ function App({user, onLogout}) {
           av, (t.avaluo_eriazo!=null?parseInt(t.avaluo_eriazo):""), (t.avaluo_construido!=null?parseInt(t.avaluo_construido):""), ufm2,
           contribTotal, ufOf(contribTotal), pagadoTotal, porPagar, vencidoMonto, vencidas.length,
           contribAnioT,
-          devTotal, ds.length,
+          devTotal, dsOk.length, devProc,
           contribTotal-devTotal,
           ultimoPago, proxVenc, pendBita
         ]);
@@ -3434,7 +3769,7 @@ function App({user, onLogout}) {
           ):(
             <>
               <div className="tab-nav">
-                {[["info","📋 Información"],["cuotas","💰 Contribuciones"],["devoluciones","↩️ Devoluciones (caja)"],["bitacora","📓 Bitácora"]].map(([id,lbl])=>(
+                {[["info","📋 Información"],["cuotas","💰 Contribuciones"],["devoluciones","↩️ Devoluciones"],["bitacora","📓 Bitácora"]].map(([id,lbl])=>(
                   <button key={id} className={`tab-btn${activeTab===id?" active":""}`} onClick={()=>setActiveTab(id)}>{lbl}</button>
                 ))}
               </div>
