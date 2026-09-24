@@ -2802,6 +2802,12 @@ function App({user, onLogout}) {
   const [hiddenRols, setHiddenRols] = useState(()=>new Set(JSON.parse(localStorage.getItem('hiddenRols')||'[]')));
   const hideDirtyRef = useRef(false); // true mientras hay un cambio de ocultos guardándose
   const loadSeqRef = useRef(0); // descarta respuestas de un terreno ya no seleccionado
+  // Memoria para mostrar un terreno al instante al seleccionarlo (ver primeDetail).
+  const [allAdjuntos, setAllAdjuntos] = useState(null); // {archivos, subtareas, archivosSub}; null si no se pudieron cargar
+  const cacheListoRef = useRef(false);  // true cuando loadAll terminó bien al menos una vez
+  const loadAllBusyRef = useRef(false); // true mientras loadAll está en curso
+  const cacheSnapRef = useRef(null);    // la memoria actual, legible desde loadDetail
+  cacheSnapRef.current = {cuotas:allCuotas, bitacora:allBitacora, devoluciones:allDevoluciones};
   const [showHidden, setShowHidden] = useState(false);
   const [activeTab, setActiveTab] = useState("info");
   const [search, setSearch] = useState("");
@@ -2857,18 +2863,28 @@ function App({user, onLogout}) {
 
   const loadAll = useCallback(async () => {
     setSyncStatus("loading");
+    loadAllBusyRef.current = true;
     try{
-      const [t, c, b, d] = await Promise.all([
+      // Archivos y subtareas también se traen, para poder mostrar un terreno al instante
+      // al seleccionarlo (ver primeDetail). Son tablas chicas; si alguna falla, no bloquea
+      // la carga: ese terreno simplemente espera a loadDetail como antes.
+      const [t, c, b, d, a, s, as] = await Promise.all([
         db.select("terrenos","order=ciudad.asc,terreno.asc"),
         db.select("cuotas","order=anio.desc,numero.asc"),
         db.select("bitacora","order=fecha.desc"),
-        db.select("devoluciones","order=fecha.desc")
+        db.select("devoluciones","order=fecha.desc"),
+        db.select("archivos","order=created_at.asc").catch(()=>null),
+        db.select("subtareas","order=created_at.asc").catch(()=>null),
+        db.select("archivos_subtareas","order=created_at.asc").catch(()=>null)
       ]);
       setTerrenos(t); setAllCuotas(c); setAllBitacora(b); setAllDevoluciones(d);
+      setAllAdjuntos(a && s && as ? {archivos:a, subtareas:s, archivosSub:as} : null);
+      cacheListoRef.current = true;
       loadUfClp();
       setSyncStatus("ok");
       // Al cargar, todas las ciudades quedan cerradas (no se auto-abre ninguna)
     }catch(e){setSyncStatus("error");}
+    loadAllBusyRef.current = false;
     setLoading(false);
   }, []);
 
@@ -2939,6 +2955,17 @@ function App({user, onLogout}) {
       ]);
       if(!vigente()) return;
       setCuotas(c); setBitacora(b); setDevoluciones(d);
+      // Si el servidor trae algo distinto a lo que había en memoria (un colega editó este
+      // terreno), se refresca también la memoria general, para que el dashboard y la próxima
+      // visita al terreno ya lo muestren. Se compara sin importar el orden, para que dos
+      // registros con la misma fecha no parezcan un cambio y disparen recargas de más.
+      const mem = cacheSnapRef.current;
+      const huella = rows => JSON.stringify([...rows].sort((x,y)=>String(x.id).localeCompare(String(y.id))));
+      const deRol = rows => rows.filter(x=>x.terreno_rol===rol);
+      if(cacheListoRef.current && !loadAllBusyRef.current &&
+         (huella(c)!==huella(deRol(mem.cuotas)) || huella(b)!==huella(deRol(mem.bitacora)) || huella(d)!==huella(deRol(mem.devoluciones)))){
+        loadAll();
+      }
       if(b.length>0){
         const ids = b.map(x=>x.id).join(",");
         const a = await db.select("archivos","bitacora_id=in.("+ids+")&order=created_at.asc");
@@ -2965,7 +2992,7 @@ function App({user, onLogout}) {
         }else{setArchivosSub({});}
       }else{setSubtareas({});setArchivosSub({});}
     }catch(e){console.error(e);}
-  },[]);
+  },[loadAll]);
 
   useEffect(()=>{
     if(selRol) loadDetail(selRol);
@@ -3233,7 +3260,33 @@ function App({user, onLogout}) {
 
   const hasBadge = (_rol) => "#5a5750"; // Punto gris neutro para todos (sin semáforo)
 
+  // Muestra al instante los datos de un terreno con lo que loadAll ya tiene en memoria, en el
+  // mismo render en que se selecciona: sin esperar a la red y sin mostrar por un momento los
+  // datos del terreno anterior. loadDetail los confirma después con el servidor.
+  const primeDetail = (rol) => {
+    if(!cacheListoRef.current){
+      setCuotas([]); setBitacora([]); setDevoluciones([]); setArchivos({}); setSubtareas({}); setArchivosSub({});
+      return;
+    }
+    const agrupar = (rows, key) => { const m={}; rows.forEach(r=>{ (m[r[key]]=m[r[key]]||[]).push(r); }); return m; };
+    const b = allBitacora.filter(x=>x.terreno_rol===rol);
+    setCuotas(allCuotas.filter(x=>x.terreno_rol===rol));
+    setBitacora(b);
+    setDevoluciones(allDevoluciones.filter(x=>x.terreno_rol===rol));
+    if(allAdjuntos){
+      const bitIds = new Set(b.map(x=>x.id));
+      const subs = allAdjuntos.subtareas.filter(x=>bitIds.has(x.bitacora_id));
+      const subIds = new Set(subs.map(x=>x.id));
+      setArchivos(agrupar(allAdjuntos.archivos.filter(x=>bitIds.has(x.bitacora_id)),"bitacora_id"));
+      setSubtareas(agrupar(subs,"bitacora_id"));
+      setArchivosSub(agrupar(allAdjuntos.archivosSub.filter(x=>subIds.has(x.subtarea_id)),"subtarea_id"));
+    }else{ setArchivos({}); setSubtareas({}); setArchivosSub({}); }
+  };
+
   const selectTerreno = (rol) => {
+    // Si vuelve a hacer clic en el mismo terreno no se repinta desde memoria: loadDetail no se
+    // volvería a ejecutar y quedaría la versión de memoria en vez de la ya confirmada.
+    if(rol!==selRol) primeDetail(rol);
     setSelRol(rol); setActiveTab("info");
     // auto-open that city
     const t = terrenos.find(x=>x.rol===rol);
