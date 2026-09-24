@@ -503,6 +503,20 @@ const safeHref = (u) => {
   return /^https?:\/\//i.test(s) ? s : null;
 };
 
+// Días transcurridos desde una fecha "YYYY-MM-DD", contados en hora local (no UTC, para que
+// de noche no se corra un día).
+const diasDesde = f => {
+  if(!f) return null;
+  const d0 = new Date(String(f).slice(0,10)+"T00:00:00");
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  return Math.round((hoy-d0)/86400000);
+};
+const fmtAntiguedad = f => {
+  const d = diasDesde(f);
+  if(d===null || d<0) return "";
+  return d===0 ? "hoy" : d===1 ? "hace 1 día" : `hace ${d} días`;
+};
+
 const fmtDate = d => {
   if(!d) return "—";
   const s = String(d).slice(0,10);
@@ -1556,6 +1570,12 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const bitaEstadoLbl = bitaEstadoDefault ? "activas"
     : filterBitaEstado.length ? filterBitaEstado.join(" / ") : "todas";
   const bitaOtrosFiltros = filterBitaCiudades.length||filterBitaResp.length;
+  // Más reciente arriba y más antigua abajo, por fecha de ingreso (si empatan, por hora de carga).
+  const bitaOrdenada = [...bitaFiltered].sort((a,b)=>
+    (b.fecha||"").localeCompare(a.fecha||"") || String(b.created_at||"").localeCompare(String(a.created_at||"")));
+  // Columnas proporcionales: el detalle se lleva la mayor parte del ancho, para que en pantallas
+  // más angostas no quede en una columna delgada que estira las filas hacia abajo.
+  const colsBita = "84px minmax(130px,0.75fr) minmax(0,2.4fr) 72px 96px minmax(100px,0.6fr)";
 
   const respMap={};
   bitaFiltered.forEach(b=>{
@@ -1859,18 +1879,22 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
                 <div className="dt-empty">{bitaEstadoDefault?"✓ Sin tareas pendientes":"Sin tareas con ese filtro"}</div>
               ):(
                 <>
-                  <div className="dt-head" style={{gridTemplateColumns:"150px 1fr 90px 110px 110px"}}>
-                    <span>Terreno · ROL</span><span>Detalle</span><span style={{textAlign:"center"}}>Prioridad</span><span>Estatus</span><span>Responsable</span>
+                  <div className="dt-head" style={{gridTemplateColumns:colsBita,columnGap:"14px"}}>
+                    <span>Ingreso</span><span>Terreno · ROL</span><span>Detalle</span><span style={{textAlign:"center"}}>Prioridad</span><span>Estatus</span><span>Responsable</span>
                   </div>
-                  {bitaFiltered.map(b=>{
+                  {bitaOrdenada.map(b=>{
                     const t=visTer.find(x=>x.rol===b.terreno_rol);
                     return (
-                      <div key={b.id} className="dt-row" style={{gridTemplateColumns:"150px 1fr 90px 110px 110px",cursor:"pointer"}} onClick={()=>onSelectTerreno(b.terreno_rol)}>
+                      <div key={b.id} className="dt-row" style={{gridTemplateColumns:colsBita,columnGap:"14px",cursor:"pointer"}} onClick={()=>onSelectTerreno(b.terreno_rol)}>
+                        <div>
+                          <div style={{fontSize:12,fontWeight:500}}>{fmtDate(b.fecha)}</div>
+                          <div style={{color:"var(--ink3)",fontSize:10.5}}>{fmtAntiguedad(b.fecha)}</div>
+                        </div>
                         <div>
                           <div style={{fontWeight:600,fontSize:11.5}}>{t?.terreno||b.terreno_rol}</div>
                           <div style={{color:"var(--ink3)",fontSize:10,fontFamily:"monospace"}}>{b.terreno_rol}</div>
                         </div>
-                        <span style={{color:"var(--ink2)",fontSize:12}}>{b.detalle.slice(0,70)}{b.detalle.length>70?"…":""}</span>
+                        <span style={{color:"var(--ink2)",fontSize:12,lineHeight:1.45,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{b.detalle||"—"}</span>
                         <span style={{textAlign:"center"}}>{b.prioridad&&<span className={`prio-chip prio-${b.prioridad.toLowerCase()}`}>{b.prioridad}</span>}</span>
                         <span><span className={`estatus-chip est-${b.estatus==="En Proceso"?"proceso":b.estatus.toLowerCase()}`}>{b.estatus}</span></span>
                         <span style={{fontSize:12,color:"var(--ink3)"}}>{b.responsable||"—"}</span>
