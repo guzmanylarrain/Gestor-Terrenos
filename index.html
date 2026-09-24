@@ -566,6 +566,9 @@ const cuotaDisplayShort = (c) => c.numero>=1 && c.numero<=4 ? (CUOTA_SHORT[c.num
 const RESPONSABLES = ["Domingo Mackenna","Mauricio González","Rodrigo Ibarra","Solange Faúndez"];
 const BITACORA_RESPONSABLES = ["Solange Faúndez","Rodrigo Ibarra"];
 const ESTATUS_OPTS = ["Pendiente","En Proceso","Finalizada"];
+// Estatus que la vista Tareas del dashboard trae seleccionados al entrar: solo las activas.
+// Las finalizadas se ven agregándolas en el filtro.
+const BITA_ESTADO_DEFAULT = ["Pendiente","En Proceso"];
 const PRIORIDADES = ["Alta","Media","Baja"];
 const CIUDADES = ["Arica","Iquique","Antofagasta","Santiago","Talcahuano","Maipú","Huechuraba"];
 
@@ -1385,7 +1388,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   // Tareas tab filters (multi-select)
   const [filterBitaCiudades, setFilterBitaCiudades] = useState([]);
   const [filterBitaResp, setFilterBitaResp] = useState([]);
-  const [filterBitaEstado, setFilterBitaEstado] = useState([]);
+  const [filterBitaEstado, setFilterBitaEstado] = useState(BITA_ESTADO_DEFAULT);
 
   const visTer = terrenos.filter(t=>!hiddenRols.has(t.rol));
   const visRols = new Set(visTer.map(t=>t.rol));
@@ -1546,12 +1549,12 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
       && (filterBitaEstado.length===0 || filterBitaEstado.includes(b.estatus));
   });
 
-  // Lista de abajo: sin filtro de estatus muestra las activas (Pendiente / En Proceso); con
-  // filtro, muestra exactamente los estatus elegidos (incluida Finalizada). Sin tope de filas,
-  // para que siempre calce con los conteos de arriba.
-  const bitaLista = filterBitaEstado.length>0
-    ? bitaFiltered
-    : bitaFiltered.filter(b=>b.estatus==="Pendiente"||b.estatus==="En Proceso");
+  // La lista de abajo muestra exactamente lo filtrado y sin tope de filas, así siempre calza con
+  // el contador y la tabla por responsable. Al entrar, el filtro trae Pendiente + En Proceso.
+  const bitaEstadoDefault = filterBitaEstado.length===BITA_ESTADO_DEFAULT.length
+    && BITA_ESTADO_DEFAULT.every(e=>filterBitaEstado.includes(e));
+  const bitaEstadoLbl = bitaEstadoDefault ? "activas"
+    : filterBitaEstado.length ? filterBitaEstado.join(" / ") : "todas";
   const bitaOtrosFiltros = filterBitaCiudades.length||filterBitaResp.length;
 
   const respMap={};
@@ -1565,9 +1568,9 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   });
   const respList = Object.values(respMap).sort((a,b)=>b.total-a.total);
 
-  const hasBitaFilters = filterBitaCiudades.length||filterBitaResp.length||filterBitaEstado.length;
+  const hasBitaFilters = filterBitaCiudades.length||filterBitaResp.length||!bitaEstadoDefault;
   const clearBitaFilters = () => {
-    setFilterBitaCiudades([]); setFilterBitaResp([]); setFilterBitaEstado([]);
+    setFilterBitaCiudades([]); setFilterBitaResp([]); setFilterBitaEstado(BITA_ESTADO_DEFAULT);
   };
 
   const SOBRETASA_OPTS = [{value:true,label:"Con sobretasa"},{value:false,label:"Sin sobretasa"}];
@@ -1820,12 +1823,12 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
             <MultiSelect label="Estatus" options={ESTATUS_OPTS} selected={filterBitaEstado} onChange={setFilterBitaEstado}/>
             {hasBitaFilters?<button className="dash-clr" onClick={clearBitaFilters}>✕ Limpiar filtros</button>:null}
             <span style={{marginLeft:"auto",fontSize:11,color:"var(--ink3)"}}>
-              {bitaFiltered.length} entradas{hasBitaFilters?` (de ${visBita.length})`:""}
+              {bitaFiltered.length} entradas{bitaFiltered.length!==visBita.length?` (de ${visBita.length})`:""}
             </span>
           </div>
 
           <div className="dash-section">
-            <h4>👤 Tareas por responsable{hasBitaFilters?" — filtrado":""}</h4>
+            <h4>👤 Tareas por responsable — {bitaEstadoLbl}{bitaOtrosFiltros?" — filtrado":""}</h4>
             <div className="resp-table">
               <div className="resp-table-head" style={{gridTemplateColumns:"1fr 70px 90px 90px 90px"}}>
                 <span>Responsable</span>
@@ -1850,16 +1853,16 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
           </div>
 
           <div className="dash-section">
-            <h4>📓 Bitácora — {filterBitaEstado.length>0?filterBitaEstado.join(" / "):"tareas activas"}{bitaOtrosFiltros?" — filtrado":""} <span style={{fontWeight:400,color:"var(--ink3)",fontSize:11.5}}>({bitaLista.length})</span></h4>
+            <h4>📓 Bitácora — {bitaEstadoDefault?"tareas activas":bitaEstadoLbl}{bitaOtrosFiltros?" — filtrado":""} <span style={{fontWeight:400,color:"var(--ink3)",fontSize:11.5}}>({bitaFiltered.length})</span></h4>
             <div className="data-table">
-              {bitaLista.length===0?(
-                <div className="dt-empty">{filterBitaEstado.length>0?"Sin tareas con ese estatus":"✓ Sin tareas pendientes"}</div>
+              {bitaFiltered.length===0?(
+                <div className="dt-empty">{bitaEstadoDefault?"✓ Sin tareas pendientes":"Sin tareas con ese filtro"}</div>
               ):(
                 <>
                   <div className="dt-head" style={{gridTemplateColumns:"150px 1fr 90px 110px 110px"}}>
                     <span>Terreno · ROL</span><span>Detalle</span><span style={{textAlign:"center"}}>Prioridad</span><span>Estatus</span><span>Responsable</span>
                   </div>
-                  {bitaLista.map(b=>{
+                  {bitaFiltered.map(b=>{
                     const t=visTer.find(x=>x.rol===b.terreno_rol);
                     return (
                       <div key={b.id} className="dt-row" style={{gridTemplateColumns:"150px 1fr 90px 110px 110px",cursor:"pointer"}} onClick={()=>onSelectTerreno(b.terreno_rol)}>
