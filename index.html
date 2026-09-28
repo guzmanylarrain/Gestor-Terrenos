@@ -1914,7 +1914,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
 // ─────────────────────────────────────────────────────
 // INFO TAB
 // ─────────────────────────────────────────────────────
-function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[], onUpdated}) {
+function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[], onUpdated, user}) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({...terreno});
   const [saving, setSaving] = useState(false);
@@ -1923,11 +1923,34 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
   const [expandUf, setExpandUf] = useState(false);
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
 
+  // ── Historial de avalúos ──
+  // En "Editar información" el avalúo queda bloqueado. Se cambia de dos formas:
+  //   "nuevo"    → reavalúo: el avalúo vigente pasa a avaluos_historial y el nuevo rige desde avDesde.
+  //   "corregir" → error de tipeo: se reemplaza el valor sin dejar registro en el historial.
+  const [avMode, setAvMode] = useState(null); // null | "nuevo" | "corregir"
+  const [avDesde, setAvDesde] = useState("");
+  const [histAv, setHistAv] = useState([]);
+  const [histTick, setHistTick] = useState(0); // se incrementa para volver a cargar el historial
+  useEffect(() => {
+    let vivo = true; // descarta la respuesta si entretanto se cambió de terreno
+    setHistAv([]);
+    db.select("avaluos_historial","terreno_rol=eq."+encodeURIComponent(terreno.rol)+"&order=vigente_hasta.desc.nullslast,created_at.desc")
+      .then(r=>{ if(vivo) setHistAv(r||[]); })
+      .catch(()=>{ if(vivo) setHistAv([]); });
+    return () => { vivo = false; };
+  }, [terreno.rol, histTick]);
+  const histAvOrd = [...histAv].sort((a,b)=>
+    String(b.vigente_hasta||"").localeCompare(String(a.vigente_hasta||"")) || String(b.created_at||"").localeCompare(String(a.created_at||"")));
+  const periodoAv = h => h.vigente_desde
+    ? `${fmtDate(h.vigente_desde)} → ${h.vigente_hasta?fmtDate(h.vigente_hasta):"—"}`
+    : `hasta ${h.vigente_hasta?fmtDate(h.vigente_hasta):"—"}`;
+
   // Resincronizar el form cuando cambia el terreno seleccionado
   useEffect(() => {
     setForm({...terreno});
     setEditing(false);
     setExpandM2(false); setExpandAv(false); setExpandUf(false);
+    setAvMode(null);
   }, [terreno.rol]);
 
   // Helpers para desglose.
@@ -1963,33 +1986,101 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
   };
   const avTotalUF = clpEnUF(avTotal);
 
+  const abrirAvMode = (modo) => {
+    setAvMode(modo);
+    setAvDesde(modo==="nuevo" ? today() : String(terreno.avaluo_vigente_desde||"").slice(0,10));
+  };
+  const cancelarAvMode = () => {
+    setForm(f=>({...f, avaluo:terreno.avaluo, avaluo_eriazo:terreno.avaluo_eriazo, avaluo_construido:terreno.avaluo_construido}));
+    setAvMode(null);
+  };
+
   const save = async () => {
+    const nom = form.terreno||terreno.terreno;
+    const proj = `${nom} · ${terreno.rol}`;
+    const redondo = v => (v===null||v===undefined||v==="") ? null : Math.round(Number(v));
+    const oldTotal = parseInt(terreno.avaluo)||0;
+    const newTotal = Math.round(avTotal||0);
+    const mismoAvaluo = newTotal===oldTotal
+      && redondo(avEri)===redondo(terreno.avaluo_eriazo)
+      && redondo(avCon)===redondo(terreno.avaluo_construido);
+    const desdeActual = String(terreno.avaluo_vigente_desde||"").slice(0,10);
+    if(avMode==="nuevo"){
+      if(newTotal<=0){alert("Ingresa el nuevo avalúo.");return;}
+      if(mismoAvaluo){alert("El nuevo avalúo es igual al actual. Ingresa el nuevo valor o cancela la actualización.");return;}
+      if(!avDesde){alert("Indica desde cuándo rige el nuevo avalúo.");return;}
+      if(desdeActual && avDesde<=desdeActual){alert("El nuevo avalúo debe regir después del actual (vigente desde "+fmtDate(desdeActual)+").");return;}
+    }
     setSaving(true);
+    let histId = null;
     try{
-      await db.patch("terrenos","rol=eq."+encodeURIComponent(terreno.rol), {
+      // 1) Reavalúo: el avalúo vigente se guarda primero en el historial.
+      if(avMode==="nuevo" && oldTotal>0){
+        histId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : null;
+        await db.insert("avaluos_historial",[{
+          ...(histId?{id:histId}:{}),
+          terreno_rol: terreno.rol,
+          avaluo: oldTotal,
+          avaluo_eriazo: redondo(terreno.avaluo_eriazo),
+          avaluo_construido: redondo(terreno.avaluo_construido),
+          vigente_desde: desdeActual||null,
+          vigente_hasta: avDesde,
+          reemplazado_por: (user && user.email) || null
+        }]);
+      }
+      // 2) Luego se actualiza el terreno. Si esto falla, se deshace el paso 1 para no dejar el
+      //    avalúo vigente duplicado en el historial.
+      const cambios = {
         terreno:form.terreno, vigente:form.vigente, ciudad:form.ciudad,
         m2_sii: m2Total||0,
-        avaluo: Math.round(avTotal||0),
+        avaluo: newTotal,
         m2_sii_eriazo: m2Eri,
         m2_sii_construido: m2Con,
-        avaluo_eriazo: avEri===null?null:Math.round(avEri),
-        avaluo_construido: avCon===null?null:Math.round(avCon),
+        avaluo_eriazo: redondo(avEri),
+        avaluo_construido: redondo(avCon),
         sobretasa:form.sobretasa,
         proyecto:form.proyecto||null, notas:form.notas||null
-      });
-      logAudit("editar_terreno",`Editó información del terreno "${form.terreno||terreno.terreno}"`,`${form.terreno||terreno.terreno} · ${terreno.rol}`);
-      onUpdated({...form, m2_sii:m2Total, avaluo:Math.round(avTotal||0), m2_sii_eriazo:m2Eri, m2_sii_construido:m2Con, avaluo_eriazo:avEri, avaluo_construido:avCon});
+      };
+      if(avMode) cambios.avaluo_vigente_desde = avDesde||null;
+      try{
+        await db.patch("terrenos","rol=eq."+encodeURIComponent(terreno.rol), cambios);
+      }catch(e){
+        if(histId){ try{ await db.del("avaluos_historial","id=eq."+histId); }catch(_){} }
+        throw e;
+      }
+      if(avMode==="nuevo"){
+        logAudit("actualizar_avaluo",`Actualizó el avalúo fiscal de "${nom}": ${fmtCLP(oldTotal)} → ${fmtCLP(newTotal)} (vigente desde ${fmtDate(avDesde)})`,proj);
+      }else if(avMode==="corregir" && !mismoAvaluo){
+        logAudit("corregir_avaluo",`Corrigió el avalúo fiscal de "${nom}": ${fmtCLP(oldTotal)} → ${fmtCLP(newTotal)} (sin historial)`,proj);
+      }else{
+        logAudit("editar_terreno",`Editó información del terreno "${nom}"`,proj);
+      }
+      onUpdated({...form, m2_sii:m2Total, avaluo:newTotal, m2_sii_eriazo:m2Eri, m2_sii_construido:m2Con,
+        avaluo_eriazo:redondo(avEri), avaluo_construido:redondo(avCon),
+        avaluo_vigente_desde: avMode ? (avDesde||null) : terreno.avaluo_vigente_desde});
       setEditing(false);
+      setAvMode(null);
+      if(avMode==="nuevo") setHistTick(x=>x+1);
     }catch(e){alert("Error: "+e.message);}
     setSaving(false);
+  };
+
+  const borrarHistAv = async (h) => {
+    if(!confirm(`¿Eliminar del historial el avalúo de ${fmtCLP(h.avaluo)} (${periodoAv(h)})?\n\nHazlo solo si se registró por error. No se puede deshacer.`)) return;
+    try{
+      await db.del("avaluos_historial","id=eq."+h.id);
+      const nom = form.terreno||terreno.terreno;
+      logAudit("eliminar_avaluo_historial",`Eliminó del historial el avalúo de ${fmtCLP(h.avaluo)} (${periodoAv(h)}) de "${nom}"`,`${nom} · ${terreno.rol}`);
+      setHistTick(x=>x+1);
+    }catch(e){alert("Error: "+e.message);}
   };
 
   const Row = ({k,v}) => (
     <div className="info-row"><span className="info-key">{k}</span><span className="info-val">{v}</span></div>
   );
-  const ExpandRow = ({k, v, expanded, onToggle, hasBreak, subRows}) => (
+  const ExpandRow = ({k, v, expanded, onToggle, hasBreak, subRows=[], extra=null, title="Ver desglose"}) => (
     <>
-      <div className="info-row" style={hasBreak?{cursor:"pointer"}:undefined} onClick={hasBreak?onToggle:undefined} title={hasBreak?"Ver desglose":undefined}>
+      <div className="info-row" style={hasBreak?{cursor:"pointer"}:undefined} onClick={hasBreak?onToggle:undefined} title={hasBreak?title:undefined}>
         <span className="info-key">{k}{hasBreak && <span style={{marginLeft:6,fontSize:9,color:"var(--ink3)",display:"inline-block",transition:"transform 0.15s",transform:expanded?"rotate(90deg)":"rotate(0)"}}>▶</span>}</span>
         <span className="info-val">{v}</span>
       </div>
@@ -1999,6 +2090,43 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
           <span className="info-val" style={{fontSize:12}}>{subV}</span>
         </div>
       ))}
+      {hasBreak && expanded && extra}
+    </>
+  );
+
+  // Detalle del avalúo al desplegar: desde cuándo rige, variación vs el anterior y avalúos anteriores.
+  const subRowSt = {background:"var(--bg)",paddingLeft:16};
+  const avActual = parseInt(terreno.avaluo)||0;
+  const avPrevio = histAvOrd.length ? (parseInt(histAvOrd[0].avaluo)||0) : 0;
+  const avVar = (avPrevio>0 && avActual>0) ? (avActual-avPrevio)/avPrevio*100 : null;
+  const fmtVar = v => (v>0?"▲ ":v<0?"▼ ":"")+Math.abs(v).toLocaleString("es-CL",{maximumFractionDigits:1})+"%";
+  const avVigenteDesde = terreno.avaluo_vigente_desde || (histAvOrd[0] && histAvOrd[0].vigente_hasta) || null;
+  const avExpandible = hasAvBreak || histAvOrd.length>0 || !!avVigenteDesde;
+  const avExtra = (
+    <>
+      {avVigenteDesde && (
+        <div className="info-row" style={subRowSt}>
+          <span className="info-key" style={{fontSize:11.5}}>└ Vigente desde</span>
+          <span className="info-val" style={{fontSize:12}}>
+            {fmtDate(avVigenteDesde)}
+            {avVar!==null && <span style={{marginLeft:6,color:"var(--ink3)",fontWeight:400}}>({fmtVar(avVar)} vs anterior)</span>}
+          </span>
+        </div>
+      )}
+      {histAvOrd.length>0 && (
+        <>
+          <div className="info-row" style={{...subRowSt,paddingTop:10}}>
+            <span className="info-key" style={{fontSize:10,textTransform:"uppercase",letterSpacing:1,fontWeight:600}}>Avalúos anteriores ({histAvOrd.length})</span>
+            <span/>
+          </div>
+          {histAvOrd.map(h=>(
+            <div key={h.id} className="info-row" style={subRowSt}>
+              <span className="info-key" style={{fontSize:11.5}}>└ {periodoAv(h)}</span>
+              <span className="info-val" style={{fontSize:12,color:"var(--ink2)"}}>{fmtCLP(h.avaluo)}</span>
+            </div>
+          ))}
+        </>
+      )}
     </>
   );
 
@@ -2049,7 +2177,7 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
             </div>
             <div style={{display:"flex",gap:8}}>
               <button className="btn btn-primary btn-sm" onClick={save} disabled={saving}>{saving?"Guardando...":"Guardar"}</button>
-              <button className="btn btn-ghost btn-sm" onClick={()=>{setForm({...terreno});setEditing(false);}}>Cancelar</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>{setForm({...terreno});setEditing(false);setAvMode(null);}}>Cancelar</button>
             </div>
           </>
         ):(
@@ -2062,7 +2190,7 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
               <div className="info-key" style={{marginBottom:4}}>Notas</div>
               <div style={{fontSize:12.5,color:"var(--ink2)",lineHeight:1.6}}>{terreno.notas}</div>
             </div>}
-            <button className="btn btn-outline btn-sm" style={{marginTop:14}} onClick={()=>setEditing(true)}>✏️ Editar información</button>
+            <button className="btn btn-outline btn-sm" style={{marginTop:14}} onClick={()=>{setAvMode(null);setEditing(true);}}>✏️ Editar información</button>
           </>
         )}
       </div>
@@ -2093,25 +2221,79 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
             </div>
 
             <div className="field" style={{marginBottom:6}}>
-              <label>Avalúo fiscal ($CLP) {hasAvBreak && <span style={{color:"var(--ink3)",fontSize:10,fontWeight:400}}>(suma del desglose)</span>}</label>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <label>Avalúo fiscal ($CLP) {hasAvBreak && <span style={{color:"var(--ink3)",fontSize:10,fontWeight:400}}>(suma del desglose)</span>}</label>
+                {avMode===null && (
+                  <span style={{marginLeft:"auto",display:"flex",gap:6}}>
+                    <button type="button" className="btn btn-primary btn-xs" onClick={()=>abrirAvMode("nuevo")} title="Reavalúo: el avalúo actual queda guardado en el historial">↻ Actualizar avalúo</button>
+                    <button type="button" className="btn btn-ghost btn-xs" onClick={()=>abrirAvMode("corregir")} title="Para errores de tipeo: reemplaza el valor sin guardarlo en el historial">✎ Corregir</button>
+                  </span>
+                )}
+              </div>
               <input type="text" inputMode="numeric"
                 value={hasAvBreak ? fmtCLInput(String(Math.round(avTotal||0)), false) : fmtCLInput(form.avaluo, false)}
                 onChange={e=>set("avaluo", parseCLInput(e.target.value, false))}
-                readOnly={hasAvBreak}
-                style={hasAvBreak?{background:"var(--bg)",color:"var(--ink3)",cursor:"not-allowed"}:undefined}/>
+                readOnly={hasAvBreak || avMode===null}
+                title={avMode===null?"Usa «Actualizar avalúo» o «Corregir» para cambiarlo":undefined}
+                style={(hasAvBreak || avMode===null)?{background:"var(--bg)",color:"var(--ink3)",cursor:"not-allowed"}:undefined}/>
             </div>
             <div className="field-row" style={{marginBottom:10}}>
               <div className="field"><label style={{fontSize:10.5,color:"var(--ink3)"}}>└ Sitio eriazo ($CLP)</label>
                 <input type="text" inputMode="numeric"
                   value={form.avaluo_eriazo===null||form.avaluo_eriazo===undefined?"":fmtCLInput(String(form.avaluo_eriazo), false)}
-                  onChange={e=>set("avaluo_eriazo", e.target.value===""?null:parseCLInput(e.target.value, false))}/>
+                  onChange={e=>set("avaluo_eriazo", e.target.value===""?null:parseCLInput(e.target.value, false))}
+                  readOnly={avMode===null}
+                  style={avMode===null?{background:"var(--bg)",color:"var(--ink3)",cursor:"not-allowed"}:undefined}/>
               </div>
               <div className="field"><label style={{fontSize:10.5,color:"var(--ink3)"}}>└ Terreno construido ($CLP)</label>
                 <input type="text" inputMode="numeric"
                   value={form.avaluo_construido===null||form.avaluo_construido===undefined?"":fmtCLInput(String(form.avaluo_construido), false)}
-                  onChange={e=>set("avaluo_construido", e.target.value===""?null:parseCLInput(e.target.value, false))}/>
+                  onChange={e=>set("avaluo_construido", e.target.value===""?null:parseCLInput(e.target.value, false))}
+                  readOnly={avMode===null}
+                  style={avMode===null?{background:"var(--bg)",color:"var(--ink3)",cursor:"not-allowed"}:undefined}/>
               </div>
             </div>
+
+            {avMode==="nuevo" && (
+              <div style={{background:"var(--teal-lt)",border:"1px solid var(--teal)",borderRadius:6,padding:"8px 10px",marginBottom:10,fontSize:12,color:"var(--ink2)",lineHeight:1.5}}>
+                <div style={{fontWeight:600,color:"var(--teal)",marginBottom:3}}>↻ Nuevo avalúo</div>
+                <div style={{marginBottom:6}}>
+                  {(parseInt(terreno.avaluo)||0)>0
+                    ? <>El avalúo actual, <b>{fmtCLP(terreno.avaluo)}</b>{terreno.avaluo_vigente_desde?` (vigente desde ${fmtDate(terreno.avaluo_vigente_desde)})`:""}, quedará guardado en el historial. Ingresa arriba el nuevo valor.</>
+                    : <>Este terreno no tiene avalúo registrado: el que ingreses quedará como el primero.</>}
+                </div>
+                <div style={{display:"flex",alignItems:"flex-end",gap:10,flexWrap:"wrap"}}>
+                  <div className="field" style={{maxWidth:180}}><label>Vigente desde</label>
+                    <input type="date" value={avDesde} onChange={e=>setAvDesde(e.target.value)}/>
+                  </div>
+                  <button type="button" className="btn btn-ghost btn-xs" onClick={cancelarAvMode}>Cancelar actualización</button>
+                </div>
+              </div>
+            )}
+            {avMode==="corregir" && (
+              <div style={{background:"var(--amber-lt)",border:"1px solid var(--amber)",borderRadius:6,padding:"8px 10px",marginBottom:10,fontSize:12,color:"var(--ink2)",lineHeight:1.5}}>
+                <div style={{fontWeight:600,color:"var(--amber)",marginBottom:3}}>✎ Corrección</div>
+                <div style={{marginBottom:6}}>Reemplaza el valor actual <b>sin guardarlo en el historial</b>. Úsalo solo para errores de tipeo; para un reavalúo usa «Actualizar avalúo».</div>
+                <div style={{display:"flex",alignItems:"flex-end",gap:10,flexWrap:"wrap"}}>
+                  <div className="field" style={{maxWidth:180}}><label>Vigente desde (opcional)</label>
+                    <input type="date" value={avDesde} onChange={e=>setAvDesde(e.target.value)}/>
+                  </div>
+                  <button type="button" className="btn btn-ghost btn-xs" onClick={cancelarAvMode}>Cancelar corrección</button>
+                </div>
+              </div>
+            )}
+            {avMode===null && histAvOrd.length>0 && (
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.2,color:"var(--ink3)",fontWeight:600,marginBottom:4}}>Avalúos anteriores</div>
+                {histAvOrd.map(h=>(
+                  <div key={h.id} style={{display:"flex",alignItems:"center",gap:8,fontSize:12,padding:"4px 0",borderBottom:"1px solid var(--line)"}}>
+                    <span style={{color:"var(--ink3)",flex:1}}>{periodoAv(h)}</span>
+                    <span style={{fontWeight:600}}>{fmtCLP(h.avaluo)}</span>
+                    <button type="button" className="btn btn-danger btn-xs" onClick={()=>borrarHistAv(h)} title="Eliminar del historial (solo si se registró por error)">🗑</button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="info-row" style={{background:"var(--teal-lt)",padding:"8px 10px",borderRadius:6,marginBottom:10}}>
               <span className="info-key">UF/m² (auto)</span>
@@ -2143,11 +2325,13 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
               v={<>{fmtCLP(avTotal)}{avTotalUF && <span style={{marginLeft:6,color:"var(--ink3)",fontWeight:400}}>({avTotalUF})</span>}</>}
               expanded={expandAv}
               onToggle={()=>setExpandAv(x=>!x)}
-              hasBreak={hasAvBreak}
-              subRows={[
+              hasBreak={avExpandible}
+              title="Ver desglose e historial"
+              subRows={hasAvBreak ? [
                 ["Sitio eriazo", avEri!==null ? fmtCLP(avEri) : "—"],
                 ["Terreno construido", avCon!==null ? fmtCLP(avCon) : "—"]
-              ]}
+              ] : []}
+              extra={avExtra}
             />
             <ExpandRow
               k="UF por m²"
@@ -3439,7 +3623,7 @@ function App({user, onLogout}) {
   const exportJSON = async () => {
     setExportBusy(true);
     try{
-      const [terrenos, cuotas, bitacora, devoluciones, archivos, subtareas, archivos_subtareas] = await Promise.all([
+      const [terrenos, cuotas, bitacora, devoluciones, archivos, subtareas, archivos_subtareas, avaluos_historial] = await Promise.all([
         db.select("terrenos","order=ciudad.asc,terreno.asc"),
         db.select("cuotas","order=anio.desc,numero.asc"),
         db.select("bitacora","order=fecha.desc"),
@@ -3447,6 +3631,7 @@ function App({user, onLogout}) {
         db.select("archivos","order=created_at.asc"),
         db.select("subtareas","order=created_at.asc"),
         db.select("archivos_subtareas","order=created_at.asc"),
+        db.select("avaluos_historial","order=terreno_rol.asc,vigente_hasta.asc"),
       ]);
       const backup = {
         version: 1,
@@ -3456,10 +3641,11 @@ function App({user, onLogout}) {
         counts: {
           terrenos: terrenos.length, cuotas: cuotas.length, bitacora: bitacora.length,
           devoluciones: devoluciones.length, archivos: archivos.length,
-          subtareas: subtareas.length, archivos_subtareas: archivos_subtareas.length
+          subtareas: subtareas.length, archivos_subtareas: archivos_subtareas.length,
+          avaluos_historial: avaluos_historial.length
         },
         notes: "Respaldo de datos. No incluye el contenido binario de archivos del bucket, ni usuarios/contraseñas. El código vive en GitHub.",
-        tables: { terrenos, cuotas, bitacora, devoluciones, archivos, subtareas, archivos_subtareas }
+        tables: { terrenos, cuotas, bitacora, devoluciones, archivos, subtareas, archivos_subtareas, avaluos_historial }
       };
       const json = JSON.stringify(backup, null, 2);
       const blob = new Blob([json], {type:"application/json"});
@@ -3810,7 +3996,7 @@ function App({user, onLogout}) {
               </div>
 
               {activeTab==="info"&&(
-                <InfoTab terreno={selTerreno} ufClp={ufClp} cuotas={cuotas} devoluciones={devoluciones} bitacora={bitacora} onUpdated={updated=>{
+                <InfoTab terreno={selTerreno} user={user} ufClp={ufClp} cuotas={cuotas} devoluciones={devoluciones} bitacora={bitacora} onUpdated={updated=>{
                   setTerrenos(ts=>ts.map(t=>t.rol===updated.rol?{...t,...updated}:t));
                   loadAll();
                 }}/>
