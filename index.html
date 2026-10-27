@@ -125,6 +125,54 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 .content::-webkit-scrollbar{width:6px}
 .content::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
 
+/* ── SELECTOR DE MÓDULO (Contribuciones / Valorización) ── */
+.mod-switch{display:flex;gap:3px;margin:8px 10px 2px;padding:3px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px}
+.mod-switch button{flex:1;border:none;background:none;color:#8a8780;font-size:11.5px;font-weight:600;padding:6px 4px;border-radius:6px;transition:all 0.14s;white-space:nowrap}
+.mod-switch button:hover{color:#d8d4cc}
+.mod-switch button.on{background:var(--teal);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+
+/* ── VALORIZACIÓN ── */
+.vz-card{background:var(--white);border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--line);padding:16px 18px}
+.vz-h4{font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:12px;font-family:'IBM Plex Sans',sans-serif}
+.vz-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px}
+@media (max-width:1100px){.vz-grid2{grid-template-columns:1fr}}
+.vz-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--ink2);margin-top:6px}
+.vz-legend i,.vz-sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.vz-mini{width:100%;border-collapse:collapse;font-size:12px}
+.vz-mini th{font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink3);font-weight:600;text-align:right;padding:6px 8px;border-bottom:1px solid var(--line)}
+.vz-mini td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--bg2);white-space:nowrap}
+.vz-bar-track{height:8px;background:var(--bg2);border-radius:4px;overflow:hidden}
+.vz-bar-fill{height:100%;border-radius:4px;transition:width 0.3s}
+.vz-top{display:flex;align-items:center;gap:10px;padding:5px 6px;border-radius:6px;cursor:pointer}
+.vz-top:hover{background:var(--bg)}
+.vz-top-n{width:20px;height:20px;border-radius:50%;background:var(--bg2);color:var(--ink2);font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.vz-chip{display:inline-block;font-size:11.5px;padding:3px 10px;border-radius:12px;border:1px solid var(--line);color:var(--ink3);background:var(--white);cursor:pointer;user-select:none;transition:all 0.13s}
+.vz-chip.on{background:var(--teal-lt);border-color:var(--teal);color:var(--teal);font-weight:600}
+.vz-rol{font-family:monospace;font-size:12px;background:var(--bg2);padding:2px 8px;border-radius:4px;color:var(--ink2)}
+.vz-sup{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.vz-sup-item{flex:1;min-width:150px;background:var(--white);border:1px solid var(--line);border-radius:10px;padding:12px 16px;box-shadow:var(--shadow)}
+.vz-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px}
+@media (max-width:1100px){.vz-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.vz-metric{background:var(--white);border:1px solid var(--line);border-top:3px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+.vz-mline{font-size:12px;color:var(--ink2);margin-top:3px}
+.vz-table-wrap{overflow:auto;max-height:72vh;border:1px solid var(--line);border-radius:8px}
+.vz-table{border-collapse:separate;border-spacing:0;font-size:12px;width:max-content;min-width:100%}
+.vz-table th{position:sticky;z-index:2;background:var(--bg);color:var(--ink2);font-size:10.5px;font-weight:600;padding:0 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.vz-table thead tr:first-child th{top:0;height:28px}
+.vz-table thead tr:nth-child(2) th{top:28px;height:30px}
+.vz-table th.grp{text-align:center;text-transform:uppercase;letter-spacing:0.8px;font-size:10px;color:var(--teal);border-left:2px solid var(--line);cursor:default}
+.vz-table td{padding:6px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--bg2);background:var(--white)}
+.vz-table .c-txt{text-align:left}
+.vz-table .c-wide{white-space:normal;min-width:260px;max-width:340px;font-size:11.5px;color:var(--ink2)}
+.vz-table .g-start{border-left:2px solid var(--line)}
+.vz-table .c-first{position:sticky;left:0;z-index:1;text-align:left;min-width:220px;max-width:280px;white-space:normal;border-right:1px solid var(--line)}
+.vz-table th.c-first{z-index:3;top:0}
+.vz-table tr.lote{cursor:pointer}
+.vz-table tr.lote:hover td{background:var(--teal-lt)}
+.vz-table tr.subtot td{background:var(--bg);font-weight:600;border-bottom:1px solid var(--line)}
+.vz-table tr.total td{position:sticky;bottom:0;z-index:1;background:var(--ink);color:#fff;font-weight:700;border-bottom:none}
+.vz-table tr.total td.c-first{z-index:2}
+
 /* ── KPI CARDS ── */
 .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
 .kpi-card{background:var(--white);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow);border:1px solid var(--line);border-top:3px solid var(--line)}
@@ -385,7 +433,7 @@ button,input,select,textarea{font-family:'IBM Plex Sans',sans-serif;cursor:point
 <!-- INITIAL_DATA removido por seguridad: los datos viven en Supabase -->
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
 // ─────────────────────────────────────────────────────
 // SUPABASE CLIENT
@@ -434,6 +482,12 @@ class SupabaseClient {
     const res = await fetch(`${this.url}/rest/v1/${table}?${filter}`, {method:"DELETE", headers:this._h()});
     if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     return true;
+  }
+  async rpc(fn, args={}) {
+    const res = await fetch(`${this.url}/rest/v1/rpc/${fn}`, {method:"POST", headers:this._h(), body:JSON.stringify(args)});
+    if(!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    const t = await res.text();
+    return t ? JSON.parse(t) : null;
   }
   async uploadFile(bucket, path, file) {
     const bearer = this.authToken || this.anonKey;
@@ -1400,305 +1454,815 @@ function UfEditor({ufClp, onSave}){
 }
 
 // ─────────────────────────────────────────────────────
-// VALORES DE TERRENOS (avalúo SII / comercial / tasación / valor libro) — solo lectura
+// MÓDULO VALORIZACIÓN — separado de contribuciones
 // ─────────────────────────────────────────────────────
-// Los datos viven en la tabla valores_terrenos (carga del Excel "BASE DATOS TERRENOS"), una fila
-// por lote. Cada lote se conecta con un terreno de la página por su ROL; si no tiene ROL propio en
-// la página (ej. W1–W4, que vienen del 5511-52) se cuelga del terreno del que proviene (rol_padre).
-// El avalúo SII se toma de la página cuando el lote tiene su propio ROL ahí, para que refleje los
-// reavalúos; si no, del Excel. Todo se convierte a UF con la UF que se edita en la página.
+// Valores de cada lote según distintos criterios: avalúo SII, valor comercial (criterio RM),
+// tasación bancaria y valor libro. La fuente es el Excel "BASE DATOS TERRENOS" (hoja Base), que
+// vive en la tabla valores_terrenos: una fila por lote. Este módulo NO usa los datos de
+// contribuciones (los criterios son distintos): superficies y avalúo salen del propio Excel.
+// Solo comparte la UF que se edita en la página, para convertir los montos en pesos.
 const valNum = v => (v===null||v===undefined||v==="") ? null : (isNaN(Number(v)) ? null : Number(v));
-function armarFilasValores(valores, terrenos, ufClp, hiddenRols){
-  if(!valores) return null;
-  const tMap = {}; terrenos.forEach(t=>{ tMap[t.rol]=t; });
-  return valores.map(v=>{
-    const t = v.rol ? (tMap[v.rol]||null) : null;
-    const padre = v.rol_padre ? (tMap[v.rol_padre]||null) : null;
-    const siiClp = t ? valNum(t.avaluo) : valNum(v.sii_clp);
-    const siiM2 = t ? valNum(t.m2_sii) : valNum(v.sii_m2);
-    const siiUf = (siiClp>0 && ufClp>0) ? siiClp/ufClp : null;
-    const libClp = valNum(v.libro_clp);
-    const libUf = valNum(v.libro_uf)!==null ? valNum(v.libro_uf) : ((libClp>0 && ufClp>0) ? libClp/ufClp : null);
-    return {
-      ...v, terreno:t, padre,
-      rolPagina: t ? t.rol : (padre ? padre.rol : null),   // a qué terreno lleva el clic
-      // Sale de los totales si su propio terreno está oculto, salvo que se haya ocultado por
-      // fusión o subdivisión: ese suelo sigue siendo de la empresa (ej. los lotes de Parque Norte
-      // que se fusionan con el 5511-01). Si el oculto es el padre, sus lotes hijos siguen contando.
-      oculto: !!(t && hiddenRols && hiddenRols.has(t.rol) && !["Subdividido","Fusionado"].includes(estadoDe(t))),
-      rolOcultoCuenta: !!(t && hiddenRols && hiddenRols.has(t.rol) && ["Subdividido","Fusionado"].includes(estadoDe(t))),
-      siiClp, siiM2, siiUf, siiUfM2: (siiUf && siiM2>0) ? siiUf/siiM2 : null,
-      m2Neto: valNum(v.m2_neto),
-      comUf: valNum(v.com_uf), comUfM2: valNum(v.com_uf_m2),
-      tasUf: valNum(v.tas_uf), tasUfM2: valNum(v.tas_uf_m2),
-      libUf, libUfM2: valNum(v.libro_uf_m2),
-    };
-  });
-}
 const fmtUFv = v => (v===null||v===undefined) ? "—" : Math.round(v).toLocaleString("es-CL")+" UF";
 const fmtUFm2v = v => (v===null||v===undefined) ? "—" : Number(v).toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2})+" UF/m²";
 const fmtVeces = v => (v===null||v===undefined||!isFinite(v)) ? "—" : "×"+v.toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1});
-// Un valor con más de 3 años se marca como antiguo.
-const fechaAntigua = f => { if(!f) return false; const d=new Date(String(f).slice(0,10)+"T00:00:00"); return (Date.now()-d.getTime()) > 3*365.25*86400000; };
-const METRICAS_VALOR = [
-  {k:"sii", lbl:"Avalúo SII", uf:"siiUf", m2:"siiUfM2", fecha:"sii_fecha", color:"#1a5f6e"},
-  {k:"com", lbl:"Comercial", uf:"comUf", m2:"comUfM2", fecha:null, color:"#b7620a"},
-  {k:"tas", lbl:"Tasación", uf:"tasUf", m2:"tasUfM2", fecha:"tas_fecha", color:"#6e1a6e"},
-  {k:"lib", lbl:"Valor libro", uf:"libUf", m2:"libUfM2", fecha:"libro_fecha", color:"#4a4740"},
-];
-// Cuántas veces el avalúo SII es esta métrica, comparando solo lotes que tienen ambos datos.
-const vecesSii = (filas, campo) => {
-  const ambos = filas.filter(f=>f[campo]>0 && f.siiUf>0);
-  const a = ambos.reduce((x,f)=>x+f[campo],0), b = ambos.reduce((x,f)=>x+f.siiUf,0);
-  return b>0 ? a/b : null;
+const fmtM2v = v => (v===null||v===undefined) ? "—" : Number(v).toLocaleString("es-CL",{maximumFractionDigits:2})+" m²";
+const fmtN0 = v => Math.round(v).toLocaleString("es-CL");
+const fmtN2 = v => Number(v).toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtM2n = v => Number(v).toLocaleString("es-CL",{maximumFractionDigits:2});
+const fmtPctV = v => (v===null||v===undefined||!isFinite(v)) ? "—" : (v>0?"+":"")+Math.round(v*100).toLocaleString("es-CL")+"%";
+// Diferencia relativa en palabras: "un 12% mayor" / "un 79% menor"
+const difTxt = d => Math.round(Math.abs(d)*100)===0 ? "igual" : `un ${Math.round(Math.abs(d)*100).toLocaleString("es-CL")}% ${d>0?"mayor":"menor"}`;
+// Años transcurridos desde una fecha "YYYY-MM-DD" (null si no hay fecha)
+const aniosDesde = f => { if(!f) return null; const d=new Date(String(f).slice(0,10)+"T00:00:00"); return isNaN(d) ? null : (Date.now()-d.getTime())/(365.25*86400000); };
+const fechaAntigua = f => { const a=aniosDesde(f); return a!==null && a>3; }; // tasación de más de 3 años
+const fmtAntig = f => {
+  const a=aniosDesde(f); if(a===null) return "";
+  if(a<1){ const m=Math.max(0,Math.round(a*12)); return m<=1 ? "hace 1 mes" : `hace ${m} meses`; }
+  const y=Math.floor(a); return y===1 ? "hace 1 año" : `hace ${y} años`;
 };
 
-// Vista global (subpestaña "Valores" del dashboard)
-function ValoresView({filas, ufClp, onSelectTerreno}){
-  const [fComuna,setFComuna]=useState([]);
-  const [fProy,setFProy]=useState([]);
-  const [fProp,setFProp]=useState([]);
-  const [fHip,setFHip]=useState([]);
-  const [busy,setBusy]=useState(false);
-  if(filas===null) return <div className="dash-section"><div className="dt-empty">No se pudieron cargar los valores de los terrenos.</div></div>;
-  if(filas.length===0) return <div className="dash-section"><div className="dt-empty">Todavía no hay valores cargados.</div></div>;
-
-  const opts = k => [...new Set(filas.map(f=>f[k]).filter(Boolean))].sort();
-  const vis = filas.filter(f=>!f.oculto
-    && (fComuna.length===0 || fComuna.includes(f.comuna))
-    && (fProy.length===0 || fProy.includes(f.proyecto))
-    && (fProp.length===0 || fProp.includes(f.propietario))
-    && (fHip.length===0 || fHip.includes(f.hipoteca)));
-  const nOcultos = filas.filter(f=>f.oculto).length;
-  const hayFiltros = fComuna.length||fProy.length||fProp.length||fHip.length;
-  const suma = k => vis.reduce((x,f)=>x+(f[k]||0),0);
-  const nCon = k => vis.filter(f=>f[k]>0).length;
-
-  const porComuna = {};
-  vis.forEach(f=>{
-    const c = f.comuna||"Sin comuna";
-    if(!porComuna[c]) porComuna[c]={comuna:c,n:0,sii:0,com:0,tas:0,lib:0};
-    const g=porComuna[c]; g.n++; g.sii+=f.siiUf||0; g.com+=f.comUf||0; g.tas+=f.tasUf||0; g.lib+=f.libUf||0;
+function prepararLotes(valores, ufClp){
+  if(!valores) return null;
+  const uf = ufClp>0 ? ufClp : null;
+  return valores.map(v=>{
+    const siiClp = valNum(v.sii_clp), siiM2 = valNum(v.sii_m2), libClp = valNum(v.libro_clp);
+    const siiUf = (siiClp>0 && uf) ? siiClp/uf : null;
+    const libUf = valNum(v.libro_uf)!==null ? valNum(v.libro_uf) : ((libClp>0 && uf) ? libClp/uf : null);
+    return {...v, key: v.id || ("o"+v.orden),
+      m2Bruto: valNum(v.m2_bruto), m2Neto: valNum(v.m2_neto), m2Sii: siiM2,
+      siiClp, siiUf, siiUfM2: (siiUf && siiM2>0) ? siiUf/siiM2 : null,
+      comUf: valNum(v.com_uf), comUfM2: valNum(v.com_uf_m2),
+      tasUf: valNum(v.tas_uf), tasUfM2: valNum(v.tas_uf_m2),
+      libClp, libUf, libUfM2: valNum(v.libro_uf_m2)};
   });
-  const grupos = Object.values(porComuna).sort((a,b)=>(b.com+b.sii)-(a.com+a.sii));
-  const serie = METRICAS_VALOR.filter(m=>grupos.some(g=>g[m.k]>0));
+}
+// Agrupa por comuna respetando el orden del Excel
+function agruparLotes(lotes){
+  const g=[], idx={};
+  [...lotes].sort((a,b)=>(a.orden||0)-(b.orden||0)).forEach(l=>{
+    const c=l.comuna||"Sin comuna";
+    if(!(c in idx)){ idx[c]=g.length; g.push({comuna:c, lotes:[]}); }
+    g[idx[c]].lotes.push(l);
+  });
+  return g;
+}
+const sumar = (ls,k) => ls.reduce((s,l)=>s+(l[k]||0),0);
+const contar = (ls,k) => ls.filter(l=>l[k]>0).length;
+// Cociente de sumas, solo con lotes que tienen ambos datos (ej. comercial / SII)
+const ratioVz = (ls,a,b) => { const am=ls.filter(l=>l[a]>0&&l[b]>0); const y=sumar(am,b); return y>0 ? sumar(am,a)/y : null; };
+// UF/m² promedio ponderado (suma de UF / suma de m²)
+const promM2 = (ls,uf,m2) => ratioVz(ls,uf,m2);
 
-  const exportar = () => {
-    if(typeof XLSX === "undefined"){ alert("La librería de Excel aún no cargó. Refresca la página e intenta de nuevo."); return; }
-    setBusy(true);
-    try{
-      const r2 = v => v===null||v===undefined ? "" : Math.round(v*100)/100;
-      const r0 = v => v===null||v===undefined ? "" : Math.round(v);
-      const rows = [
-        ["Valores de terrenos — Gestor de Terrenos"],
-        ["Exportado", new Date().toLocaleString("es-CL")],
-        ["UF usada para convertir el avalúo SII", ufClp],
-        hayFiltros ? ["Con filtros aplicados", ""] : [],
-        [],
-        ["ROL","Viene de (ROL)","Lote","Propietario","Comuna","Proyecto","Detalle","m² bruto","m² neto","Hipoteca",
-         "m² SII","Avalúo SII (CLP)","Avalúo SII (UF)","SII UF/m²","Fecha avalúo",
-         "Comercial (UF)","Comercial UF/m²","Tasación (UF)","Tasación UF/m²","Fecha tasación",
-         "Valor libro (UF)","Valor libro UF/m²","Fecha valor libro","Comercial / SII","Tasación / SII","En la página","Observaciones"]
-      ];
-      vis.forEach(f=>{
-        rows.push([f.rol||"", f.rol_padre||"", f.nombre||"", f.propietario||"", f.comuna||"", f.proyecto||"", f.detalle||"",
-          r2(valNum(f.m2_bruto)), r2(f.m2Neto), f.hipoteca||"",
-          r2(f.siiM2), r0(f.siiClp), r0(f.siiUf), r2(f.siiUfM2), f.sii_fecha||"",
-          r0(f.comUf), r2(f.comUfM2), r0(f.tasUf), r2(f.tasUfM2), f.tas_fecha||"",
-          r0(f.libUf), r2(f.libUfM2), f.libro_fecha||"",
-          (f.comUf>0&&f.siiUf>0)?r2(f.comUf/f.siiUf):"", (f.tasUf>0&&f.siiUf>0)?r2(f.tasUf/f.siiUf):"",
-          f.terreno?"Sí":(f.padre?"Vía "+f.padre.rol:"No"), f.obs||""]);
-      });
-      rows.push(["TOTAL","",vis.length+" lotes","","","","","",r2(suma("m2Neto")),"","",r0(suma("siiClp")),r0(suma("siiUf")),"","",
-        r0(suma("comUf")),"",r0(suma("tasUf")),"","",r0(suma("libUf"))]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Valores");
-      XLSX.writeFile(wb, "valores-terrenos-"+new Date().toISOString().slice(0,10)+".xlsx");
-      logAudit("exportar_valores", "Exportó los valores de terrenos a Excel ("+vis.length+" lotes)", "");
-    }catch(e){ alert("Error al exportar: "+e.message); }
-    setBusy(false);
-  };
+const VZ_METRICAS = [
+  {k:"sii", lbl:"Avalúo SII", uf:"siiUf", m2:"siiUfM2", base:"m2Sii", fecha:"sii_fecha", color:"#1a5f6e"},
+  {k:"com", lbl:"Valor comercial", nota:"criterio RM", uf:"comUf", m2:"comUfM2", base:"m2Neto", fecha:null, color:"#b7620a"},
+  {k:"tas", lbl:"Tasación", uf:"tasUf", m2:"tasUfM2", base:"m2Neto", fecha:"tas_fecha", color:"#6e1a6e"},
+  {k:"lib", lbl:"Valor libro", nota:"contable", uf:"libUf", m2:"libUfM2", base:"m2Neto", fecha:"libro_fecha", color:"#4a4740"},
+];
+const VZ_GRUPOS = [
+  {id:"id", lbl:"Identificación"}, {id:"det", lbl:"Detalle"}, {id:"sup", lbl:"Superficies"},
+  {id:"sii", lbl:"Avalúo SII"}, {id:"com", lbl:"Comercial (criterio RM)"}, {id:"tas", lbl:"Tasación"}, {id:"lib", lbl:"Valor libro"},
+];
+const esLibre = h => /^libre$/i.test(String(h||"").trim());
+const VZ_COLS = [
+  {id:"propietario", grupo:"id", lbl:"Propietario", txt:true},
+  {id:"comuna", grupo:"id", lbl:"Comuna", txt:true},
+  {id:"proyecto", grupo:"id", lbl:"Proyecto", txt:true},
+  {id:"hipoteca", grupo:"id", lbl:"Hipoteca", txt:true,
+   estilo:l=>({color: esLibre(l.hipoteca) ? "var(--green)" : "var(--amber)", fontWeight:600})},
+  {id:"detalle", grupo:"det", lbl:"Detalle", txt:true, wide:true},
+  {id:"m2Bruto", grupo:"sup", lbl:"m² bruto", fmt:fmtM2n, sum:true},
+  {id:"m2Neto", grupo:"sup", lbl:"m² neto", fmt:fmtM2n, sum:true},
+  {id:"m2Sii", grupo:"sup", lbl:"m² SII", fmt:fmtM2n, sum:true},
+  {id:"siiClp", grupo:"sii", lbl:"Avalúo $", fmt:fmtCLP, sum:true},
+  {id:"siiUf", grupo:"sii", lbl:"UF", fmt:fmtN0, sum:true},
+  {id:"siiUfM2", grupo:"sii", lbl:"UF/m²", fmt:fmtN2, avg:["siiUf","m2Sii"]},
+  {id:"sii_fecha", grupo:"sii", lbl:"Fecha", fmt:fmtDate},
+  {id:"comUf", grupo:"com", lbl:"UF", fmt:fmtN0, sum:true},
+  {id:"comUfM2", grupo:"com", lbl:"UF/m²", fmt:fmtN2, avg:["comUf","m2Neto"]},
+  {id:"comVsSii", grupo:"com", lbl:"× SII", fmt:fmtVeces, get:l=>(l.comUf>0&&l.siiUf>0)?l.comUf/l.siiUf:null, ratio:["comUf","siiUf"]},
+  {id:"tasUf", grupo:"tas", lbl:"UF", fmt:fmtN0, sum:true},
+  {id:"tasUfM2", grupo:"tas", lbl:"UF/m²", fmt:fmtN2, avg:["tasUf","m2Neto"]},
+  {id:"tas_fecha", grupo:"tas", lbl:"Fecha", fmt:fmtDate,
+   estilo:l=>fechaAntigua(l.tas_fecha) ? {color:"var(--amber)",fontWeight:600} : undefined},
+  {id:"libUf", grupo:"lib", lbl:"UF", fmt:fmtN0, sum:true},
+  {id:"libUfM2", grupo:"lib", lbl:"UF/m²", fmt:fmtN2, avg:["libUf","m2Neto"]},
+  {id:"libro_fecha", grupo:"lib", lbl:"Fecha", fmt:fmtDate},
+];
+const valorCol = (c,l) => c.get ? c.get(l) : l[c.id];
+const vacioVz = v => v===null || v===undefined || v==="";
+const totalCol = (c,ls) => {
+  if(c.sum){ const con=ls.filter(l=>!vacioVz(valorCol(c,l))); return con.length ? c.fmt(con.reduce((s,l)=>s+Number(valorCol(c,l)),0)) : "—"; }
+  if(c.avg){ const v=promM2(ls,c.avg[0],c.avg[1]); return v===null ? "—" : c.fmt(v); }
+  if(c.ratio) return fmtVeces(ratioVz(ls,c.ratio[0],c.ratio[1]));
+  return "";
+};
+const HipotecaChip = ({h}) => {
+  if(!h) return null;
+  const libre = esLibre(h);
+  return <span className="badge-chip" style={{background:libre?"var(--green-lt)":"var(--amber-lt)",color:libre?"var(--green)":"var(--amber)"}}>{libre?"Sin hipoteca":"Hipoteca "+h}</span>;
+};
 
-  // Gráfico: UF por comuna y métrica
-  const maxV = Math.max(1, ...grupos.flatMap(g=>serie.map(m=>g[m.k])));
-  const bw=16, gIn=3, gOut=26, padL=64, padB=34, padT=14, chH=170;
-  const gW = serie.length*(bw+gIn)-gIn;
-  const W = padL + grupos.length*(gW+gOut) + 10;
-  const fmtCorto = v => v>=1e6 ? (v/1e6).toLocaleString("es-CL",{maximumFractionDigits:1})+" M" : v>=1e3 ? Math.round(v/1e3)+" mil" : Math.round(v)+"";
-
-  const cols = "minmax(190px,1.6fr) 110px 92px 128px 128px 140px 104px 66px 72px";
-  const celda = (uf, m2, extra) => (
-    <span style={{textAlign:"right"}}>
-      <div style={{fontWeight:600}}>{fmtUFv(uf)}</div>
-      <div style={{fontSize:10.5,color:"var(--ink3)"}}>{uf? fmtUFm2v(m2) : ""}{extra}</div>
-    </span>
-  );
-
+// ── Barra lateral del módulo ──
+function VzSidebar({grupos, total, busca, setBusca, sel, onSel, cerradas, setCerradas, onResumen, onImportar}){
+  const dot = l => l.tasUf>0 ? (fechaAntigua(l.tas_fecha) ? "#d08a3a" : "#4fa37a") : "#5a5750";
+  // Al recorrer lote a lote, la barra acompaña al lote abierto
+  useEffect(()=>{ const el=document.querySelector(".sidebar .terreno-item.active"); if(el && el.scrollIntoView) el.scrollIntoView({block:"nearest"}); },[sel]);
   return (
     <>
-      <div className="dash-filter-bar">
-        <label style={{marginRight:4}}>Valores:</label>
-        <MultiSelect label="Comuna" options={opts("comuna")} selected={fComuna} onChange={setFComuna}/>
-        <MultiSelect label="Proyecto" options={opts("proyecto")} selected={fProy} onChange={setFProy}/>
-        <MultiSelect label="Propietario" options={opts("propietario")} selected={fProp} onChange={setFProp}/>
-        <MultiSelect label="Hipoteca" options={opts("hipoteca")} selected={fHip} onChange={setFHip}/>
-        {hayFiltros?<button className="dash-clr" onClick={()=>{setFComuna([]);setFProy([]);setFProp([]);setFHip([]);}}>✕ Limpiar filtros</button>:null}
-        <span style={{marginLeft:"auto",fontSize:11,color:"var(--ink3)"}}>{vis.length} lotes · UF ${Number(ufClp||0).toLocaleString("es-CL")}</span>
-        <button className="btn btn-outline btn-sm" onClick={exportar} disabled={busy}>{busy?"Exportando…":"⬇ Exportar a Excel"}</button>
+      <div className="sidebar-search">
+        <input value={busca} onChange={e=>setBusca(e.target.value)} placeholder="🔍 Buscar lote, ROL o proyecto..."/>
       </div>
-
-      <div className="kpi-grid-5" style={{gridTemplateColumns:"repeat(4,1fr)"}}>
-        {METRICAS_VALOR.map(m=>{
-          const tot = suma(m.uf), n = nCon(m.uf), veces = m.k==="sii" ? null : vecesSii(vis, m.uf);
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",padding:"2px 14px 4px",fontSize:10,color:"#8a8780"}}>
+        <span><span className="t-dot" style={{display:"inline-block",background:"#4fa37a",marginRight:4}}/>Tasación al día</span>
+        <span><span className="t-dot" style={{display:"inline-block",background:"#d08a3a",marginRight:4}}/>+3 años</span>
+        <span><span className="t-dot" style={{display:"inline-block",background:"#5a5750",marginRight:4}}/>Sin tasación</span>
+      </div>
+      <div className="terreno-list">
+        <div className={`terreno-item${sel===null?" active":""}`} onClick={onResumen} style={{marginBottom:6}}>
+          <span className="t-dot" style={{background:"#90c4cc"}}/>
+          <div className="t-info"><div className="t-name">Resumen de valorización</div><div className="t-rol">{total} lotes</div></div>
+        </div>
+        {grupos.map(g=>{
+          const abierta = !!busca || !cerradas[g.comuna];
           return (
-            <div key={m.k} className="kpi-card" style={{borderTopColor:m.color}}>
-              <div className="kpi-label">{m.lbl}</div>
-              <div className="kpi-value" style={{fontSize:16,color:n?m.color:"var(--ink3)"}}>{n?fmtUFv(tot):"Sin datos"}</div>
-              <div className="kpi-sub">{n} de {vis.length} lotes con dato</div>
-              {m.k==="sii" && n>0 && <div className="kpi-sub">{fmtCLP(suma("siiClp"))}</div>}
-              {veces!==null && <div className="kpi-sub">{fmtVeces(veces)} el avalúo SII de esos mismos lotes</div>}
+            <div key={g.comuna} className="city-group">
+              <div className="city-header" onClick={()=>setCerradas(p=>({...p,[g.comuna]:!p[g.comuna]}))}>
+                <span className={`city-arrow${abierta?" open":""}`}>▶</span>
+                <span className="city-name">{g.comuna}</span>
+                <span className="city-count">{g.lotes.length}</span>
+              </div>
+              {abierta && (
+                <div className="city-terrenos">
+                  {g.lotes.map(l=>(
+                    <div key={l.key} className={`terreno-item${sel===l.key?" active":""}`} onClick={()=>onSel(l.key)} title={l.nombre}>
+                      <span className="t-dot" style={{background:dot(l)}}/>
+                      <div className="t-info">
+                        <div className="t-name">{l.nombre}</div>
+                        <div className="t-rol">{l.rol||"sin ROL"}{l.obs?" · ⚠":""}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
+        {grupos.length===0 && <div style={{fontSize:11.5,color:"#8a8780",padding:"10px 14px"}}>Sin resultados.</div>}
       </div>
-      {nOcultos>0 && <div style={{fontSize:11.5,color:"var(--ink3)",margin:"-10px 0 14px"}}>{nOcultos} lote{nOcultos===1?"":"s"} de terrenos ocultos (vendidos, entregados u otros) no se suma{nOcultos===1?"":"n"}. Los ocultos por fusión o subdivisión sí se suman.</div>}
-
-      <div className="chart-card">
-        <h4>📊 Valores por comuna (UF)</h4>
-        <div className="chart-scroll">
-          <svg viewBox={`0 0 ${W} ${chH+padT+padB}`} style={{minWidth:Math.max(520,W),height:chH+padT+padB,display:"block"}}>
-            {[0,0.25,0.5,0.75,1].map(t=>{ const y=padT+chH*(1-t); return <g key={t}>
-              <line x1={padL} y1={y} x2={W-10} y2={y} stroke="var(--line)" strokeWidth="1"/>
-              <text x={padL-6} y={y+4} textAnchor="end" fontSize="10" fill="var(--ink3)">{fmtCorto(maxV*t)}</text></g>; })}
-            {grupos.map((g,i)=>{
-              const x0 = padL + i*(gW+gOut) + gOut/2;
-              return <g key={g.comuna}>
-                {serie.map((m,j)=>{ const h=(g[m.k]/maxV)*chH; return h>0 &&
-                  <rect key={m.k} x={x0+j*(bw+gIn)} y={padT+chH-h} width={bw} height={h} fill={m.color} rx="2"><title>{g.comuna} · {m.lbl}: {fmtUFv(g[m.k])}</title></rect>; })}
-                <text x={x0+gW/2} y={padT+chH+15} textAnchor="middle" fontSize="10" fill="var(--ink2)">{g.comuna}</text>
-              </g>;
-            })}
-            <line x1={padL} y1={padT+chH} x2={W-10} y2={padT+chH} stroke="var(--ink3)" strokeWidth="1.5"/>
-          </svg>
-        </div>
-        <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:11,color:"var(--ink3)",marginTop:6}}>
-          {serie.map(m=><span key={m.k}><span style={{display:"inline-block",width:10,height:10,borderRadius:2,background:m.color,marginRight:5,verticalAlign:"-1px"}}/>{m.lbl}</span>)}
-        </div>
-      </div>
-
-      <div className="dash-section">
-        <h4>📋 Detalle por lote{hayFiltros?" — filtrado":""} <span style={{fontWeight:400,color:"var(--ink3)",fontSize:11.5}}>({vis.length})</span></h4>
-        <div style={{overflowX:"auto"}}>
-          <div className="data-table" style={{minWidth:1100}}>
-            <div className="dt-head" style={{gridTemplateColumns:cols,columnGap:"12px"}}>
-              <span>Lote · ROL</span><span>Comuna</span><span style={{textAlign:"right"}}>m² neto</span>
-              <span style={{textAlign:"right"}}>Avalúo SII</span><span style={{textAlign:"right"}}>Comercial</span>
-              <span style={{textAlign:"right"}}>Tasación</span><span style={{textAlign:"right"}}>Valor libro</span>
-              <span style={{textAlign:"right"}}>Com./SII</span><span>Hipoteca</span>
-            </div>
-            {vis.map(f=>{
-              const antigua = fechaAntigua(f.tas_fecha);
-              return (
-                <div key={f.id||f.orden} className="dt-row" style={{gridTemplateColumns:cols,columnGap:"12px",alignItems:"start",cursor:f.rolPagina?"pointer":"default"}}
-                  onClick={()=>f.rolPagina && onSelectTerreno(f.rolPagina)} title={f.rolPagina?"Ir al terreno "+f.rolPagina:"Este lote no está en la página"}>
-                  <div style={{minWidth:0}}>
-                    <div style={{fontWeight:600,fontSize:12}}>{f.nombre||"—"}</div>
-                    <div style={{fontSize:10.5,color:"var(--ink3)",fontFamily:"monospace"}}>
-                      {f.rol||"sin ROL"}
-                      {!f.terreno && f.padre && <span style={{fontFamily:"inherit",marginLeft:6}}>· viene del {f.padre.rol}</span>}
-                      {!f.terreno && !f.padre && <span style={{fontFamily:"inherit",marginLeft:6,color:"var(--amber)"}}>· no está en la página</span>}
-                      {f.rolOcultoCuenta && <span style={{fontFamily:"inherit",marginLeft:6}}>· rol oculto ({estadoDe(f.terreno).toLowerCase()})</span>}
-                    </div>
-                    {f.obs && <div style={{fontSize:10.5,color:"var(--amber)",marginTop:3,lineHeight:1.35}}>⚠ {f.obs}</div>}
-                  </div>
-                  <span style={{fontSize:12}}>{f.comuna||"—"}<div style={{fontSize:10.5,color:"var(--ink3)"}}>{f.proyecto||""}</div></span>
-                  <span style={{textAlign:"right",fontSize:12}}>{fmtM2(f.m2Neto)}</span>
-                  {celda(f.siiUf, f.siiUfM2)}
-                  {celda(f.comUf, f.comUfM2)}
-                  {celda(f.tasUf, f.tasUfM2, f.tas_fecha ? <span style={{color:antigua?"var(--amber)":"var(--ink3)",fontWeight:antigua?600:400}}> · {f.tas_fecha.slice(0,4)}</span> : null)}
-                  {celda(f.libUf, f.libUfM2)}
-                  <span style={{textAlign:"right",fontSize:12}}>{(f.comUf>0&&f.siiUf>0)?fmtVeces(f.comUf/f.siiUf):"—"}</span>
-                  <span style={{fontSize:12,color:"var(--ink2)"}}>{f.hipoteca||"—"}</span>
-                </div>
-              );
-            })}
-            <div className="dt-row" style={{gridTemplateColumns:cols,columnGap:"12px",background:"var(--bg2)",fontWeight:700}}>
-              <span style={{fontSize:12}}>TOTAL {vis.length} lotes</span><span/>
-              <span style={{textAlign:"right",fontSize:12}}>{fmtM2(suma("m2Neto"))}</span>
-              <span style={{textAlign:"right",fontSize:12}}>{fmtUFv(suma("siiUf"))}</span>
-              <span style={{textAlign:"right",fontSize:12}}>{fmtUFv(suma("comUf"))}</span>
-              <span style={{textAlign:"right",fontSize:12}}>{fmtUFv(suma("tasUf"))}</span>
-              <span style={{textAlign:"right",fontSize:12}}>{nCon("libUf")?fmtUFv(suma("libUf")):"—"}</span>
-              <span style={{textAlign:"right",fontSize:12}}>{fmtVeces(vecesSii(vis,"comUf"))}</span><span/>
-            </div>
-          </div>
-        </div>
-        <div className="chart-help">Las tasaciones con más de 3 años aparecen con el año en naranjo. Los totales de cada métrica suman solo los lotes que tienen ese dato. Haz clic en un lote para ir a su terreno.</div>
+      <div className="sidebar-bottom">
+        <button className="sbtn sbtn-primary" onClick={onImportar}>⇪ Cargar Excel actualizado</button>
+        <button className="sbtn sbtn-ghost" onClick={onResumen}>⊞ Resumen de valorización</button>
       </div>
     </>
   );
 }
 
-// Tarjeta "Valores" dentro de la información de cada terreno
-function ValoresTerrenoCard({filas}){
-  if(!filas) return null; // la tabla de valores no está disponible
-  const box = {background:"var(--bg)",borderRadius:8,padding:"10px 12px",border:"1px solid var(--line)"};
+// ── Exportación a Excel (mismo orden de columnas que el Excel de origen, con totales) ──
+function exportarValorizacion(lotes, ufClp, filtrado){
+  if(typeof XLSX === "undefined"){ alert("La librería de Excel aún no cargó. Refresca la página e intenta de nuevo."); return; }
+  const r0 = v => vacioVz(v) ? "" : Math.round(v);
+  const r2 = v => vacioVz(v) ? "" : Math.round(v*100)/100;
+  const f = v => v ? fmtDate(v) : "";
+  const ord = [...lotes].sort((a,b)=>(a.orden||0)-(b.orden||0));
+  const g1 = ["","","","","","","","Superficies","","","Avalúo SII","","","","Comercial (criterio RM)","","","Tasación","","","Valor libro","","","","",""];
+  const g2 = ["ROL","Lote","Propietario","Comuna","Proyecto","Detalle","Hipoteca","m² bruto","m² neto","m² SII",
+              "Avalúo $","UF","UF/m²","Fecha","UF","UF/m²","× SII","UF","UF/m²","Fecha","$","UF","UF/m²","Fecha","Observaciones","Fila Excel origen"];
+  const rows = ord.map(l=>[l.rol||"", l.nombre||"", l.propietario||"", l.comuna||"", l.proyecto||"", l.detalle||"", l.hipoteca||"",
+    r2(l.m2Bruto), r2(l.m2Neto), r2(l.m2Sii), r0(l.siiClp), r0(l.siiUf), r2(l.siiUfM2), f(l.sii_fecha),
+    r0(l.comUf), r2(l.comUfM2), (l.comUf>0&&l.siiUf>0)?r2(l.comUf/l.siiUf):"", r0(l.tasUf), r2(l.tasUfM2), f(l.tas_fecha),
+    r0(l.libClp), r0(l.libUf), r2(l.libUfM2), f(l.libro_fecha), l.obs||"", l.orden||""]);
+  const tot = ["TOTAL", ord.length+" lotes","","","","","", r2(sumar(ord,"m2Bruto")), r2(sumar(ord,"m2Neto")), r2(sumar(ord,"m2Sii")),
+    r0(sumar(ord,"siiClp")), r0(sumar(ord,"siiUf")), r2(promM2(ord,"siiUf","m2Sii")), "",
+    r0(sumar(ord,"comUf")), r2(promM2(ord,"comUf","m2Neto")), r2(ratioVz(ord,"comUf","siiUf")), r0(sumar(ord,"tasUf")), r2(promM2(ord,"tasUf","m2Neto")), "",
+    r0(sumar(ord,"libClp")), r0(sumar(ord,"libUf")), "", "", "", ""];
+  const aoa = [["Valorización de terrenos — Guzmán & Larraín"],
+    ["Exportado: "+new Date().toLocaleString("es-CL"), "UF usada para el avalúo SII: "+(ufClp||""), filtrado?"Con filtros aplicados":"Todos los lotes"],
+    [], g1, g2, ...rows, tot];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!merges"] = [{s:{r:3,c:7},e:{r:3,c:9}},{s:{r:3,c:10},e:{r:3,c:13}},{s:{r:3,c:14},e:{r:3,c:16}},{s:{r:3,c:17},e:{r:3,c:19}},{s:{r:3,c:20},e:{r:3,c:23}}];
+  ws["!cols"] = [10,34,12,14,18,40,10,11,11,11,16,11,9,11,11,9,8,11,9,11,14,11,9,11,50,9].map(w=>({wch:w}));
+  ws["!autofilter"] = {ref:`A5:Z${5+rows.length}`};
+  const comunas = agruparLotes(ord).map(g=>[g.comuna, g.lotes.length, r2(sumar(g.lotes,"m2Neto")), r0(sumar(g.lotes,"siiUf")), r0(sumar(g.lotes,"comUf")), r0(sumar(g.lotes,"tasUf")), r0(sumar(g.lotes,"libUf"))]);
+  const wsC = XLSX.utils.aoa_to_sheet([["Comuna","Lotes","m² neto","Avalúo SII (UF)","Comercial (UF)","Tasación (UF)","Valor libro (UF)"], ...comunas]);
+  wsC["!cols"] = [16,8,12,16,16,16,16].map(w=>({wch:w}));
+  const bancos = {};
+  ord.forEach(l=>{ const b = esLibre(l.hipoteca) ? "Libre" : (l.hipoteca||"Sin dato"); (bancos[b]=bancos[b]||[]).push(l); });
+  const wsB = XLSX.utils.aoa_to_sheet([["Hipoteca","Lotes","m² neto","Comercial (UF)","Tasación (UF)","Avalúo SII (UF)"],
+    ...Object.entries(bancos).map(([b,ls])=>[b, ls.length, r2(sumar(ls,"m2Neto")), r0(sumar(ls,"comUf")), r0(sumar(ls,"tasUf")), r0(sumar(ls,"siiUf"))])]);
+  wsB["!cols"] = [16,8,12,16,16,16].map(w=>({wch:w}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Valorización");
+  XLSX.utils.book_append_sheet(wb, wsC, "Por comuna");
+  XLSX.utils.book_append_sheet(wb, wsB, "Por banco");
+  XLSX.writeFile(wb, "valorizacion-terrenos-"+new Date().toISOString().slice(0,10)+".xlsx");
+  logAudit("exportar_valorizacion", "Exportó la valorización de terrenos a Excel ("+ord.length+" lotes)", "");
+}
+
+// ── Resumen del módulo: indicadores, gráficos y tabla completa ──
+function ValorizacionResumen({lotes, ufClp, onSaveUfClp, onOpen}){
+  const [fComuna,setFComuna]=useState([]);
+  const [fProy,setFProy]=useState([]);
+  const [fProp,setFProp]=useState([]);
+  const [fHip,setFHip]=useState([]);
+  const [grupos,setGrupos]=useState(()=>{
+    try{ const g=JSON.parse(localStorage.getItem("gt_vz_grupos")||"null"); if(Array.isArray(g)&&g.length) return g; }catch(e){}
+    return ["id","sup","sii","com","tas","lib"];
+  });
+  const [agrupar,setAgrupar]=useState(true);
+  const [orden,setOrden]=useState({col:null,dir:1});
+  const toggleGrupo = id => setGrupos(g=>{
+    const n = g.includes(id) ? g.filter(x=>x!==id) : [...g,id];
+    try{ localStorage.setItem("gt_vz_grupos", JSON.stringify(n)); }catch(e){}
+    return n;
+  });
+
+  const opts = k => [...new Set(lotes.map(l=>l[k]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),"es"));
+  const vis = lotes.filter(l=>(fComuna.length===0||fComuna.includes(l.comuna))
+    && (fProy.length===0||fProy.includes(l.proyecto))
+    && (fProp.length===0||fProp.includes(l.propietario))
+    && (fHip.length===0||fHip.includes(l.hipoteca)));
+  const hayFiltros = fComuna.length||fProy.length||fProp.length||fHip.length;
+  const limpiar = ()=>{ setFComuna([]); setFProy([]); setFProp([]); setFHip([]); };
+
+  // Por comuna
+  const porComuna = agruparLotes(vis).map(g=>({comuna:g.comuna, n:g.lotes.length, sii:sumar(g.lotes,"siiUf"), com:sumar(g.lotes,"comUf"), tas:sumar(g.lotes,"tasUf"), lib:sumar(g.lotes,"libUf")}));
+  const serie = VZ_METRICAS.filter(m=>porComuna.some(g=>g[m.k]>0));
+  const maxV = Math.max(1, ...porComuna.flatMap(g=>serie.map(m=>g[m.k])));
+  const bw=14, gIn=3, gOut=22, padL=60, padB=34, padT=14, chH=170;
+  const gW = serie.length*(bw+gIn)-gIn;
+  const W = padL + porComuna.length*(gW+gOut) + 10;
+  const fmtCorto = v => v>=1e6 ? (v/1e6).toLocaleString("es-CL",{maximumFractionDigits:1})+" M" : v>=1e3 ? Math.round(v/1e3)+" mil" : Math.round(v)+"";
+  // Por banco (hipoteca)
+  const bancos = {};
+  vis.forEach(l=>{ const b = esLibre(l.hipoteca) ? "Libre" : (l.hipoteca||"Sin dato"); (bancos[b]=bancos[b]||[]).push(l); });
+  const filasBanco = Object.entries(bancos).map(([b,ls])=>({banco:b, n:ls.length, m2:sumar(ls,"m2Neto"), com:sumar(ls,"comUf"), tas:sumar(ls,"tasUf")}))
+    .sort((a,b)=>(a.banco==="Libre")-(b.banco==="Libre") || b.com-a.com);
+  const totCom = sumar(vis,"comUf");
+  // Top 10 por valor comercial
+  const top = [...vis].filter(l=>l.comUf>0).sort((a,b)=>b.comUf-a.comUf).slice(0,10);
+  const maxTop = top.length ? top[0].comUf : 1;
+  // Antigüedad de las tasaciones
+  const buckets = [
+    {lbl:"Menos de 1 año", color:"#1a7a4a", test:a=>a!==null&&a<1},
+    {lbl:"Entre 1 y 3 años", color:"#d08a3a", test:a=>a!==null&&a>=1&&a<=3},
+    {lbl:"Más de 3 años", color:"#c0392b", test:a=>a!==null&&a>3},
+    {lbl:"Sin tasación", color:"#c9c5bc", test:a=>a===null},
+  ].map(b=>{ const ls=vis.filter(l=>b.test(l.tasUf>0?aniosDesde(l.tas_fecha):null)); return {...b, n:ls.length, m2:sumar(ls,"m2Neto"), com:sumar(ls,"comUf")}; });
+
+  // Tabla
+  const cols = VZ_COLS.filter(c=>grupos.includes(c.grupo));
+  const gruposVis = VZ_GRUPOS.filter(g=>cols.some(c=>c.grupo===g.id));
+  const ordenar = ls => {
+    if(!orden.col) return [...ls].sort((a,b)=>(a.orden||0)-(b.orden||0));
+    const c = VZ_COLS.find(x=>x.id===orden.col);
+    const get = orden.col==="nombre" ? (l=>l.nombre) : (l=>valorCol(c,l));
+    return [...ls].sort((a,b)=>{
+      const x=get(a), y=get(b), nx=vacioVz(x), ny=vacioVz(y);
+      if(nx&&ny) return 0; if(nx) return 1; if(ny) return -1;
+      if(typeof x==="number" && typeof y==="number") return (x-y)*orden.dir;
+      return String(x).localeCompare(String(y),"es",{numeric:true})*orden.dir;
+    });
+  };
+  const clickOrden = id => setOrden(o=>{
+    const esTxt = id==="nombre" || (VZ_COLS.find(x=>x.id===id)||{}).txt || /fecha/.test(id);
+    const dir0 = esTxt ? 1 : -1;
+    if(o.col!==id) return {col:id, dir:dir0};
+    if(o.dir===dir0) return {col:id, dir:-dir0};
+    return {col:null, dir:1};
+  });
+  const flecha = id => orden.col===id ? (orden.dir===1?" ▲":" ▼") : "";
+  const bloques = agrupar ? agruparLotes(vis).map(g=>({titulo:g.comuna, lotes:ordenar(g.lotes)})) : [{titulo:null, lotes:ordenar(vis)}];
+  const gIni = (i) => i===0 || cols[i-1].grupo!==cols[i].grupo;
+  const filaTotales = (ls, cls, titulo) => (
+    <tr className={cls}>
+      <td className="c-first">{titulo} <span style={{fontWeight:400,opacity:0.7}}>· {ls.length} lote{ls.length===1?"":"s"}</span></td>
+      {cols.map((c,i)=><td key={c.id} className={`${c.txt?"c-txt":""} ${gIni(i)?"g-start":""}`}>{totalCol(c,ls)}</td>)}
+    </tr>
+  );
+
   return (
-    <div className="info-card" style={{marginTop:14}}>
-      <h4>💲 Valores</h4>
-      {filas.length===0 ? (
-        <div className="isum-empty">Este terreno no está en la base de valores.</div>
-      ) : filas.length===1 ? (
-        <>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
-            {METRICAS_VALOR.map(m=>{
-              const f=filas[0], uf=f[m.uf], fe=m.fecha?f[m.fecha]:null, veces=(m.k!=="sii"&&uf>0&&f.siiUf>0)?uf/f.siiUf:null;
-              return (
-                <div key={m.k} style={box}>
-                  <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.1,color:"var(--ink3)",fontWeight:600}}>{m.lbl}</div>
-                  <div style={{fontSize:15,fontWeight:700,color:uf?m.color:"var(--ink3)",marginTop:3}}>{uf?fmtUFv(uf):"Sin dato"}</div>
-                  {uf ? <div style={{fontSize:11,color:"var(--ink3)"}}>{fmtUFm2v(f[m.m2])}</div> : null}
-                  {(uf && fe) ? <div style={{fontSize:11,color:fechaAntigua(fe)&&m.k==="tas"?"var(--amber)":"var(--ink3)"}}>{fmtDate(fe)}</div> : null}
-                  {veces!==null && <div style={{fontSize:11,color:"var(--ink3)"}}>{fmtVeces(veces)} el avalúo SII</div>}
+    <>
+      <UfEditor ufClp={ufClp} onSave={onSaveUfClp}/>
+      <div className="dash-filter-bar">
+        <label style={{marginRight:4}}>Filtrar:</label>
+        <MultiSelect label="Comuna" options={opts("comuna")} selected={fComuna} onChange={setFComuna}/>
+        <MultiSelect label="Proyecto" options={opts("proyecto")} selected={fProy} onChange={setFProy}/>
+        <MultiSelect label="Propietario" options={opts("propietario")} selected={fProp} onChange={setFProp}/>
+        <MultiSelect label="Hipoteca" options={opts("hipoteca")} selected={fHip} onChange={setFHip}/>
+        {hayFiltros?<button className="dash-clr" onClick={limpiar}>✕ Limpiar filtros</button>:null}
+        <span style={{marginLeft:"auto",fontSize:11,color:"var(--ink3)"}}>{vis.length} de {lotes.length} lotes</span>
+        <button className="btn btn-outline btn-sm" onClick={()=>exportarValorizacion(vis, ufClp, !!hayFiltros)}>⬇ Exportar a Excel</button>
+      </div>
+
+      <div className="kpi-grid-5">
+        <div className="kpi-card teal">
+          <div className="kpi-label">Superficie neta</div>
+          <div className="kpi-value" style={{fontSize:16}}>{fmtM2v(sumar(vis,"m2Neto"))}</div>
+          <div className="kpi-sub">{vis.length} lotes · {porComuna.length} comunas</div>
+          <div className="kpi-sub">m² SII: {fmtM2v(sumar(vis,"m2Sii"))}</div>
+        </div>
+        {VZ_METRICAS.map(m=>{
+          const tot=sumar(vis,m.uf), n=contar(vis,m.uf), veces = m.k==="sii" ? null : ratioVz(vis,m.uf,"siiUf"), pm2=promM2(vis,m.uf,m.base);
+          return (
+            <div key={m.k} className="kpi-card" style={{borderTopColor:m.color}}>
+              <div className="kpi-label">{m.lbl}</div>
+              <div className="kpi-value" style={{fontSize:16,color:n?m.color:"var(--ink3)"}}>{n?fmtUFv(tot):"Sin datos"}</div>
+              <div className="kpi-sub">{n} de {vis.length} lotes con dato{pm2!==null?` · prom. ${fmtUFm2v(pm2)}`:""}</div>
+              {m.k==="sii" && n>0 && <div className="kpi-sub">{fmtCLP(sumar(vis,"siiClp"))}</div>}
+              {veces!==null && <div className="kpi-sub">{fmtVeces(veces)} el avalúo SII de esos lotes</div>}
+              {m.k==="tas" && n>0 && <div className="kpi-sub" style={{color:buckets[2].n?"var(--amber)":undefined}}>{buckets[2].n} con más de 3 años</div>}
+              {m.k==="lib" && n===0 && <div className="kpi-sub">Pendiente de contabilidad</div>}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="vz-grid2">
+        <div className="vz-card">
+          <h4 className="vz-h4">📊 Valor por comuna (UF)</h4>
+          <div className="chart-scroll">
+            <svg viewBox={`0 0 ${W} ${chH+padT+padB}`} style={{width:"100%",minWidth:420,height:"auto",display:"block"}}>
+              {[0,0.25,0.5,0.75,1].map(t=>{ const y=padT+chH*(1-t); return <g key={t}>
+                <line x1={padL} y1={y} x2={W-10} y2={y} stroke="var(--line)" strokeWidth="1"/>
+                <text x={padL-6} y={y+4} textAnchor="end" fontSize="10" fill="var(--ink3)">{fmtCorto(maxV*t)}</text></g>; })}
+              {porComuna.map((g,i)=>{
+                const x0 = padL + i*(gW+gOut) + gOut/2;
+                return <g key={g.comuna}>
+                  {serie.map((m,j)=>{ const h=(g[m.k]/maxV)*chH; return h>0 &&
+                    <rect key={m.k} x={x0+j*(bw+gIn)} y={padT+chH-h} width={bw} height={h} fill={m.color} rx="2"><title>{g.comuna} · {m.lbl}: {fmtUFv(g[m.k])}</title></rect>; })}
+                  <text x={x0+gW/2} y={padT+chH+15} textAnchor="middle" fontSize="10" fill="var(--ink2)">{g.comuna}</text>
+                </g>;
+              })}
+              <line x1={padL} y1={padT+chH} x2={W-10} y2={padT+chH} stroke="var(--ink3)" strokeWidth="1.5"/>
+            </svg>
+          </div>
+          <div className="vz-legend">{serie.map(m=><span key={m.k}><i style={{background:m.color}}/>{m.lbl}</span>)}</div>
+        </div>
+
+        <div className="vz-card">
+          <h4 className="vz-h4">🏦 Garantías por banco</h4>
+          <table className="vz-mini">
+            <thead><tr><th style={{textAlign:"left"}}>Hipoteca</th><th>Lotes</th><th>m² neto</th><th>Comercial</th><th>% comercial</th><th>Tasación</th></tr></thead>
+            <tbody>
+              {filasBanco.map(b=>(
+                <tr key={b.banco}>
+                  <td style={{textAlign:"left",fontWeight:600,color:b.banco==="Libre"?"var(--green)":"var(--ink)"}}>{b.banco==="Libre"?"Libre (sin hipoteca)":b.banco}</td>
+                  <td>{b.n}</td><td>{fmtN0(b.m2)}</td><td>{fmtUFv(b.com)}</td>
+                  <td>
+                    <div style={{display:"flex",alignItems:"center",gap:6,justifyContent:"flex-end"}}>
+                      <div className="vz-bar-track" style={{width:44}}><div className="vz-bar-fill" style={{width:(totCom>0?b.com/totCom*100:0)+"%",background:b.banco==="Libre"?"var(--green)":"#b7620a"}}/></div>
+                      {totCom>0?Math.round(b.com/totCom*100):0}%
+                    </div>
+                  </td>
+                  <td>{b.tas>0?fmtUFv(b.tas):"—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="chart-help">Valor de los lotes según el banco que tiene la hipoteca. "Libre" son los lotes sin hipoteca.</div>
+        </div>
+
+        <div className="vz-card">
+          <h4 className="vz-h4">🏆 Los 10 lotes de mayor valor comercial</h4>
+          {top.map((l,i)=>(
+            <div key={l.key} className="vz-top" onClick={()=>onOpen(l.key)} title="Ver ficha del lote">
+              <span className="vz-top-n">{i+1}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:12}}>
+                  <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.nombre} <span style={{color:"var(--ink3)",fontWeight:400}}>· {l.comuna}</span></span>
+                  <span style={{whiteSpace:"nowrap"}}>{fmtUFv(l.comUf)} <span style={{color:"var(--ink3)"}}>({totCom>0?Math.round(l.comUf/totCom*100):0}%)</span></span>
                 </div>
-              );
-            })}
-          </div>
-          <div style={{fontSize:11.5,color:"var(--ink3)",marginTop:8}}>
-            m² neto: {fmtM2(filas[0].m2Neto)}{filas[0].hipoteca?` · Hipoteca: ${filas[0].hipoteca}`:""}{filas[0].propietario?` · Propietario: ${filas[0].propietario}`:""}
-          </div>
-        </>
-      ) : (
-        <>
-          <div style={{fontSize:12,color:"var(--ink2)",marginBottom:8}}>Este terreno agrupa {filas.length} lotes en la base de valores:</div>
-          <div className="data-table">
-            <div className="dt-head" style={{gridTemplateColumns:"minmax(140px,1.4fr) 90px 1fr 1fr 1fr 1fr",columnGap:"10px"}}>
-              <span>Lote</span><span style={{textAlign:"right"}}>m² neto</span>
-              {METRICAS_VALOR.map(m=><span key={m.k} style={{textAlign:"right"}}>{m.lbl}</span>)}
-            </div>
-            {filas.map(f=>(
-              <div key={f.id||f.orden} className="dt-row" style={{gridTemplateColumns:"minmax(140px,1.4fr) 90px 1fr 1fr 1fr 1fr",columnGap:"10px"}}>
-                <span style={{fontSize:12,fontWeight:600}}>{f.nombre}<div style={{fontSize:10.5,color:"var(--ink3)",fontFamily:"monospace",fontWeight:400}}>{f.rol||"sin ROL"}</div></span>
-                <span style={{textAlign:"right",fontSize:12}}>{fmtM2(f.m2Neto)}</span>
-                {METRICAS_VALOR.map(m=><span key={m.k} style={{textAlign:"right",fontSize:12}}>{fmtUFv(f[m.uf])}</span>)}
+                <div className="vz-bar-track" style={{height:6,marginTop:4}}><div className="vz-bar-fill" style={{width:(l.comUf/maxTop*100)+"%",background:"#b7620a"}}/></div>
               </div>
-            ))}
-            <div className="dt-row" style={{gridTemplateColumns:"minmax(140px,1.4fr) 90px 1fr 1fr 1fr 1fr",columnGap:"10px",background:"var(--bg2)",fontWeight:700}}>
-              <span style={{fontSize:12}}>TOTAL</span>
-              <span style={{textAlign:"right",fontSize:12}}>{fmtM2(filas.reduce((x,f)=>x+(f.m2Neto||0),0))}</span>
-              {METRICAS_VALOR.map(m=>{ const t=filas.reduce((x,f)=>x+(f[m.uf]||0),0); return <span key={m.k} style={{textAlign:"right",fontSize:12}}>{t?fmtUFv(t):"—"}</span>; })}
             </div>
+          ))}
+          {top.length===0 && <div className="dt-empty">Sin datos</div>}
+        </div>
+
+        <div className="vz-card">
+          <h4 className="vz-h4">🗓 Antigüedad de las tasaciones</h4>
+          <div style={{display:"flex",height:14,borderRadius:7,overflow:"hidden",margin:"4px 0 12px",background:"var(--bg2)"}}>
+            {buckets.filter(b=>b.n>0).map(b=><div key={b.lbl} title={`${b.lbl}: ${b.n} lotes`} style={{width:(b.n/Math.max(1,vis.length)*100)+"%",background:b.color}}/>)}
           </div>
-        </>
-      )}
-      {filas.filter(f=>f.obs).map(f=>(
-        <div key={"o"+(f.id||f.orden)} style={{fontSize:11.5,color:"var(--amber)",marginTop:8,lineHeight:1.4}}>⚠ {filas.length>1?<b>{f.nombre}: </b>:null}{f.obs}</div>
-      ))}
-    </div>
+          <table className="vz-mini">
+            <thead><tr><th style={{textAlign:"left"}}>Tasación</th><th>Lotes</th><th>m² neto</th><th>Comercial</th></tr></thead>
+            <tbody>
+              {buckets.map(b=>(
+                <tr key={b.lbl}>
+                  <td style={{textAlign:"left"}}><i className="vz-sw" style={{background:b.color}}/>{b.lbl}</td>
+                  <td>{b.n}</td><td>{fmtN0(b.m2)}</td><td>{b.com>0?fmtUFv(b.com):"—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="chart-help">Sirve para ver qué lotes conviene volver a tasar.</div>
+        </div>
+      </div>
+
+      <div className="vz-card" style={{marginBottom:20}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:12}}>
+          <h4 className="vz-h4" style={{margin:0,marginRight:8}}>📋 Detalle por lote</h4>
+          <span style={{fontSize:11,color:"var(--ink3)"}}>Columnas:</span>
+          {VZ_GRUPOS.map(g=><span key={g.id} className={`vz-chip${grupos.includes(g.id)?" on":""}`} onClick={()=>toggleGrupo(g.id)}>{g.lbl}</span>)}
+          <span style={{width:1,height:18,background:"var(--line)",margin:"0 4px"}}/>
+          <span className={`vz-chip${agrupar?" on":""}`} onClick={()=>setAgrupar(a=>!a)}>Agrupar por comuna</span>
+          {orden.col && <button className="btn btn-ghost btn-xs" onClick={()=>setOrden({col:null,dir:1})}>Volver al orden del Excel</button>}
+        </div>
+        <div className="vz-table-wrap">
+          <table className="vz-table">
+            <thead>
+              <tr>
+                <th className="c-first" rowSpan={2} onClick={()=>clickOrden("nombre")} style={{cursor:"pointer"}}>Lote · ROL{flecha("nombre")}</th>
+                {gruposVis.map(g=><th key={g.id} className="grp" colSpan={cols.filter(c=>c.grupo===g.id).length}>{g.lbl}</th>)}
+              </tr>
+              <tr>
+                {cols.map((c,i)=><th key={c.id} className={`${c.txt?"c-txt":""} ${gIni(i)?"g-start":""}`} onClick={()=>clickOrden(c.id)} title="Ordenar">{c.lbl}{flecha(c.id)}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {bloques.map(b=>(
+                <React.Fragment key={b.titulo||"todos"}>
+                  {b.lotes.map(l=>(
+                    <tr key={l.key} className="lote" onClick={()=>onOpen(l.key)}>
+                      <td className="c-first">
+                        <div style={{fontWeight:600}}>{l.nombre}</div>
+                        <div style={{fontSize:10.5,color:"var(--ink3)",fontFamily:"monospace"}}>
+                          {l.rol||"sin ROL"}{l.obs && <span title={l.obs} style={{color:"var(--amber)",fontFamily:"inherit",marginLeft:6}}>⚠ obs.</span>}
+                        </div>
+                      </td>
+                      {cols.map((c,i)=>{ const v=valorCol(c,l); return (
+                        <td key={c.id} className={`${c.txt?"c-txt":""} ${c.wide?"c-wide":""} ${gIni(i)?"g-start":""}`} style={c.estilo?c.estilo(l):undefined}>
+                          {vacioVz(v) ? <span style={{color:"var(--ink3)"}}>—</span> : (c.fmt ? c.fmt(v) : v)}
+                        </td>); })}
+                    </tr>
+                  ))}
+                  {b.titulo && filaTotales(b.lotes, "subtot", b.titulo)}
+                </React.Fragment>
+              ))}
+              {filaTotales(vis, "total", "TOTAL")}
+            </tbody>
+          </table>
+        </div>
+        <div className="chart-help">Haz clic en un lote para ver su ficha. Haz clic en un título para ordenar. Los UF/m² de los totales son promedios ponderados. Fechas de tasación en naranjo: más de 3 años.</div>
+      </div>
+    </>
   );
 }
 
-function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSelectTerreno, hiddenRols, ufClp=40027, onSaveUfClp, valores=null}) {
+// ── Ficha de un lote ──
+function ValorizacionLote({lote, orden, lotes, onNav, onVolver, onGuardarObs}){
+  const idx = orden.findIndex(l=>l.key===lote.key);
+  const prev = idx>0 ? orden[idx-1] : null;
+  const next = idx>=0 && idx<orden.length-1 ? orden[idx+1] : null;
+  const [editObs,setEditObs]=useState(false);
+  const [obsTxt,setObsTxt]=useState(lote.obs||"");
+  const [guardando,setGuardando]=useState(false);
+  useEffect(()=>{ setEditObs(false); setObsTxt(lote.obs||""); },[lote.key, lote.obs]);
+  // ← → para recorrer los lotes, Esc para volver al resumen (salvo escribiendo en un campo)
+  useEffect(()=>{
+    const h = e => {
+      if(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      if(document.querySelector(".overlay")) return; // hay una ventana abierta
+      if(e.key==="ArrowLeft" && prev) onNav(prev.key);
+      else if(e.key==="ArrowRight" && next) onNav(next.key);
+      else if(e.key==="Escape") onVolver();
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  },[prev, next, onNav, onVolver]);
+
+  const pares = lotes.filter(l=>(l.comuna||"")===(lote.comuna||""));
+  const maxUf = Math.max(1, ...VZ_METRICAS.map(m=>lote[m.uf]||0));
+  const rankCom = lote.comUf>0 ? [...pares].filter(l=>l.comUf>0).sort((a,b)=>b.comUf-a.comUf).findIndex(l=>l.key===lote.key)+1 : 0;
+  const nComCom = pares.filter(l=>l.comUf>0).length;
+  const difNetoSii = (lote.m2Neto>0 && lote.m2Sii>0) ? (lote.m2Neto-lote.m2Sii)/lote.m2Sii : null;
+  const guardar = async () => { setGuardando(true); try{ await onGuardarObs(lote, obsTxt); setEditObs(false); }catch(e){ alert("Error: "+e.message); } setGuardando(false); };
+  const lblMin = {fontSize:10,textTransform:"uppercase",letterSpacing:1.1,color:"var(--ink3)",fontWeight:600};
+
+  return (
+    <>
+      <div className="vz-card" style={{marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"flex-start",gap:16,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:260}}>
+            <div style={lblMin}>{lote.comuna||"Sin comuna"}{lote.proyecto?" · "+lote.proyecto:""}</div>
+            <div style={{fontSize:21,fontWeight:700,margin:"4px 0 8px",fontFamily:"'Libre Baskerville',serif"}}>{lote.nombre}</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+              <span className="vz-rol">{lote.rol||"sin ROL"}</span>
+              <HipotecaChip h={lote.hipoteca}/>
+              {lote.propietario && <span style={{fontSize:12,color:"var(--ink2)"}}>Propietario: <b>{lote.propietario}</b></span>}
+            </div>
+            {lote.detalle && <div style={{marginTop:10,fontSize:12.5,color:"var(--ink2)",lineHeight:1.5}}>{lote.detalle}</div>}
+          </div>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
+            <div style={{display:"flex",gap:6}}>
+              <button className="btn btn-ghost btn-sm" onClick={onVolver}>⊞ Resumen</button>
+              <button className="btn btn-outline btn-sm" disabled={!prev} onClick={()=>prev&&onNav(prev.key)} title={prev?prev.nombre:""}>← Anterior</button>
+              <button className="btn btn-outline btn-sm" disabled={!next} onClick={()=>next&&onNav(next.key)} title={next?next.nombre:""}>Siguiente →</button>
+            </div>
+            <div style={{fontSize:11,color:"var(--ink3)"}}>{idx>=0?`Lote ${idx+1} de ${orden.length}`:"Fuera del filtro de búsqueda"} · también con las flechas ← → del teclado</div>
+            <div style={{fontSize:11,color:"var(--ink3)"}}>Origen: Excel "BASE DATOS TERRENOS", fila {lote.orden}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="vz-sup">
+        {[["Superficie bruta",lote.m2Bruto],["Superficie neta",lote.m2Neto],["Superficie SII",lote.m2Sii]].map(([lbl,v])=>(
+          <div key={lbl} className="vz-sup-item"><div style={lblMin}>{lbl}</div><div style={{fontSize:16,fontWeight:700,marginTop:3}}>{fmtM2v(v)}</div></div>
+        ))}
+        <div className="vz-sup-item" style={{flex:1.4}}>
+          <div style={lblMin}>Neta vs SII</div>
+          <div style={{fontSize:12.5,marginTop:5,color:difNetoSii!==null&&Math.abs(difNetoSii)>0.05?"var(--amber)":"var(--ink2)"}}>
+            {difNetoSii===null ? "—" : Math.abs(difNetoSii)<=0.005 ? "Coinciden" : `La neta es ${difTxt(difNetoSii)} que la del SII`}
+          </div>
+        </div>
+      </div>
+
+      <div className="vz-metrics">
+        {VZ_METRICAS.map(m=>{
+          const uf=lote[m.uf], fe=m.fecha?lote[m.fecha]:null;
+          const veces = (m.k!=="sii" && uf>0 && lote.siiUf>0) ? uf/lote.siiUf : null;
+          const clp = m.k==="sii" ? lote.siiClp : m.k==="lib" ? lote.libClp : null;
+          const vieja = m.k==="tas" && fechaAntigua(fe);
+          return (
+            <div key={m.k} className="vz-metric" style={{borderTopColor:m.color}}>
+              <div style={lblMin}>{m.lbl}{m.nota?<span style={{textTransform:"none",letterSpacing:0,fontWeight:400}}> · {m.nota}</span>:null}</div>
+              <div style={{fontSize:20,fontWeight:700,color:uf?m.color:"var(--ink3)",margin:"6px 0 4px"}}>{uf?fmtUFv(uf):"Sin dato"}</div>
+              {clp>0 && <div className="vz-mline">{fmtCLP(clp)}</div>}
+              {uf ? <div className="vz-mline">{fmtUFm2v(lote[m.m2])}</div> : null}
+              {(uf && fe) ? <div className="vz-mline" style={vieja?{color:"var(--amber)",fontWeight:600}:undefined}>{fmtDate(fe)} · {fmtAntig(fe)}</div> : null}
+              {veces!==null && <div className="vz-mline">{fmtVeces(veces)} el avalúo SII</div>}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="vz-grid2">
+        <div className="vz-card">
+          <h4 className="vz-h4">⚖️ Comparación de valores</h4>
+          {VZ_METRICAS.map(m=>{ const v=lote[m.uf]; return (
+            <div key={m.k} style={{marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
+                <span style={{color:"var(--ink2)"}}>{m.lbl}</span><span style={{fontWeight:600}}>{v?fmtUFv(v):"Sin dato"}</span>
+              </div>
+              <div className="vz-bar-track"><div className="vz-bar-fill" style={{width:(v?v/maxUf*100:0)+"%",background:m.color}}/></div>
+            </div>); })}
+          {lote.comUf>0 && lote.tasUf>0 && (
+            <div className="chart-help">La tasación es {difTxt(lote.tasUf/lote.comUf-1)} que el valor comercial.</div>
+          )}
+        </div>
+        <div className="vz-card">
+          <h4 className="vz-h4">📍 Frente a su comuna ({lote.comuna||"—"})</h4>
+          <table className="vz-mini">
+            <thead><tr><th style={{textAlign:"left"}}>UF/m²</th><th>Este lote</th><th>Promedio comuna</th><th>Diferencia</th></tr></thead>
+            <tbody>
+              {VZ_METRICAS.map(m=>{ const a=lote[m.m2], p=promM2(pares,m.uf,m.base); const d=(a>0&&p>0)?a/p-1:null; return (
+                <tr key={m.k}>
+                  <td style={{textAlign:"left"}}>{m.lbl}</td>
+                  <td>{a?fmtN2(a):"—"}</td><td>{p?fmtN2(p):"—"}</td>
+                  <td style={{color:d===null?"var(--ink3)":d>=0?"var(--green)":"var(--red)",fontWeight:600}}>{fmtPctV(d)}</td>
+                </tr>); })}
+            </tbody>
+          </table>
+          <div className="chart-help">
+            {rankCom>0 ? `Es el n° ${rankCom} de ${nComCom} lotes de la comuna en valor comercial. ` : ""}
+            El promedio es ponderado por superficie ({pares.length} lote{pares.length===1?"":"s"} en {lote.comuna||"la comuna"}).
+          </div>
+        </div>
+      </div>
+
+      <div className="vz-card" style={{marginBottom:20}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+          <h4 className="vz-h4" style={{margin:0}}>📝 Observaciones</h4>
+          {!editObs && <button className="btn btn-outline btn-xs" style={{marginLeft:"auto"}} onClick={()=>setEditObs(true)}>✏️ Editar</button>}
+        </div>
+        {editObs ? (
+          <>
+            <textarea value={obsTxt} onChange={e=>setObsTxt(e.target.value)} rows={3} style={{width:"100%",border:"1px solid var(--line)",borderRadius:6,padding:"8px 11px",fontSize:13,fontFamily:"inherit",background:"var(--bg)"}} placeholder="Notas sobre la valorización de este lote"/>
+            <div style={{display:"flex",gap:8,marginTop:8}}>
+              <button className="btn btn-primary btn-sm" onClick={guardar} disabled={guardando}>{guardando?"Guardando...":"Guardar"}</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>{setObsTxt(lote.obs||"");setEditObs(false);}}>Cancelar</button>
+            </div>
+          </>
+        ) : (
+          <div style={{fontSize:13,color:lote.obs?"var(--ink2)":"var(--ink3)",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{lote.obs || "Sin observaciones."}</div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ── Carga de un Excel actualizado ──
+// Lee la hoja "Base" con el mismo formato que "BASE DATOS TERRENOS" (títulos en la fila 4, lotes
+// desde la fila 5), muestra qué cambia y reemplaza los datos en una sola operación en la base
+// (función reemplazar_valores), que antes guarda una copia de lo que había para poder restaurarla.
+const VZ_CAMPOS = [["nombre","Nombre"],["propietario","Propietario"],["comuna","Comuna"],["proyecto","Proyecto"],["detalle","Detalle"],["hipoteca","Hipoteca"],
+  ["m2_bruto","m² bruto"],["m2_neto","m² neto"],["sii_m2","m² SII"],["sii_clp","Avalúo SII $"],["sii_fecha","Fecha avalúo"],
+  ["com_uf","Comercial UF"],["com_uf_m2","Comercial UF/m²"],["tas_uf","Tasación UF"],["tas_uf_m2","Tasación UF/m²"],["tas_fecha","Fecha tasación"],
+  ["libro_clp","Valor libro $"],["libro_uf","Valor libro UF"],["libro_uf_m2","Valor libro UF/m²"],["libro_fecha","Fecha valor libro"]];
+const VZ_NUM = new Set(["m2_bruto","m2_neto","sii_m2","sii_clp","com_uf","com_uf_m2","tas_uf","tas_uf_m2","libro_clp","libro_uf","libro_uf_m2"]);
+// Clave para reconocer un lote entre dos cargas: su ROL (100-05 = 100-5) o, si no tiene, su nombre
+const normRol = r => String(r).trim().split("-").map(p=>/^\d+$/.test(p.trim()) ? String(parseInt(p,10)) : p.trim().toUpperCase()).join("-");
+const claveLote = f => f.rol ? "R:"+normRol(f.rol) : "N:"+String(f.nombre||"").trim().toLowerCase();
+function igualVz(campo, a, b){
+  const va = vacioVz(a)?null:a, vb = vacioVz(b)?null:b;
+  if(va===null && vb===null) return true;
+  if(va===null || vb===null) return false;
+  if(VZ_NUM.has(campo)){ const x=Number(va), y=Number(vb); return Math.abs(x-y) <= 0.001 + Math.abs(y)*1e-9; }
+  if(/fecha/.test(campo)) return String(va).slice(0,10)===String(vb).slice(0,10);
+  return String(va).trim()===String(vb).trim();
+}
+function compararValores(actuales, nuevas){
+  const indexar = filas => { const m=new Map(); filas.forEach(f=>{ let k=claveLote(f), i=2; while(m.has(k)) k=claveLote(f)+"#"+(i++); m.set(k,f); }); return m; };
+  const A=indexar(actuales), N=indexar(nuevas);
+  const nuevos=[], eliminados=[], cambios=[]; let iguales=0;
+  N.forEach((f,k)=>{
+    const a=A.get(k);
+    if(!a){ nuevos.push(f); return; }
+    const cs = VZ_CAMPOS.filter(([c])=>!igualVz(c,a[c],f[c])).map(([c,lbl])=>({campo:c, lbl, antes:a[c], despues:f[c]}));
+    if(cs.length) cambios.push({fila:f, cambios:cs}); else iguales++;
+  });
+  A.forEach((a,k)=>{ if(!N.has(k)) eliminados.push(a); });
+  return {nuevos, eliminados, cambios, iguales};
+}
+const fmtCampoVz = (campo, v) => {
+  if(vacioVz(v)) return "—";
+  if(/_clp$/.test(campo)) return fmtCLP(v);
+  if(/fecha/.test(campo)) return fmtDate(v);
+  if(/^(m2_|sii_m2)/.test(campo)) return fmtM2v(v);
+  if(VZ_NUM.has(campo)) return Number(v).toLocaleString("es-CL",{maximumFractionDigits:2});
+  return String(v);
+};
+function leerExcelValores(buf, terrenos){
+  if(typeof XLSX === "undefined") throw new Error("La librería de Excel aún no cargó. Refresca la página e intenta de nuevo.");
+  const wb = XLSX.read(buf, {type:"array", cellNF:true});
+  const ws = wb.Sheets["Base"] || wb.Sheets[wb.SheetNames[0]];
+  if(!ws || !ws["!ref"]) throw new Error("El archivo no tiene una hoja con datos.");
+  const val = a => { const c=ws[a]; return c ? c.v : null; };
+  // Fecha de una celda con formato de fecha (Excel guarda los días desde 1899-12-30)
+  const fecha = a => {
+    const c = ws[a]; if(!c) return null;
+    if(c.t==="d" && c.v instanceof Date && !isNaN(c.v)) return c.v.toISOString().slice(0,10);
+    if(c.t==="n" && c.v>0 && c.z && XLSX.SSF.is_date(c.z)) return new Date(Date.UTC(1899,11,30)+Math.round(c.v)*86400000).toISOString().slice(0,10);
+    return null;
+  };
+  const titulo = c => String(val(c+"4")||"").trim().toLowerCase();
+  if(titulo("A")!=="rol" || titulo("B")!=="terreno" || titulo("K")!=="clp")
+    throw new Error('El archivo no tiene el formato esperado: en la fila 4 deben estar los títulos "ROL", "Terreno", …, igual que en "BASE DATOS TERRENOS" (hoja Base).');
+  const num = x => (typeof x==="number" && isFinite(x)) ? x : null;           // "n.a." → sin dato
+  const txt = x => { if(x===null||x===undefined) return null; const s=String(x).trim(); return s||null; };
+  // El ROL se guarda con el formato que usa la página cuando es el mismo número (ej. 100-05 → 100-5)
+  const partes = r => String(r).split("-").map(p=>parseInt(p,10));
+  const formatoPagina = r => {
+    if(!r) return r;
+    const pr = partes(r);
+    const t = (terrenos||[]).find(t=>{ const pt=partes(t.rol); return pt.length===pr.length && pt.every((n,i)=>n===pr[i]); });
+    return t ? t.rol : r;
+  };
+  const ultima = XLSX.utils.decode_range(ws["!ref"]).e.r + 1;
+  const filas = [];
+  for(let r=5; r<=ultima; r++){
+    const rol = txt(val("A"+r)), nombre = txt(val("B"+r));
+    if(!rol && !nombre) continue;
+    const tasM2 = num(val("T"+r)); // sin UF/m² de tasación no hay tasación (el 0 que calcula el Excel es "sin dato")
+    filas.push({orden:r, rol:formatoPagina(rol), rol_padre:null, nombre,
+      propietario:txt(val("C"+r)), comuna:txt(val("D"+r)), proyecto:txt(val("E"+r)), detalle:txt(val("F"+r)),
+      m2_bruto:num(val("G"+r)), m2_neto:num(val("H"+r)), hipoteca:txt(val("I"+r)),
+      sii_m2:num(val("J"+r)), sii_clp:num(val("K"+r)), sii_fecha:fecha("N"+r),
+      com_uf:num(val("P"+r)), com_uf_m2:num(val("Q"+r)),
+      tas_uf: tasM2 ? num(val("S"+r)) : null, tas_uf_m2: tasM2, tas_fecha: tasM2 ? fecha("U"+r) : null,
+      libro_clp:num(val("V"+r)), libro_uf:num(val("W"+r)), libro_uf_m2:num(val("X"+r)), libro_fecha:fecha("Y"+r),
+      obs:null});
+  }
+  if(filas.length===0) throw new Error("No encontré lotes desde la fila 5.");
+  return filas;
+}
+function ImportarValoresModal({actuales, terrenos, ufClp, onClose, onListo}){
+  const [nuevas,setNuevas]=useState(null);
+  const [archivo,setArchivo]=useState("");
+  const [error,setError]=useState("");
+  const [hist,setHist]=useState(null);
+  const [verCambios,setVerCambios]=useState(true);
+  const [busy,setBusy]=useState(false);
+  useEffect(()=>{
+    db.select("valores_importaciones","select=id,created_at,usuario,archivo,n_previas,n_nuevas&order=created_at.desc&limit=10")
+      .then(r=>setHist(r||[])).catch(()=>setHist([]));
+  },[]);
+  const leer = async e => {
+    const f = e.target.files && e.target.files[0]; if(!f) return;
+    setError(""); setNuevas(null);
+    try{ setNuevas(leerExcelValores(await f.arrayBuffer(), terrenos)); setArchivo(f.name); }
+    catch(err){ setError(err.message); }
+    e.target.value = "";
+  };
+  const dif = nuevas ? compararValores(actuales, nuevas) : null;
+  const resumen = filas => { const ls=prepararLotes(filas, ufClp); return {n:ls.length, m2:sumar(ls,"m2Neto"), sii:sumar(ls,"siiClp"), com:sumar(ls,"comUf"), tas:sumar(ls,"tasUf"), lib:sumar(ls,"libUf")}; };
+  const rA = resumen(actuales), rN = nuevas ? resumen(nuevas) : null;
+  const confirmar = async () => {
+    setBusy(true); setError("");
+    try{
+      // Las observaciones escritas en la página se conservan para los lotes que siguen en el Excel
+      const previas = {}; actuales.forEach(a=>{ previas[claveLote(a)] = a; });
+      const filas = nuevas.map(f=>{ const a=previas[claveLote(f)]||{}; return {...f, obs:a.obs||null, rol_padre:a.rol_padre||null}; });
+      await db.rpc("reemplazar_valores", {p_filas:filas, p_archivo:archivo});
+      logAudit("cargar_valores", `Cargó el Excel de valorización "${archivo}": ${filas.length} lotes (${dif.nuevos.length} nuevos, ${dif.eliminados.length} eliminados, ${dif.cambios.length} con cambios)`, "");
+      onListo();
+    }catch(err){ setError("No se pudo guardar: "+err.message); setBusy(false); }
+  };
+  const restaurar = async h => {
+    const cuando = new Date(h.created_at).toLocaleString("es-CL");
+    if(!confirm(`¿Volver a los datos que había antes de la carga del ${cuando}?\n\nLos datos actuales quedan guardados en el historial, así que esto también se puede deshacer.`)) return;
+    setBusy(true); setError("");
+    try{
+      const r = await db.select("valores_importaciones","id=eq."+h.id+"&select=filas_previas");
+      const filas = (r[0] && r[0].filas_previas) || [];
+      if(!filas.length) throw new Error("Esa copia está vacía.");
+      await db.rpc("reemplazar_valores", {p_filas:filas, p_archivo:"Restauración: datos previos a la carga del "+cuando});
+      logAudit("restaurar_valores", `Restauró la valorización a los datos previos a la carga del ${cuando} (${filas.length} lotes)`, "");
+      onListo();
+    }catch(err){ setError("No se pudo restaurar: "+err.message); setBusy(false); }
+  };
+  const fila = (lbl, a, n, fmt) => (
+    <tr><td style={{textAlign:"left"}}>{lbl}</td><td>{fmt(a)}</td><td>{fmt(n)}</td>
+      <td style={{color:Math.abs(n-a)<0.5?"var(--ink3)":"var(--ink)",fontWeight:Math.abs(n-a)<0.5?400:600}}>{Math.abs(n-a)<0.5?"=":(n>a?"+":"−")+fmt(Math.abs(n-a))}</td></tr>
+  );
+  return (
+    <Modal title="⇪ Cargar Excel de valorización" onClose={onClose} large footer={
+      <>
+        <button className="btn btn-ghost btn-sm" onClick={onClose} disabled={busy}>Cancelar</button>
+        {dif && <button className="btn btn-primary btn-sm" onClick={confirmar} disabled={busy || (dif.nuevos.length+dif.eliminados.length+dif.cambios.length===0)}>
+          {busy ? "Guardando..." : (dif.nuevos.length+dif.eliminados.length+dif.cambios.length===0 ? "No hay cambios" : "Reemplazar datos con este Excel")}
+        </button>}
+      </>}>
+      <div style={{fontSize:12.5,color:"var(--ink2)",lineHeight:1.55,marginBottom:12}}>
+        Elige el Excel actualizado con el mismo formato que <b>BASE DATOS TERRENOS</b> (hoja <b>Base</b>: títulos en la fila 4 y lotes desde la fila 5).
+        Antes de guardar vas a ver qué cambia. Al confirmar se guarda una copia de los datos actuales, que puedes restaurar desde el historial de abajo.
+      </div>
+      <label className="btn btn-outline btn-sm" style={{display:"inline-flex",cursor:"pointer"}}>
+        📂 Elegir archivo Excel
+        <input type="file" accept=".xlsx,.xlsm,.xls" onChange={leer} style={{display:"none"}}/>
+      </label>
+      {archivo && <span style={{marginLeft:10,fontSize:12,color:"var(--ink3)"}}>{archivo}</span>}
+      {error && <div style={{marginTop:10,padding:"8px 12px",background:"var(--red-lt)",color:"var(--red)",borderRadius:6,fontSize:12.5}}>{error}</div>}
+
+      {dif && (
+        <div style={{marginTop:14}}>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+            <span className="vz-chip">{nuevas.length} lotes en el archivo</span>
+            <span className="vz-chip" style={dif.nuevos.length?{borderColor:"var(--green)",color:"var(--green)"}:undefined}>{dif.nuevos.length} nuevos</span>
+            <span className="vz-chip" style={dif.eliminados.length?{borderColor:"var(--red)",color:"var(--red)"}:undefined}>{dif.eliminados.length} ya no están</span>
+            <span className="vz-chip" style={dif.cambios.length?{borderColor:"var(--amber)",color:"var(--amber)"}:undefined}>{dif.cambios.length} con cambios</span>
+            <span className="vz-chip">{dif.iguales} sin cambios</span>
+          </div>
+          <table className="vz-mini" style={{marginBottom:12}}>
+            <thead><tr><th style={{textAlign:"left"}}>Totales</th><th>Hoy</th><th>Con el archivo</th><th>Diferencia</th></tr></thead>
+            <tbody>
+              {fila("Lotes", rA.n, rN.n, v=>fmtN0(v))}
+              {fila("m² neto", rA.m2, rN.m2, v=>fmtM2n(v))}
+              {fila("Avalúo SII", rA.sii, rN.sii, v=>fmtCLP(v))}
+              {fila("Comercial (UF)", rA.com, rN.com, v=>fmtN0(v))}
+              {fila("Tasación (UF)", rA.tas, rN.tas, v=>fmtN0(v))}
+              {fila("Valor libro (UF)", rA.lib, rN.lib, v=>fmtN0(v))}
+            </tbody>
+          </table>
+          {(dif.nuevos.length+dif.eliminados.length+dif.cambios.length)>0 && (
+            <div style={{border:"1px solid var(--line)",borderRadius:8,maxHeight:260,overflowY:"auto"}}>
+              <div style={{padding:"8px 12px",background:"var(--bg)",fontSize:12,fontWeight:600,cursor:"pointer"}} onClick={()=>setVerCambios(v=>!v)}>{verCambios?"▼":"▶"} Detalle de lo que cambia</div>
+              {verCambios && (
+                <div style={{padding:"6px 12px 10px",fontSize:12,lineHeight:1.6}}>
+                  {dif.nuevos.map(f=><div key={"n"+claveLote(f)} style={{color:"var(--green)"}}>＋ Nuevo: <b>{f.nombre}</b> {f.rol?`(${f.rol})`:""} — fila {f.orden}</div>)}
+                  {dif.eliminados.map(f=><div key={"e"+claveLote(f)} style={{color:"var(--red)"}}>− Ya no está: <b>{f.nombre}</b> {f.rol?`(${f.rol})`:""}</div>)}
+                  {dif.cambios.map(c=>(
+                    <div key={"c"+claveLote(c.fila)} style={{marginTop:4}}>
+                      <b>{c.fila.nombre}</b> {c.fila.rol?`(${c.fila.rol})`:""}
+                      {c.cambios.map(x=><div key={x.campo} style={{paddingLeft:14,color:"var(--ink2)"}}>{x.lbl}: {fmtCampoVz(x.campo,x.antes)} → <b>{fmtCampoVz(x.campo,x.despues)}</b></div>)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          <div style={{fontSize:11.5,color:"var(--ink3)",marginTop:8}}>Las observaciones escritas en la página se mantienen para los lotes que siguen en el archivo.</div>
+        </div>
+      )}
+
+      <div style={{marginTop:18,borderTop:"1px solid var(--line)",paddingTop:12}}>
+        <div style={{fontSize:12,fontWeight:600,color:"var(--ink2)",marginBottom:6}}>Historial de cargas</div>
+        {hist===null ? <div style={{fontSize:12,color:"var(--ink3)"}}>Cargando…</div>
+          : hist.length===0 ? <div style={{fontSize:12,color:"var(--ink3)"}}>Todavía no hay cargas desde la página.</div>
+          : hist.map(h=>(
+            <div key={h.id} style={{display:"flex",alignItems:"center",gap:10,fontSize:12,padding:"5px 0",borderBottom:"1px solid var(--line)"}}>
+              <span style={{color:"var(--ink3)",minWidth:130}}>{new Date(h.created_at).toLocaleString("es-CL")}</span>
+              <span style={{flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.archivo||"—"} <span style={{color:"var(--ink3)"}}>· {h.usuario||""} · {h.n_previas} → {h.n_nuevas} lotes</span></span>
+              <button className="btn btn-ghost btn-xs" onClick={()=>restaurar(h)} disabled={busy} title="Volver a los datos que había antes de esta carga">↺ Restaurar lo anterior</button>
+            </div>
+          ))}
+      </div>
+    </Modal>
+  );
+}
+
+function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSelectTerreno, hiddenRols, ufClp=40027, onSaveUfClp}) {
   const [subTab, setSubTab] = useState("principal");
 
   // Principal tab filters (multi-select)
@@ -1912,7 +2476,6 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
       <div className="dash-subtabs">
         <button className={"dash-subtab"+(subTab==="principal"?" active":"")} onClick={()=>setSubTab("principal")}>📊 Principal</button>
         <button className={"dash-subtab"+(subTab==="tareas"?" active":"")} onClick={()=>setSubTab("tareas")}>📓 Tareas / Bitácora</button>
-        <button className={"dash-subtab"+(subTab==="valores"?" active":"")} onClick={()=>setSubTab("valores")}>💲 Valores</button>
       </div>
 
       {subTab==="principal" && (
@@ -2219,10 +2782,6 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
           </div>
         </>
       )}
-
-      {subTab==="valores" && (
-        <ValoresView filas={valores} ufClp={ufClp} onSelectTerreno={onSelectTerreno}/>
-      )}
     </>
   );
 }
@@ -2230,7 +2789,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
 // ─────────────────────────────────────────────────────
 // INFO TAB
 // ─────────────────────────────────────────────────────
-function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[], onUpdated, user, valoresTerreno=null, oculto=false}) {
+function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[], onUpdated, user, oculto=false}) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({...terreno});
   const [saving, setSaving] = useState(false);
@@ -2675,8 +3234,6 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
         )}
       </div>
     </div>
-
-    <ValoresTerrenoCard filas={valoresTerreno}/>
 
     {/* ── Resumen de Contribuciones / Devoluciones / Bitácora (solo lectura) ── */}
     <div className="info-summary-grid">
@@ -3676,7 +4233,16 @@ function App({user, onLogout}) {
   const loadSeqRef = useRef(0); // descarta respuestas de un terreno ya no seleccionado
   // Memoria para mostrar un terreno al instante al seleccionarlo (ver primeDetail).
   const [allAdjuntos, setAllAdjuntos] = useState(null);
-  const [valores, setValores] = useState(null); // tabla valores_terrenos; null si no está disponible // {archivos, subtareas, archivosSub}; null si no se pudieron cargar
+  // {archivos, subtareas, archivosSub}; null si no se pudieron cargar
+  // Módulo Valorización (independiente de contribuciones)
+  const [modulo, setModulo] = useState(()=>{ try{ return localStorage.getItem("gt_modulo")==="valor" ? "valor" : "contrib"; }catch(e){ return "contrib"; } });
+  const [valores, setValores] = useState(null); // tabla valores_terrenos; null si no está disponible
+  const [selLote, setSelLote] = useState(null);
+  const [buscaLote, setBuscaLote] = useState("");
+  const [comunasCerradas, setComunasCerradas] = useState({});
+  const [showImport, setShowImport] = useState(false);
+  const contentRef = useRef(null);
+  const vzScrollRef = useRef(0); // posición del resumen, para volver al mismo lugar
   const cacheListoRef = useRef(false);  // true cuando loadAll terminó bien al menos una vez
   const loadAllBusyRef = useRef(false); // true mientras loadAll está en curso
   const cacheSnapRef = useRef(null);    // la memoria actual, legible desde loadDetail
@@ -3763,6 +4329,10 @@ function App({user, onLogout}) {
     setLoading(false);
   }, []);
 
+
+  const loadValores = useCallback(async () => {
+    try{ setValores(await db.select("valores_terrenos","order=orden.asc")); }catch(e){}
+  }, []);
 
   const seedIfEmpty = useCallback(async () => {
     if(!window.INITIAL_DATA||window.INITIAL_DATA.length===0) return;
@@ -4178,6 +4748,34 @@ function App({user, onLogout}) {
     if(t) setOpenCities(prev=>({...prev,[t.ciudad]:true}));
   };
 
+  // ── Módulo Valorización ──
+  const cambiarModulo = m => { setModulo(m); try{ localStorage.setItem("gt_modulo", m); }catch(e){} };
+  const lotesVz = useMemo(()=>prepararLotes(valores, ufClp), [valores, ufClp]);
+  const qLote = buscaLote.trim().toLowerCase();
+  const gruposVz = useMemo(()=>agruparLotes((lotesVz||[]).filter(l=>!qLote ||
+    [l.nombre,l.rol,l.proyecto,l.comuna,l.propietario].some(x=>x && String(x).toLowerCase().includes(qLote)))), [lotesVz, qLote]);
+  const loteSel = (lotesVz && selLote) ? lotesVz.find(l=>l.key===selLote) || null : null;
+  // Orden para recorrer lote a lote: el de la barra lateral (si la búsqueda deja fuera el lote, todos)
+  const ordenVz = useMemo(()=>{
+    const vis = gruposVz.flatMap(g=>g.lotes);
+    return (!loteSel || vis.some(l=>l.key===loteSel.key)) ? vis : agruparLotes(lotesVz||[]).flatMap(g=>g.lotes);
+  }, [gruposVz, lotesVz, loteSel]);
+  const abrirLote = key => {
+    if(!selLote && contentRef.current) vzScrollRef.current = contentRef.current.scrollTop;
+    setSelLote(key);
+  };
+  const volverResumen = useCallback(()=>setSelLote(null), []);
+  useEffect(()=>{
+    if(!contentRef.current) return;
+    contentRef.current.scrollTop = (modulo==="valor" && !selLote) ? vzScrollRef.current : 0;
+  }, [selLote, modulo]);
+  const guardarObsLote = async (lote, obs) => {
+    const txt = obs.trim() || null;
+    await db.patch("valores_terrenos", "id=eq."+lote.id, {obs:txt});
+    logAudit("editar_obs_valor", `Editó las observaciones de valorización de "${lote.nombre}"${lote.rol?" ("+lote.rol+")":""}`, lote.nombre||"");
+    await loadValores();
+  };
+
   return (
     <div className="app">
       {/* ─ SIDEBAR ─ */}
@@ -4186,6 +4784,15 @@ function App({user, onLogout}) {
           <div className="sidebar-logo-wrap"><img src="logo.jpg" alt="Guzmán & Larraín"/></div>
           <h1>Gestor de Terrenos</h1>
         </div>
+        <div className="mod-switch">
+          <button className={modulo==="contrib"?"on":""} onClick={()=>cambiarModulo("contrib")}>📋 Contribuciones</button>
+          <button className={modulo==="valor"?"on":""} onClick={()=>cambiarModulo("valor")}>💲 Valorización</button>
+        </div>
+        {modulo==="valor" ? (
+          <VzSidebar grupos={gruposVz} total={lotesVz?lotesVz.length:0} busca={buscaLote} setBusca={setBuscaLote}
+            sel={selLote} onSel={abrirLote} cerradas={comunasCerradas} setCerradas={setComunasCerradas}
+            onResumen={volverResumen} onImportar={()=>setShowImport(true)}/>
+        ) : (<>
         <div className="sidebar-search">
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar terreno o ROL..."/>
         </div>
@@ -4261,6 +4868,7 @@ function App({user, onLogout}) {
             </button>
           )}
         </div>
+        </>)}
 
         <UserBar user={user} onLogout={onLogout}/>
         <div className="sync-bar">
@@ -4274,7 +4882,13 @@ function App({user, onLogout}) {
       <div className="main">
         <div className="topbar">
           <div className="topbar-left">
-            {selTerreno ? (
+            {modulo==="valor" ? (loteSel ? (
+              <>
+                <h2>{loteSel.nombre}</h2>
+                <span style={{fontFamily:"monospace",fontSize:11.5,color:"var(--ink3)",background:"var(--bg2)",padding:"2px 8px",borderRadius:4,flexShrink:0}}>{loteSel.rol||"sin ROL"}</span>
+                {loteSel.comuna&&<span style={{fontSize:12,color:"var(--ink3)"}}>{loteSel.comuna}</span>}
+              </>
+            ):<h2>Valorización de terrenos</h2>) : selTerreno ? (
               <>
                 <h2>{selTerreno.terreno}</h2>
                 <span style={{fontFamily:"monospace",fontSize:11.5,color:"var(--ink3)",background:"var(--bg2)",padding:"2px 8px",borderRadius:4,flexShrink:0}}>{selTerreno.rol}</span>
@@ -4283,12 +4897,16 @@ function App({user, onLogout}) {
             ):<h2>Dashboard de Terrenos</h2>}
           </div>
           <div className="topbar-right">
+            {modulo==="valor" ? (
+              <span style={{fontSize:12,color:"var(--ink3)"}}>{lotesVz?lotesVz.length:0} lotes · UF {fmtCLP(ufClp)}</span>
+            ) : (<>
             <span style={{fontSize:12,color:"var(--ink3)"}}>
               {terrenos.length} terrenos · {allCuotas.filter(c=>!c.pagado&&c.fecha_vencimiento&&c.fecha_vencimiento<today()).length} cuotas vencidas
             </span>
             <button className="btn btn-outline btn-sm" onClick={exportExcel} disabled={excelBusy} title="Exportar la información a Excel (.xlsx)">
               {excelBusy ? "⏳ Generando..." : "📊 Exportar Excel"}
             </button>
+            </>)}
             <div className="audit-bell-wrap" ref={auditRef}>
               <button className="audit-bell-btn" onClick={()=>{setShowAudit(s=>!s); setAuditUnread(0);}} title="Historial de cambios">
                 🔔
@@ -4324,14 +4942,26 @@ function App({user, onLogout}) {
           </div>
         </div>
 
-        <div className="content">
+        <div className="content" ref={contentRef}>
           {loading ? (
             <div className="loading-cover">
               <div className="spinner"/>
               <span style={{color:"var(--ink3)",fontSize:13}}>Cargando terrenos...</span>
             </div>
+          ):modulo==="valor" ? (
+            !lotesVz ? (
+              <div className="dt-empty" style={{padding:"40px 0"}}>No se pudieron cargar los datos de valorización. Revisa la conexión y presiona ↺ (abajo a la izquierda).</div>
+            ) : (
+              <>
+                {/* El resumen queda montado (oculto) al ver un lote, para no perder filtros ni orden */}
+                <div style={{display:loteSel?"none":"block"}}>
+                  <ValorizacionResumen lotes={lotesVz} ufClp={ufClp} onSaveUfClp={saveUfClp} onOpen={abrirLote}/>
+                </div>
+                {loteSel && <ValorizacionLote lote={loteSel} orden={ordenVz} lotes={lotesVz} onNav={setSelLote} onVolver={volverResumen} onGuardarObs={guardarObsLote}/>}
+              </>
+            )
           ):!selTerreno ? (
-            <Dashboard terrenos={terrenos} allCuotas={allCuotas} allBitacora={allBitacora} allDevoluciones={allDevoluciones} onSelectTerreno={selectTerreno} hiddenRols={hiddenRols} ufClp={ufClp} onSaveUfClp={saveUfClp} valores={armarFilasValores(valores, terrenos, ufClp, hiddenRols)}/>
+            <Dashboard terrenos={terrenos} allCuotas={allCuotas} allBitacora={allBitacora} allDevoluciones={allDevoluciones} onSelectTerreno={selectTerreno} hiddenRols={hiddenRols} ufClp={ufClp} onSaveUfClp={saveUfClp}/>
           ):(
             <>
               {hiddenRols.has(selTerreno.rol) && (
@@ -4347,7 +4977,7 @@ function App({user, onLogout}) {
               </div>
 
               {activeTab==="info"&&(
-                <InfoTab terreno={selTerreno} oculto={hiddenRols.has(selTerreno.rol)} user={user} ufClp={ufClp} valoresTerreno={valores ? armarFilasValores(valores, terrenos, ufClp, hiddenRols).filter(f=>f.rol===selTerreno.rol || f.rol_padre===selTerreno.rol) : null} cuotas={cuotas} devoluciones={devoluciones} bitacora={bitacora} onUpdated={updated=>{
+                <InfoTab terreno={selTerreno} oculto={hiddenRols.has(selTerreno.rol)} user={user} ufClp={ufClp} cuotas={cuotas} devoluciones={devoluciones} bitacora={bitacora} onUpdated={updated=>{
                   setTerrenos(ts=>ts.map(t=>t.rol===updated.rol?{...t,...updated}:t));
                   loadAll();
                 }}/>
@@ -4367,6 +4997,8 @@ function App({user, onLogout}) {
       </div>
 
       {showNew&&<NewTerrenoModal onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);loadAll();}}/>}
+      {showImport&&<ImportarValoresModal actuales={valores||[]} terrenos={terrenos} ufClp={ufClp} onClose={()=>setShowImport(false)}
+        onListo={()=>{ setShowImport(false); setSelLote(null); loadValores(); }}/>}
     </div>
   );
 }
