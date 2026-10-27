@@ -1422,9 +1422,11 @@ function armarFilasValores(valores, terrenos, ufClp, hiddenRols){
     return {
       ...v, terreno:t, padre,
       rolPagina: t ? t.rol : (padre ? padre.rol : null),   // a qué terreno lleva el clic
-      // Solo sale de los totales si su propio terreno está oculto. Si el oculto es el padre
-      // (una matriz ya subdividida), sus lotes hijos siguen contando.
-      oculto: !!(t && hiddenRols && hiddenRols.has(t.rol)),
+      // Sale de los totales si su propio terreno está oculto, salvo que se haya ocultado por
+      // fusión o subdivisión: ese suelo sigue siendo de la empresa (ej. los lotes de Parque Norte
+      // que se fusionan con el 5511-01). Si el oculto es el padre, sus lotes hijos siguen contando.
+      oculto: !!(t && hiddenRols && hiddenRols.has(t.rol) && !["Subdividido","Fusionado"].includes(estadoDe(t))),
+      rolOcultoCuenta: !!(t && hiddenRols && hiddenRols.has(t.rol) && ["Subdividido","Fusionado"].includes(estadoDe(t))),
       siiClp, siiM2, siiUf, siiUfM2: (siiUf && siiM2>0) ? siiUf/siiM2 : null,
       m2Neto: valNum(v.m2_neto),
       comUf: valNum(v.com_uf), comUfM2: valNum(v.com_uf_m2),
@@ -1559,7 +1561,7 @@ function ValoresView({filas, ufClp, onSelectTerreno}){
           );
         })}
       </div>
-      {nOcultos>0 && <div style={{fontSize:11.5,color:"var(--ink3)",margin:"-10px 0 14px"}}>{nOcultos} lote{nOcultos===1?"":"s"} de terrenos ocultos no se suma{nOcultos===1?"":"n"}.</div>}
+      {nOcultos>0 && <div style={{fontSize:11.5,color:"var(--ink3)",margin:"-10px 0 14px"}}>{nOcultos} lote{nOcultos===1?"":"s"} de terrenos ocultos (vendidos, entregados u otros) no se suma{nOcultos===1?"":"n"}. Los ocultos por fusión o subdivisión sí se suman.</div>}
 
       <div className="chart-card">
         <h4>📊 Valores por comuna (UF)</h4>
@@ -1605,6 +1607,7 @@ function ValoresView({filas, ufClp, onSelectTerreno}){
                       {f.rol||"sin ROL"}
                       {!f.terreno && f.padre && <span style={{fontFamily:"inherit",marginLeft:6}}>· viene del {f.padre.rol}</span>}
                       {!f.terreno && !f.padre && <span style={{fontFamily:"inherit",marginLeft:6,color:"var(--amber)"}}>· no está en la página</span>}
+                      {f.rolOcultoCuenta && <span style={{fontFamily:"inherit",marginLeft:6}}>· rol oculto ({estadoDe(f.terreno).toLowerCase()})</span>}
                     </div>
                     {f.obs && <div style={{fontSize:10.5,color:"var(--amber)",marginTop:3,lineHeight:1.35}}>⚠ {f.obs}</div>}
                   </div>
@@ -4203,7 +4206,7 @@ function App({user, onLogout}) {
                       return (
                         <div key={t.rol}
                           className={`terreno-item${selRol===t.rol?" active":""}${isHidden?" hidden-item":""}`}
-                          onClick={()=>!isHidden&&selectTerreno(t.rol)}>
+                          onClick={()=>selectTerreno(t.rol)}>
                           <span className="t-dot" style={{background:isHidden?"#5a5750":hasBadge(t.rol)}}/>
                           <div className="t-info">
                             <div className="t-name">{t.terreno}</div>
@@ -4313,6 +4316,12 @@ function App({user, onLogout}) {
             <Dashboard terrenos={terrenos} allCuotas={allCuotas} allBitacora={allBitacora} allDevoluciones={allDevoluciones} onSelectTerreno={selectTerreno} hiddenRols={hiddenRols} ufClp={ufClp} onSaveUfClp={saveUfClp} valores={armarFilasValores(valores, terrenos, ufClp, hiddenRols)}/>
           ):(
             <>
+              {hiddenRols.has(selTerreno.rol) && (
+                <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",background:"var(--bg2)",border:"1px solid var(--line)",borderRadius:8,padding:"9px 14px",marginBottom:14,fontSize:12.5,color:"var(--ink2)"}}>
+                  <span>🙈 <b>Este terreno está oculto:</b> no suma en el avalúo ni en los m² del dashboard. Su historial de contribuciones se mantiene y lo puedes editar igual.</span>
+                  <button className="btn btn-outline btn-xs" style={{marginLeft:"auto"}} onClick={()=>toggleHide(selTerreno.rol,{stopPropagation(){}})}>👁 Mostrar</button>
+                </div>
+              )}
               <div className="tab-nav">
                 {[["info","📋 Información"],["cuotas","💰 Contribuciones"],["devoluciones","↩️ Devoluciones"],["bitacora","📓 Bitácora"]].map(([id,lbl])=>(
                   <button key={id} className={`tab-btn${activeTab===id?" active":""}`} onClick={()=>setActiveTab(id)}>{lbl}</button>
