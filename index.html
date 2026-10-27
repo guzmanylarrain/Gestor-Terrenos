@@ -531,6 +531,18 @@ const devConcretada = d => d.concretada !== false;
 // Fecha en que la plata entró a caja. Si falta (registros antiguos), se usa la fecha original.
 const devFechaCaja = d => d.fecha_concretada || d.fecha;
 
+// ── Estado del terreno ──
+// Explica por qué un terreno está o no activo. Es solo informativo: lo único que lo saca de los
+// totales del dashboard es ocultarlo (el ojo de la barra lateral). Reemplaza al antiguo "Vigente
+// SI/NO"; la columna vigente se sigue llenando (SI = Activo) para pestañas abiertas antes del cambio.
+const ESTADOS = ["Activo","Vendido","Subdividido","Fusionado","Entregado","Por definir"];
+const estadoDe = t => (t && t.estado) || (t && t.vigente==="NO" ? "Por definir" : "Activo");
+const ESTADO_COLOR = {"Activo":["var(--green-lt)","var(--green)"],"Por definir":["var(--amber-lt)","var(--amber)"]};
+const EstadoChip = ({estado}) => {
+  const [bg,fg] = ESTADO_COLOR[estado] || ["var(--bg2)","var(--ink2)"];
+  return <span className="badge-chip" style={{background:bg,color:fg}}>{estado}</span>;
+};
+
 const fmtCLP = n => {
   if(!n && n!==0) return "—";
   const v = Math.round(Number(n));
@@ -1719,7 +1731,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const filTer = visTer.filter(t =>
     (filterCiudades.length===0 || filterCiudades.includes(t.ciudad))
     && (filterProyectos.length===0 || filterProyectos.includes(t.proyecto))
-    && (filterVigente.length===0 || filterVigente.includes(t.vigente))
+    && (filterVigente.length===0 || filterVigente.includes(estadoDe(t)))
     && (filterSobretasa.length===0 || filterSobretasa.includes(!!t.sobretasa))
   );
   const filRols = new Set(filTer.map(t=>t.rol));
@@ -1737,7 +1749,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   const filTerMoney = terrenos.filter(t =>
     (filterCiudades.length===0 || filterCiudades.includes(t.ciudad))
     && (filterProyectos.length===0 || filterProyectos.includes(t.proyecto))
-    && (filterVigente.length===0 || filterVigente.includes(t.vigente))
+    && (filterVigente.length===0 || filterVigente.includes(estadoDe(t)))
     && (filterSobretasa.length===0 || filterSobretasa.includes(!!t.sobretasa))
   );
   const filRolsMoney = new Set(filTerMoney.map(t=>t.rol));
@@ -1890,7 +1902,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
   };
 
   const SOBRETASA_OPTS = [{value:true,label:"Con sobretasa"},{value:false,label:"Sin sobretasa"}];
-  const VIGENTE_OPTS = [{value:"SI",label:"Vigente — SI"},{value:"NO",label:"Vigente — NO"}];
+  const VIGENTE_OPTS = ESTADOS; // filtro por estado del terreno
 
   return (
     <>
@@ -1907,7 +1919,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
             <label style={{marginRight:4}}>Portafolio:</label>
             <MultiSelect label="Ciudad" options={ciudadOpts} selected={filterCiudades} onChange={setFilterCiudades}/>
             <MultiSelect label="Proyecto" options={proyectoOpts} selected={filterProyectos} onChange={setFilterProyectos}/>
-            <MultiSelect label="Vigente" options={VIGENTE_OPTS} selected={filterVigente} onChange={setFilterVigente}/>
+            <MultiSelect label="Estado" options={VIGENTE_OPTS} selected={filterVigente} onChange={setFilterVigente}/>
             <MultiSelect label="Sobretasa" options={SOBRETASA_OPTS} selected={filterSobretasa} onChange={setFilterSobretasa}/>
             {hasPrincipalFilters?<button className="dash-clr" onClick={clearPrincipalFilters}>✕ Limpiar filtros</button>:null}
             <span style={{marginLeft:"auto",fontSize:11,color:"var(--ink3)"}}>
@@ -2215,7 +2227,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
 // ─────────────────────────────────────────────────────
 // INFO TAB
 // ─────────────────────────────────────────────────────
-function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[], onUpdated, user, valoresTerreno=null}) {
+function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[], onUpdated, user, valoresTerreno=null, oculto=false}) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({...terreno});
   const [saving, setSaving] = useState(false);
@@ -2332,7 +2344,7 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
       // 2) Luego se actualiza el terreno. Si esto falla, se deshace el paso 1 para no dejar el
       //    avalúo vigente duplicado en el historial.
       const cambios = {
-        terreno:form.terreno, vigente:form.vigente, ciudad:form.ciudad,
+        terreno:form.terreno, estado:estadoDe(form), vigente:estadoDe(form)==="Activo"?"SI":"NO", ciudad:form.ciudad,
         m2_sii: m2Total||0,
         avaluo: newTotal,
         m2_sii_eriazo: m2Eri,
@@ -2356,7 +2368,7 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
       }else{
         logAudit("editar_terreno",`Editó información del terreno "${nom}"`,proj);
       }
-      onUpdated({...form, m2_sii:m2Total, avaluo:newTotal, m2_sii_eriazo:m2Eri, m2_sii_construido:m2Con,
+      onUpdated({...form, estado:estadoDe(form), vigente:estadoDe(form)==="Activo"?"SI":"NO", m2_sii:m2Total, avaluo:newTotal, m2_sii_eriazo:m2Eri, m2_sii_construido:m2Con,
         avaluo_eriazo:redondo(avEri), avaluo_construido:redondo(avCon),
         avaluo_vigente_desde: avMode ? (avDesde||null) : terreno.avaluo_vigente_desde});
       setEditing(false);
@@ -2462,9 +2474,9 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
                   {!CIUDADES.includes(form.ciudad)&&<option>{form.ciudad}</option>}
                 </select>
               </div>
-              <div className="field"><label>Vigente</label>
-                <select value={form.vigente} onChange={e=>set("vigente",e.target.value)}>
-                  <option>SI</option><option>NO</option>
+              <div className="field"><label>Estado</label>
+                <select value={estadoDe(form)} onChange={e=>set("estado",e.target.value)}>
+                  {ESTADOS.map(x=><option key={x}>{x}</option>)}
                 </select>
               </div>
             </div>
@@ -2485,7 +2497,12 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
           <>
             <Row k="ROL SII" v={<span style={{fontFamily:"monospace"}}>{terreno.rol}</span>}/>
             <Row k="Ciudad" v={terreno.ciudad}/>
-            <Row k="Vigente" v={terreno.vigente}/>
+            <Row k="Estado" v={<EstadoChip estado={estadoDe(terreno)}/>}/>
+            {estadoDe(terreno)!=="Activo" && !oculto && (
+              <div style={{fontSize:11.5,color:"var(--amber)",padding:"6px 0",lineHeight:1.4}}>
+                Este terreno no está activo pero sigue sumando en los totales del dashboard. Si ya no corresponde, ocúltalo con 🙈 en la barra lateral.
+              </div>
+            )}
             <Row k="Proyecto" v={terreno.proyecto||"—"}/>
             {terreno.notas&&<div style={{padding:"8px 0"}}>
               <div className="info-key" style={{marginBottom:4}}>Notas</div>
@@ -3570,7 +3587,7 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
 // NEW TERRENO MODAL
 // ─────────────────────────────────────────────────────
 function NewTerrenoModal({onClose, onCreated}) {
-  const [form,setForm]=useState({rol:"",terreno:"",ciudad:"Antofagasta",vigente:"SI",m2_sii:"",avaluo:"",sobretasa:false,proyecto:"",notas:""});
+  const [form,setForm]=useState({rol:"",terreno:"",ciudad:"Antofagasta",vigente:"SI",estado:"Activo",m2_sii:"",avaluo:"",sobretasa:false,proyecto:"",notas:""});
   const [saving,setSaving]=useState(false);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
 
@@ -3579,7 +3596,7 @@ function NewTerrenoModal({onClose, onCreated}) {
     setSaving(true);
     try{
       await db.insert("terrenos",[{
-        rol:form.rol.trim(), terreno:form.terreno.trim(), ciudad:form.ciudad, vigente:form.vigente,
+        rol:form.rol.trim(), terreno:form.terreno.trim(), ciudad:form.ciudad, vigente:form.vigente, estado:form.estado,
         m2_sii:parseFloat(form.m2_sii)||0, avaluo:parseInt(form.avaluo)||0,
         sobretasa:form.sobretasa, proyecto:form.proyecto||null,
         responsable:form.responsable||null, notas:form.notas||null
@@ -4035,7 +4052,7 @@ function App({user, onLogout}) {
 
       // ═══════════ HOJA 2 — BASE (una fila por terreno) ═══════════
       const baseHeader = [
-        "ROL","Terreno","Ciudad","Proyecto","Vigente","Sobretasa",
+        "ROL","Terreno","Ciudad","Proyecto","Estado","Sobretasa",
         "M² SII","M² Sitio eriazo","M² Terreno construido",
         "Avalúo fiscal (CLP)","Avalúo Sitio eriazo (CLP)","Avalúo Terreno construido (CLP)","UF/m²",
         "Contribuciones totales (CLP)","Contribuciones totales (UF)","Pagado total (CLP)","Por pagar (CLP)","Vencido (CLP)","N° cuotas vencidas",
@@ -4064,7 +4081,7 @@ function App({user, onLogout}) {
         const m2 = parseFloat(t.m2_sii)||0, av = parseInt(t.avaluo)||0;
         const ufm2 = (m2>0&&av>0&&ufClp>0) ? Math.round((av/ufClp/m2)*100)/100 : "";
         baseRows.push([
-          t.rol, t.terreno||"", t.ciudad||"", t.proyecto||"", t.vigente||"", t.sobretasa?"Sí":"No",
+          t.rol, t.terreno||"", t.ciudad||"", t.proyecto||"", estadoDe(t), t.sobretasa?"Sí":"No",
           m2, (t.m2_sii_eriazo!=null?parseFloat(t.m2_sii_eriazo):""), (t.m2_sii_construido!=null?parseFloat(t.m2_sii_construido):""),
           av, (t.avaluo_eriazo!=null?parseInt(t.avaluo_eriazo):""), (t.avaluo_construido!=null?parseInt(t.avaluo_construido):""), ufm2,
           contribTotal, ufOf(contribTotal), pagadoTotal, porPagar, vencidoMonto, vencidas.length,
@@ -4303,7 +4320,7 @@ function App({user, onLogout}) {
               </div>
 
               {activeTab==="info"&&(
-                <InfoTab terreno={selTerreno} user={user} ufClp={ufClp} valoresTerreno={valores ? armarFilasValores(valores, terrenos, ufClp, hiddenRols).filter(f=>f.rol===selTerreno.rol || f.rol_padre===selTerreno.rol) : null} cuotas={cuotas} devoluciones={devoluciones} bitacora={bitacora} onUpdated={updated=>{
+                <InfoTab terreno={selTerreno} oculto={hiddenRols.has(selTerreno.rol)} user={user} ufClp={ufClp} valoresTerreno={valores ? armarFilasValores(valores, terrenos, ufClp, hiddenRols).filter(f=>f.rol===selTerreno.rol || f.rol_padre===selTerreno.rol) : null} cuotas={cuotas} devoluciones={devoluciones} bitacora={bitacora} onUpdated={updated=>{
                   setTerrenos(ts=>ts.map(t=>t.rol===updated.rol?{...t,...updated}:t));
                   loadAll();
                 }}/>
