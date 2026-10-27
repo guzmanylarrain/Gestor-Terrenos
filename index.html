@@ -4125,7 +4125,9 @@ function App({user, onLogout}) {
   terrenos
     .filter(t=>{
       const sOK = !search||(t.terreno+" "+t.rol+" "+(t.proyecto||"")).toLowerCase().includes(search.toLowerCase());
-      return sOK;
+      // Modo "Ocultos": solo los ocultos, para revisarlos. Modo normal: solo los visibles.
+      const vOK = showHidden ? hiddenRols.has(t.rol) : !hiddenRols.has(t.rol);
+      return sOK && vOK;
     })
     .forEach(t=>{
       if(!cityMap[t.ciudad]){cityMap[t.ciudad]=[];cityOrder.push(t.ciudad);}
@@ -4189,6 +4191,14 @@ function App({user, onLogout}) {
         </div>
 
         <div className="terreno-list">
+          {showHidden && (
+            <div style={{fontSize:11.5,color:"#c9c5bc",padding:"8px 14px 6px",lineHeight:1.4}}>
+              🙈 Mostrando solo los <b>{hiddenRols.size}</b> terrenos ocultos. Haz clic en uno para revisarlo o editarlo.
+            </div>
+          )}
+          {showHidden && hiddenRols.size===0 && (
+            <div style={{fontSize:11.5,color:"#c9c5bc",padding:"0 14px 8px"}}>No hay terrenos ocultos.</div>
+          )}
           {cityOrder.map(city=>{
             const items=cityMap[city]; const isOpen=!!openCities[city];
             const hasActive=items.some(t=>t.rol===selRol);
@@ -4201,7 +4211,7 @@ function App({user, onLogout}) {
                 </div>
                 {isOpen&&(
                   <div className="city-terrenos">
-                    {(showHidden?items:items.filter(t=>!hiddenRols.has(t.rol))).map(t=>{
+                    {items.map(t=>{
                       const isHidden=hiddenRols.has(t.rol);
                       return (
                         <div key={t.rol}
@@ -4237,9 +4247,17 @@ function App({user, onLogout}) {
             {exportBusy ? "⏳ Generando respaldo..." : "⇩ Descargar respaldo (JSON)"}
           </button>
           <button className="sbtn sbtn-ghost" onClick={()=>setSelRol(null)}>⊞ Dashboard global</button>
-          {hiddenRols.size>0&&(
-            <button className="sbtn sbtn-ghost" onClick={()=>setShowHidden(s=>!s)}>
-              {showHidden?"🙈 Ocultar ocultos":"👁 Ocultos ("+hiddenRols.size+")"}
+          {(hiddenRols.size>0 || showHidden)&&(
+            <button className="sbtn sbtn-ghost" onClick={()=>{
+              const entrar = !showHidden;
+              setShowHidden(entrar);
+              if(entrar){
+                const abiertas = {};
+                terrenos.forEach(t=>{ if(hiddenRols.has(t.rol)) abiertas[t.ciudad]=true; });
+                setOpenCities(p=>({...p, ...abiertas}));
+              }
+            }}>
+              {showHidden?"← Volver a todos los terrenos":"👁 Ver solo ocultos ("+hiddenRols.size+")"}
             </button>
           )}
         </div>
