@@ -1387,7 +1387,303 @@ function UfEditor({ufClp, onSave}){
   );
 }
 
-function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSelectTerreno, hiddenRols, ufClp=40027, onSaveUfClp}) {
+// ─────────────────────────────────────────────────────
+// VALORES DE TERRENOS (avalúo SII / comercial / tasación / valor libro) — solo lectura
+// ─────────────────────────────────────────────────────
+// Los datos viven en la tabla valores_terrenos (carga del Excel "BASE DATOS TERRENOS"), una fila
+// por lote. Cada lote se conecta con un terreno de la página por su ROL; si no tiene ROL propio en
+// la página (ej. W1–W4, que vienen del 5511-52) se cuelga del terreno del que proviene (rol_padre).
+// El avalúo SII se toma de la página cuando el lote tiene su propio ROL ahí, para que refleje los
+// reavalúos; si no, del Excel. Todo se convierte a UF con la UF que se edita en la página.
+const valNum = v => (v===null||v===undefined||v==="") ? null : (isNaN(Number(v)) ? null : Number(v));
+function armarFilasValores(valores, terrenos, ufClp, hiddenRols){
+  if(!valores) return null;
+  const tMap = {}; terrenos.forEach(t=>{ tMap[t.rol]=t; });
+  return valores.map(v=>{
+    const t = v.rol ? (tMap[v.rol]||null) : null;
+    const padre = v.rol_padre ? (tMap[v.rol_padre]||null) : null;
+    const siiClp = t ? valNum(t.avaluo) : valNum(v.sii_clp);
+    const siiM2 = t ? valNum(t.m2_sii) : valNum(v.sii_m2);
+    const siiUf = (siiClp>0 && ufClp>0) ? siiClp/ufClp : null;
+    const libClp = valNum(v.libro_clp);
+    const libUf = valNum(v.libro_uf)!==null ? valNum(v.libro_uf) : ((libClp>0 && ufClp>0) ? libClp/ufClp : null);
+    return {
+      ...v, terreno:t, padre,
+      rolPagina: t ? t.rol : (padre ? padre.rol : null),   // a qué terreno lleva el clic
+      // Solo sale de los totales si su propio terreno está oculto. Si el oculto es el padre
+      // (una matriz ya subdividida), sus lotes hijos siguen contando.
+      oculto: !!(t && hiddenRols && hiddenRols.has(t.rol)),
+      siiClp, siiM2, siiUf, siiUfM2: (siiUf && siiM2>0) ? siiUf/siiM2 : null,
+      m2Neto: valNum(v.m2_neto),
+      comUf: valNum(v.com_uf), comUfM2: valNum(v.com_uf_m2),
+      tasUf: valNum(v.tas_uf), tasUfM2: valNum(v.tas_uf_m2),
+      libUf, libUfM2: valNum(v.libro_uf_m2),
+    };
+  });
+}
+const fmtUFv = v => (v===null||v===undefined) ? "—" : Math.round(v).toLocaleString("es-CL")+" UF";
+const fmtUFm2v = v => (v===null||v===undefined) ? "—" : Number(v).toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2})+" UF/m²";
+const fmtVeces = v => (v===null||v===undefined||!isFinite(v)) ? "—" : "×"+v.toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1});
+// Un valor con más de 3 años se marca como antiguo.
+const fechaAntigua = f => { if(!f) return false; const d=new Date(String(f).slice(0,10)+"T00:00:00"); return (Date.now()-d.getTime()) > 3*365.25*86400000; };
+const METRICAS_VALOR = [
+  {k:"sii", lbl:"Avalúo SII", uf:"siiUf", m2:"siiUfM2", fecha:"sii_fecha", color:"#1a5f6e"},
+  {k:"com", lbl:"Comercial", uf:"comUf", m2:"comUfM2", fecha:null, color:"#b7620a"},
+  {k:"tas", lbl:"Tasación", uf:"tasUf", m2:"tasUfM2", fecha:"tas_fecha", color:"#6e1a6e"},
+  {k:"lib", lbl:"Valor libro", uf:"libUf", m2:"libUfM2", fecha:"libro_fecha", color:"#4a4740"},
+];
+// Cuántas veces el avalúo SII es esta métrica, comparando solo lotes que tienen ambos datos.
+const vecesSii = (filas, campo) => {
+  const ambos = filas.filter(f=>f[campo]>0 && f.siiUf>0);
+  const a = ambos.reduce((x,f)=>x+f[campo],0), b = ambos.reduce((x,f)=>x+f.siiUf,0);
+  return b>0 ? a/b : null;
+};
+
+// Vista global (subpestaña "Valores" del dashboard)
+function ValoresView({filas, ufClp, onSelectTerreno}){
+  const [fComuna,setFComuna]=useState([]);
+  const [fProy,setFProy]=useState([]);
+  const [fProp,setFProp]=useState([]);
+  const [fHip,setFHip]=useState([]);
+  const [busy,setBusy]=useState(false);
+  if(filas===null) return <div className="dash-section"><div className="dt-empty">No se pudieron cargar los valores de los terrenos.</div></div>;
+  if(filas.length===0) return <div className="dash-section"><div className="dt-empty">Todavía no hay valores cargados.</div></div>;
+
+  const opts = k => [...new Set(filas.map(f=>f[k]).filter(Boolean))].sort();
+  const vis = filas.filter(f=>!f.oculto
+    && (fComuna.length===0 || fComuna.includes(f.comuna))
+    && (fProy.length===0 || fProy.includes(f.proyecto))
+    && (fProp.length===0 || fProp.includes(f.propietario))
+    && (fHip.length===0 || fHip.includes(f.hipoteca)));
+  const nOcultos = filas.filter(f=>f.oculto).length;
+  const hayFiltros = fComuna.length||fProy.length||fProp.length||fHip.length;
+  const suma = k => vis.reduce((x,f)=>x+(f[k]||0),0);
+  const nCon = k => vis.filter(f=>f[k]>0).length;
+
+  const porComuna = {};
+  vis.forEach(f=>{
+    const c = f.comuna||"Sin comuna";
+    if(!porComuna[c]) porComuna[c]={comuna:c,n:0,sii:0,com:0,tas:0,lib:0};
+    const g=porComuna[c]; g.n++; g.sii+=f.siiUf||0; g.com+=f.comUf||0; g.tas+=f.tasUf||0; g.lib+=f.libUf||0;
+  });
+  const grupos = Object.values(porComuna).sort((a,b)=>(b.com+b.sii)-(a.com+a.sii));
+  const serie = METRICAS_VALOR.filter(m=>grupos.some(g=>g[m.k]>0));
+
+  const exportar = () => {
+    if(typeof XLSX === "undefined"){ alert("La librería de Excel aún no cargó. Refresca la página e intenta de nuevo."); return; }
+    setBusy(true);
+    try{
+      const r2 = v => v===null||v===undefined ? "" : Math.round(v*100)/100;
+      const r0 = v => v===null||v===undefined ? "" : Math.round(v);
+      const rows = [
+        ["Valores de terrenos — Gestor de Terrenos"],
+        ["Exportado", new Date().toLocaleString("es-CL")],
+        ["UF usada para convertir el avalúo SII", ufClp],
+        hayFiltros ? ["Con filtros aplicados", ""] : [],
+        [],
+        ["ROL","Viene de (ROL)","Lote","Propietario","Comuna","Proyecto","Detalle","m² bruto","m² neto","Hipoteca",
+         "m² SII","Avalúo SII (CLP)","Avalúo SII (UF)","SII UF/m²","Fecha avalúo",
+         "Comercial (UF)","Comercial UF/m²","Tasación (UF)","Tasación UF/m²","Fecha tasación",
+         "Valor libro (UF)","Valor libro UF/m²","Fecha valor libro","Comercial / SII","Tasación / SII","En la página","Observaciones"]
+      ];
+      vis.forEach(f=>{
+        rows.push([f.rol||"", f.rol_padre||"", f.nombre||"", f.propietario||"", f.comuna||"", f.proyecto||"", f.detalle||"",
+          r2(valNum(f.m2_bruto)), r2(f.m2Neto), f.hipoteca||"",
+          r2(f.siiM2), r0(f.siiClp), r0(f.siiUf), r2(f.siiUfM2), f.sii_fecha||"",
+          r0(f.comUf), r2(f.comUfM2), r0(f.tasUf), r2(f.tasUfM2), f.tas_fecha||"",
+          r0(f.libUf), r2(f.libUfM2), f.libro_fecha||"",
+          (f.comUf>0&&f.siiUf>0)?r2(f.comUf/f.siiUf):"", (f.tasUf>0&&f.siiUf>0)?r2(f.tasUf/f.siiUf):"",
+          f.terreno?"Sí":(f.padre?"Vía "+f.padre.rol:"No"), f.obs||""]);
+      });
+      rows.push(["TOTAL","",vis.length+" lotes","","","","","",r2(suma("m2Neto")),"","",r0(suma("siiClp")),r0(suma("siiUf")),"","",
+        r0(suma("comUf")),"",r0(suma("tasUf")),"","",r0(suma("libUf"))]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Valores");
+      XLSX.writeFile(wb, "valores-terrenos-"+new Date().toISOString().slice(0,10)+".xlsx");
+      logAudit("exportar_valores", "Exportó los valores de terrenos a Excel ("+vis.length+" lotes)", "");
+    }catch(e){ alert("Error al exportar: "+e.message); }
+    setBusy(false);
+  };
+
+  // Gráfico: UF por comuna y métrica
+  const maxV = Math.max(1, ...grupos.flatMap(g=>serie.map(m=>g[m.k])));
+  const bw=16, gIn=3, gOut=26, padL=64, padB=34, padT=14, chH=170;
+  const gW = serie.length*(bw+gIn)-gIn;
+  const W = padL + grupos.length*(gW+gOut) + 10;
+  const fmtCorto = v => v>=1e6 ? (v/1e6).toLocaleString("es-CL",{maximumFractionDigits:1})+" M" : v>=1e3 ? Math.round(v/1e3)+" mil" : Math.round(v)+"";
+
+  const cols = "minmax(190px,1.6fr) 110px 92px 128px 128px 140px 104px 66px 72px";
+  const celda = (uf, m2, extra) => (
+    <span style={{textAlign:"right"}}>
+      <div style={{fontWeight:600}}>{fmtUFv(uf)}</div>
+      <div style={{fontSize:10.5,color:"var(--ink3)"}}>{uf? fmtUFm2v(m2) : ""}{extra}</div>
+    </span>
+  );
+
+  return (
+    <>
+      <div className="dash-filter-bar">
+        <label style={{marginRight:4}}>Valores:</label>
+        <MultiSelect label="Comuna" options={opts("comuna")} selected={fComuna} onChange={setFComuna}/>
+        <MultiSelect label="Proyecto" options={opts("proyecto")} selected={fProy} onChange={setFProy}/>
+        <MultiSelect label="Propietario" options={opts("propietario")} selected={fProp} onChange={setFProp}/>
+        <MultiSelect label="Hipoteca" options={opts("hipoteca")} selected={fHip} onChange={setFHip}/>
+        {hayFiltros?<button className="dash-clr" onClick={()=>{setFComuna([]);setFProy([]);setFProp([]);setFHip([]);}}>✕ Limpiar filtros</button>:null}
+        <span style={{marginLeft:"auto",fontSize:11,color:"var(--ink3)"}}>{vis.length} lotes · UF ${Number(ufClp||0).toLocaleString("es-CL")}</span>
+        <button className="btn btn-outline btn-sm" onClick={exportar} disabled={busy}>{busy?"Exportando…":"⬇ Exportar a Excel"}</button>
+      </div>
+
+      <div className="kpi-grid-5" style={{gridTemplateColumns:"repeat(4,1fr)"}}>
+        {METRICAS_VALOR.map(m=>{
+          const tot = suma(m.uf), n = nCon(m.uf), veces = m.k==="sii" ? null : vecesSii(vis, m.uf);
+          return (
+            <div key={m.k} className="kpi-card" style={{borderTopColor:m.color}}>
+              <div className="kpi-label">{m.lbl}</div>
+              <div className="kpi-value" style={{fontSize:16,color:n?m.color:"var(--ink3)"}}>{n?fmtUFv(tot):"Sin datos"}</div>
+              <div className="kpi-sub">{n} de {vis.length} lotes con dato</div>
+              {m.k==="sii" && n>0 && <div className="kpi-sub">{fmtCLP(suma("siiClp"))}</div>}
+              {veces!==null && <div className="kpi-sub">{fmtVeces(veces)} el avalúo SII de esos mismos lotes</div>}
+            </div>
+          );
+        })}
+      </div>
+      {nOcultos>0 && <div style={{fontSize:11.5,color:"var(--ink3)",margin:"-10px 0 14px"}}>{nOcultos} lote{nOcultos===1?"":"s"} de terrenos ocultos no se suma{nOcultos===1?"":"n"}.</div>}
+
+      <div className="chart-card">
+        <h4>📊 Valores por comuna (UF)</h4>
+        <div className="chart-scroll">
+          <svg viewBox={`0 0 ${W} ${chH+padT+padB}`} style={{minWidth:Math.max(520,W),height:chH+padT+padB,display:"block"}}>
+            {[0,0.25,0.5,0.75,1].map(t=>{ const y=padT+chH*(1-t); return <g key={t}>
+              <line x1={padL} y1={y} x2={W-10} y2={y} stroke="var(--line)" strokeWidth="1"/>
+              <text x={padL-6} y={y+4} textAnchor="end" fontSize="10" fill="var(--ink3)">{fmtCorto(maxV*t)}</text></g>; })}
+            {grupos.map((g,i)=>{
+              const x0 = padL + i*(gW+gOut) + gOut/2;
+              return <g key={g.comuna}>
+                {serie.map((m,j)=>{ const h=(g[m.k]/maxV)*chH; return h>0 &&
+                  <rect key={m.k} x={x0+j*(bw+gIn)} y={padT+chH-h} width={bw} height={h} fill={m.color} rx="2"><title>{g.comuna} · {m.lbl}: {fmtUFv(g[m.k])}</title></rect>; })}
+                <text x={x0+gW/2} y={padT+chH+15} textAnchor="middle" fontSize="10" fill="var(--ink2)">{g.comuna}</text>
+              </g>;
+            })}
+            <line x1={padL} y1={padT+chH} x2={W-10} y2={padT+chH} stroke="var(--ink3)" strokeWidth="1.5"/>
+          </svg>
+        </div>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:11,color:"var(--ink3)",marginTop:6}}>
+          {serie.map(m=><span key={m.k}><span style={{display:"inline-block",width:10,height:10,borderRadius:2,background:m.color,marginRight:5,verticalAlign:"-1px"}}/>{m.lbl}</span>)}
+        </div>
+      </div>
+
+      <div className="dash-section">
+        <h4>📋 Detalle por lote{hayFiltros?" — filtrado":""} <span style={{fontWeight:400,color:"var(--ink3)",fontSize:11.5}}>({vis.length})</span></h4>
+        <div style={{overflowX:"auto"}}>
+          <div className="data-table" style={{minWidth:1100}}>
+            <div className="dt-head" style={{gridTemplateColumns:cols,columnGap:"12px"}}>
+              <span>Lote · ROL</span><span>Comuna</span><span style={{textAlign:"right"}}>m² neto</span>
+              <span style={{textAlign:"right"}}>Avalúo SII</span><span style={{textAlign:"right"}}>Comercial</span>
+              <span style={{textAlign:"right"}}>Tasación</span><span style={{textAlign:"right"}}>Valor libro</span>
+              <span style={{textAlign:"right"}}>Com./SII</span><span>Hipoteca</span>
+            </div>
+            {vis.map(f=>{
+              const antigua = fechaAntigua(f.tas_fecha);
+              return (
+                <div key={f.id||f.orden} className="dt-row" style={{gridTemplateColumns:cols,columnGap:"12px",alignItems:"start",cursor:f.rolPagina?"pointer":"default"}}
+                  onClick={()=>f.rolPagina && onSelectTerreno(f.rolPagina)} title={f.rolPagina?"Ir al terreno "+f.rolPagina:"Este lote no está en la página"}>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontWeight:600,fontSize:12}}>{f.nombre||"—"}</div>
+                    <div style={{fontSize:10.5,color:"var(--ink3)",fontFamily:"monospace"}}>
+                      {f.rol||"sin ROL"}
+                      {!f.terreno && f.padre && <span style={{fontFamily:"inherit",marginLeft:6}}>· viene del {f.padre.rol}</span>}
+                      {!f.terreno && !f.padre && <span style={{fontFamily:"inherit",marginLeft:6,color:"var(--amber)"}}>· no está en la página</span>}
+                    </div>
+                    {f.obs && <div style={{fontSize:10.5,color:"var(--amber)",marginTop:3,lineHeight:1.35}}>⚠ {f.obs}</div>}
+                  </div>
+                  <span style={{fontSize:12}}>{f.comuna||"—"}<div style={{fontSize:10.5,color:"var(--ink3)"}}>{f.proyecto||""}</div></span>
+                  <span style={{textAlign:"right",fontSize:12}}>{fmtM2(f.m2Neto)}</span>
+                  {celda(f.siiUf, f.siiUfM2)}
+                  {celda(f.comUf, f.comUfM2)}
+                  {celda(f.tasUf, f.tasUfM2, f.tas_fecha ? <span style={{color:antigua?"var(--amber)":"var(--ink3)",fontWeight:antigua?600:400}}> · {f.tas_fecha.slice(0,4)}</span> : null)}
+                  {celda(f.libUf, f.libUfM2)}
+                  <span style={{textAlign:"right",fontSize:12}}>{(f.comUf>0&&f.siiUf>0)?fmtVeces(f.comUf/f.siiUf):"—"}</span>
+                  <span style={{fontSize:12,color:"var(--ink2)"}}>{f.hipoteca||"—"}</span>
+                </div>
+              );
+            })}
+            <div className="dt-row" style={{gridTemplateColumns:cols,columnGap:"12px",background:"var(--bg2)",fontWeight:700}}>
+              <span style={{fontSize:12}}>TOTAL {vis.length} lotes</span><span/>
+              <span style={{textAlign:"right",fontSize:12}}>{fmtM2(suma("m2Neto"))}</span>
+              <span style={{textAlign:"right",fontSize:12}}>{fmtUFv(suma("siiUf"))}</span>
+              <span style={{textAlign:"right",fontSize:12}}>{fmtUFv(suma("comUf"))}</span>
+              <span style={{textAlign:"right",fontSize:12}}>{fmtUFv(suma("tasUf"))}</span>
+              <span style={{textAlign:"right",fontSize:12}}>{nCon("libUf")?fmtUFv(suma("libUf")):"—"}</span>
+              <span style={{textAlign:"right",fontSize:12}}>{fmtVeces(vecesSii(vis,"comUf"))}</span><span/>
+            </div>
+          </div>
+        </div>
+        <div className="chart-help">Las tasaciones con más de 3 años aparecen con el año en naranjo. Los totales de cada métrica suman solo los lotes que tienen ese dato. Haz clic en un lote para ir a su terreno.</div>
+      </div>
+    </>
+  );
+}
+
+// Tarjeta "Valores" dentro de la información de cada terreno
+function ValoresTerrenoCard({filas}){
+  if(!filas) return null; // la tabla de valores no está disponible
+  const box = {background:"var(--bg)",borderRadius:8,padding:"10px 12px",border:"1px solid var(--line)"};
+  return (
+    <div className="info-card" style={{marginTop:14}}>
+      <h4>💲 Valores</h4>
+      {filas.length===0 ? (
+        <div className="isum-empty">Este terreno no está en la base de valores.</div>
+      ) : filas.length===1 ? (
+        <>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
+            {METRICAS_VALOR.map(m=>{
+              const f=filas[0], uf=f[m.uf], fe=m.fecha?f[m.fecha]:null, veces=(m.k!=="sii"&&uf>0&&f.siiUf>0)?uf/f.siiUf:null;
+              return (
+                <div key={m.k} style={box}>
+                  <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:1.1,color:"var(--ink3)",fontWeight:600}}>{m.lbl}</div>
+                  <div style={{fontSize:15,fontWeight:700,color:uf?m.color:"var(--ink3)",marginTop:3}}>{uf?fmtUFv(uf):"Sin dato"}</div>
+                  {uf ? <div style={{fontSize:11,color:"var(--ink3)"}}>{fmtUFm2v(f[m.m2])}</div> : null}
+                  {(uf && fe) ? <div style={{fontSize:11,color:fechaAntigua(fe)&&m.k==="tas"?"var(--amber)":"var(--ink3)"}}>{fmtDate(fe)}</div> : null}
+                  {veces!==null && <div style={{fontSize:11,color:"var(--ink3)"}}>{fmtVeces(veces)} el avalúo SII</div>}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{fontSize:11.5,color:"var(--ink3)",marginTop:8}}>
+            m² neto: {fmtM2(filas[0].m2Neto)}{filas[0].hipoteca?` · Hipoteca: ${filas[0].hipoteca}`:""}{filas[0].propietario?` · Propietario: ${filas[0].propietario}`:""}
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={{fontSize:12,color:"var(--ink2)",marginBottom:8}}>Este terreno agrupa {filas.length} lotes en la base de valores:</div>
+          <div className="data-table">
+            <div className="dt-head" style={{gridTemplateColumns:"minmax(140px,1.4fr) 90px 1fr 1fr 1fr 1fr",columnGap:"10px"}}>
+              <span>Lote</span><span style={{textAlign:"right"}}>m² neto</span>
+              {METRICAS_VALOR.map(m=><span key={m.k} style={{textAlign:"right"}}>{m.lbl}</span>)}
+            </div>
+            {filas.map(f=>(
+              <div key={f.id||f.orden} className="dt-row" style={{gridTemplateColumns:"minmax(140px,1.4fr) 90px 1fr 1fr 1fr 1fr",columnGap:"10px"}}>
+                <span style={{fontSize:12,fontWeight:600}}>{f.nombre}<div style={{fontSize:10.5,color:"var(--ink3)",fontFamily:"monospace",fontWeight:400}}>{f.rol||"sin ROL"}</div></span>
+                <span style={{textAlign:"right",fontSize:12}}>{fmtM2(f.m2Neto)}</span>
+                {METRICAS_VALOR.map(m=><span key={m.k} style={{textAlign:"right",fontSize:12}}>{fmtUFv(f[m.uf])}</span>)}
+              </div>
+            ))}
+            <div className="dt-row" style={{gridTemplateColumns:"minmax(140px,1.4fr) 90px 1fr 1fr 1fr 1fr",columnGap:"10px",background:"var(--bg2)",fontWeight:700}}>
+              <span style={{fontSize:12}}>TOTAL</span>
+              <span style={{textAlign:"right",fontSize:12}}>{fmtM2(filas.reduce((x,f)=>x+(f.m2Neto||0),0))}</span>
+              {METRICAS_VALOR.map(m=>{ const t=filas.reduce((x,f)=>x+(f[m.uf]||0),0); return <span key={m.k} style={{textAlign:"right",fontSize:12}}>{t?fmtUFv(t):"—"}</span>; })}
+            </div>
+          </div>
+        </>
+      )}
+      {filas.filter(f=>f.obs).map(f=>(
+        <div key={"o"+(f.id||f.orden)} style={{fontSize:11.5,color:"var(--amber)",marginTop:8,lineHeight:1.4}}>⚠ {filas.length>1?<b>{f.nombre}: </b>:null}{f.obs}</div>
+      ))}
+    </div>
+  );
+}
+
+function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSelectTerreno, hiddenRols, ufClp=40027, onSaveUfClp, valores=null}) {
   const [subTab, setSubTab] = useState("principal");
 
   // Principal tab filters (multi-select)
@@ -1601,6 +1897,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
       <div className="dash-subtabs">
         <button className={"dash-subtab"+(subTab==="principal"?" active":"")} onClick={()=>setSubTab("principal")}>📊 Principal</button>
         <button className={"dash-subtab"+(subTab==="tareas"?" active":"")} onClick={()=>setSubTab("tareas")}>📓 Tareas / Bitácora</button>
+        <button className={"dash-subtab"+(subTab==="valores"?" active":"")} onClick={()=>setSubTab("valores")}>💲 Valores</button>
       </div>
 
       {subTab==="principal" && (
@@ -1907,6 +2204,10 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
           </div>
         </>
       )}
+
+      {subTab==="valores" && (
+        <ValoresView filas={valores} ufClp={ufClp} onSelectTerreno={onSelectTerreno}/>
+      )}
     </>
   );
 }
@@ -1914,7 +2215,7 @@ function Dashboard({terrenos, allCuotas, allBitacora, allDevoluciones=[], onSele
 // ─────────────────────────────────────────────────────
 // INFO TAB
 // ─────────────────────────────────────────────────────
-function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[], onUpdated, user}) {
+function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[], onUpdated, user, valoresTerreno=null}) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({...terreno});
   const [saving, setSaving] = useState(false);
@@ -2354,6 +2655,8 @@ function InfoTab({terreno, ufClp=40027, cuotas=[], devoluciones=[], bitacora=[],
         )}
       </div>
     </div>
+
+    <ValoresTerrenoCard filas={valoresTerreno}/>
 
     {/* ── Resumen de Contribuciones / Devoluciones / Bitácora (solo lectura) ── */}
     <div className="info-summary-grid">
@@ -3352,7 +3655,8 @@ function App({user, onLogout}) {
   const hideDirtyRef = useRef(false); // true mientras hay un cambio de ocultos guardándose
   const loadSeqRef = useRef(0); // descarta respuestas de un terreno ya no seleccionado
   // Memoria para mostrar un terreno al instante al seleccionarlo (ver primeDetail).
-  const [allAdjuntos, setAllAdjuntos] = useState(null); // {archivos, subtareas, archivosSub}; null si no se pudieron cargar
+  const [allAdjuntos, setAllAdjuntos] = useState(null);
+  const [valores, setValores] = useState(null); // tabla valores_terrenos; null si no está disponible // {archivos, subtareas, archivosSub}; null si no se pudieron cargar
   const cacheListoRef = useRef(false);  // true cuando loadAll terminó bien al menos una vez
   const loadAllBusyRef = useRef(false); // true mientras loadAll está en curso
   const cacheSnapRef = useRef(null);    // la memoria actual, legible desde loadDetail
@@ -3417,17 +3721,19 @@ function App({user, onLogout}) {
       // Archivos y subtareas también se traen, para poder mostrar un terreno al instante
       // al seleccionarlo (ver primeDetail). Son tablas chicas; si alguna falla, no bloquea
       // la carga: ese terreno simplemente espera a loadDetail como antes.
-      const [t, c, b, d, a, s, as] = await Promise.all([
+      const [t, c, b, d, a, s, as, vt] = await Promise.all([
         db.select("terrenos","order=ciudad.asc,terreno.asc"),
         db.select("cuotas","order=anio.desc,numero.asc"),
         db.select("bitacora","order=fecha.desc"),
         db.select("devoluciones","order=fecha.desc"),
         db.select("archivos","order=created_at.asc").catch(()=>null),
         db.select("subtareas","order=created_at.asc").catch(()=>null),
-        db.select("archivos_subtareas","order=created_at.asc").catch(()=>null)
+        db.select("archivos_subtareas","order=created_at.asc").catch(()=>null),
+        db.select("valores_terrenos","order=orden.asc").catch(()=>null)
       ]);
       setTerrenos(t); setAllCuotas(c); setAllBitacora(b); setAllDevoluciones(d);
       setAllAdjuntos(a && s && as ? {archivos:a, subtareas:s, archivosSub:as} : null);
+      setValores(vt);
       cacheListoRef.current = true;
       loadUfClp();
       setSyncStatus("ok");
@@ -3623,7 +3929,7 @@ function App({user, onLogout}) {
   const exportJSON = async () => {
     setExportBusy(true);
     try{
-      const [terrenos, cuotas, bitacora, devoluciones, archivos, subtareas, archivos_subtareas, avaluos_historial] = await Promise.all([
+      const [terrenos, cuotas, bitacora, devoluciones, archivos, subtareas, archivos_subtareas, avaluos_historial, valores_terrenos] = await Promise.all([
         db.select("terrenos","order=ciudad.asc,terreno.asc"),
         db.select("cuotas","order=anio.desc,numero.asc"),
         db.select("bitacora","order=fecha.desc"),
@@ -3632,6 +3938,7 @@ function App({user, onLogout}) {
         db.select("subtareas","order=created_at.asc"),
         db.select("archivos_subtareas","order=created_at.asc"),
         db.select("avaluos_historial","order=terreno_rol.asc,vigente_hasta.asc"),
+        db.select("valores_terrenos","order=orden.asc").catch(()=>[]),
       ]);
       const backup = {
         version: 1,
@@ -3642,10 +3949,10 @@ function App({user, onLogout}) {
           terrenos: terrenos.length, cuotas: cuotas.length, bitacora: bitacora.length,
           devoluciones: devoluciones.length, archivos: archivos.length,
           subtareas: subtareas.length, archivos_subtareas: archivos_subtareas.length,
-          avaluos_historial: avaluos_historial.length
+          avaluos_historial: avaluos_historial.length, valores_terrenos: valores_terrenos.length
         },
         notes: "Respaldo de datos. No incluye el contenido binario de archivos del bucket, ni usuarios/contraseñas. El código vive en GitHub.",
-        tables: { terrenos, cuotas, bitacora, devoluciones, archivos, subtareas, archivos_subtareas, avaluos_historial }
+        tables: { terrenos, cuotas, bitacora, devoluciones, archivos, subtareas, archivos_subtareas, avaluos_historial, valores_terrenos }
       };
       const json = JSON.stringify(backup, null, 2);
       const blob = new Blob([json], {type:"application/json"});
@@ -3986,7 +4293,7 @@ function App({user, onLogout}) {
               <span style={{color:"var(--ink3)",fontSize:13}}>Cargando terrenos...</span>
             </div>
           ):!selTerreno ? (
-            <Dashboard terrenos={terrenos} allCuotas={allCuotas} allBitacora={allBitacora} allDevoluciones={allDevoluciones} onSelectTerreno={selectTerreno} hiddenRols={hiddenRols} ufClp={ufClp} onSaveUfClp={saveUfClp}/>
+            <Dashboard terrenos={terrenos} allCuotas={allCuotas} allBitacora={allBitacora} allDevoluciones={allDevoluciones} onSelectTerreno={selectTerreno} hiddenRols={hiddenRols} ufClp={ufClp} onSaveUfClp={saveUfClp} valores={armarFilasValores(valores, terrenos, ufClp, hiddenRols)}/>
           ):(
             <>
               <div className="tab-nav">
@@ -3996,7 +4303,7 @@ function App({user, onLogout}) {
               </div>
 
               {activeTab==="info"&&(
-                <InfoTab terreno={selTerreno} user={user} ufClp={ufClp} cuotas={cuotas} devoluciones={devoluciones} bitacora={bitacora} onUpdated={updated=>{
+                <InfoTab terreno={selTerreno} user={user} ufClp={ufClp} valoresTerreno={valores ? armarFilasValores(valores, terrenos, ufClp, hiddenRols).filter(f=>f.rol===selTerreno.rol || f.rol_padre===selTerreno.rol) : null} cuotas={cuotas} devoluciones={devoluciones} bitacora={bitacora} onUpdated={updated=>{
                   setTerrenos(ts=>ts.map(t=>t.rol===updated.rol?{...t,...updated}:t));
                   loadAll();
                 }}/>
