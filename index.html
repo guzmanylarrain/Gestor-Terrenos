@@ -1524,6 +1524,8 @@ const VZ_GRUPOS = [
   {id:"sii", lbl:"Avalúo SII"}, {id:"com", lbl:"Comercial (criterio RM)"}, {id:"tas", lbl:"Tasación"}, {id:"lib", lbl:"Valor libro"},
 ];
 const esLibre = h => /^libre$/i.test(String(h||"").trim());
+// Acciones del historial de cambios que son de Valorización (no se muestran a quien no tiene acceso)
+const VZ_ACCIONES = new Set(["exportar_valorizacion","editar_obs_valor","cargar_valores","restaurar_valores","exportar_valores"]);
 const VZ_COLS = [
   {id:"propietario", grupo:"id", lbl:"Propietario", txt:true},
   {id:"comuna", grupo:"id", lbl:"Comuna", txt:true},
@@ -4235,7 +4237,10 @@ function App({user, onLogout}) {
   const [allAdjuntos, setAllAdjuntos] = useState(null);
   // {archivos, subtareas, archivosSub}; null si no se pudieron cargar
   // Módulo Valorización (independiente de contribuciones)
-  const [modulo, setModulo] = useState(()=>{ try{ return localStorage.getItem("gt_modulo")==="valor" ? "valor" : "contrib"; }catch(e){ return "contrib"; } });
+  const [moduloElegido, setModulo] = useState(()=>{ try{ return localStorage.getItem("gt_modulo")==="valor" ? "valor" : "contrib"; }catch(e){ return "contrib"; } });
+  // Solo quienes están en la tabla valorizacion_acceso ven el módulo (la base además lo exige)
+  const [puedeValor, setPuedeValor] = useState(false);
+  const modulo = puedeValor ? moduloElegido : "contrib";
   const [valores, setValores] = useState(null); // tabla valores_terrenos; null si no está disponible
   const [selLote, setSelLote] = useState(null);
   const [buscaLote, setBuscaLote] = useState("");
@@ -4307,7 +4312,7 @@ function App({user, onLogout}) {
       // Archivos y subtareas también se traen, para poder mostrar un terreno al instante
       // al seleccionarlo (ver primeDetail). Son tablas chicas; si alguna falla, no bloquea
       // la carga: ese terreno simplemente espera a loadDetail como antes.
-      const [t, c, b, d, a, s, as, vt] = await Promise.all([
+      const [t, c, b, d, a, s, as, vt, va] = await Promise.all([
         db.select("terrenos","order=ciudad.asc,terreno.asc"),
         db.select("cuotas","order=anio.desc,numero.asc"),
         db.select("bitacora","order=fecha.desc"),
@@ -4315,11 +4320,13 @@ function App({user, onLogout}) {
         db.select("archivos","order=created_at.asc").catch(()=>null),
         db.select("subtareas","order=created_at.asc").catch(()=>null),
         db.select("archivos_subtareas","order=created_at.asc").catch(()=>null),
-        db.select("valores_terrenos","order=orden.asc").catch(()=>null)
+        db.select("valores_terrenos","order=orden.asc").catch(()=>null),
+        db.select("valorizacion_acceso","select=email").catch(()=>null)
       ]);
       setTerrenos(t); setAllCuotas(c); setAllBitacora(b); setAllDevoluciones(d);
       setAllAdjuntos(a && s && as ? {archivos:a, subtareas:s, archivosSub:as} : null);
       setValores(vt);
+      if(va) setPuedeValor(va.length>0);
       cacheListoRef.current = true;
       loadUfClp();
       setSyncStatus("ok");
@@ -4748,6 +4755,8 @@ function App({user, onLogout}) {
     if(t) setOpenCities(prev=>({...prev,[t.ciudad]:true}));
   };
 
+  const auditVis = puedeValor ? auditLogs : auditLogs.filter(e=>!VZ_ACCIONES.has(e.action_type));
+
   // ── Módulo Valorización ──
   const cambiarModulo = m => { setModulo(m); try{ localStorage.setItem("gt_modulo", m); }catch(e){} };
   const lotesVz = useMemo(()=>prepararLotes(valores, ufClp), [valores, ufClp]);
@@ -4784,10 +4793,12 @@ function App({user, onLogout}) {
           <div className="sidebar-logo-wrap"><img src="logo.jpg" alt="Guzmán & Larraín"/></div>
           <h1>Gestor de Terrenos</h1>
         </div>
-        <div className="mod-switch">
-          <button className={modulo==="contrib"?"on":""} onClick={()=>cambiarModulo("contrib")}>📋 Contribuciones</button>
-          <button className={modulo==="valor"?"on":""} onClick={()=>cambiarModulo("valor")}>💲 Valorización</button>
-        </div>
+        {puedeValor && (
+          <div className="mod-switch">
+            <button className={modulo==="contrib"?"on":""} onClick={()=>cambiarModulo("contrib")}>📋 Contribuciones</button>
+            <button className={modulo==="valor"?"on":""} onClick={()=>cambiarModulo("valor")}>💲 Valorización</button>
+          </div>
+        )}
         {modulo==="valor" ? (
           <VzSidebar grupos={gruposVz} total={lotesVz?lotesVz.length:0} busca={buscaLote} setBusca={setBuscaLote}
             sel={selLote} onSel={abrirLote} cerradas={comunasCerradas} setCerradas={setComunasCerradas}
@@ -4919,9 +4930,9 @@ function App({user, onLogout}) {
                     <button className="btn btn-ghost btn-xs" onClick={()=>setShowAudit(false)}>✕</button>
                   </div>
                   <div className="audit-list">
-                    {auditLogs.length===0 ? (
+                    {auditVis.length===0 ? (
                       <div className="audit-empty">Sin cambios registrados aún.</div>
-                    ) : auditLogs.map((e,i)=>{
+                    ) : auditVis.map((e,i)=>{
                       const dt = new Date(e.created_at);
                       const when = isNaN(dt) ? "—" : dt.toLocaleString("es-CL",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"});
                       return (
