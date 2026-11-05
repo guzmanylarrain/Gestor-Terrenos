@@ -5026,7 +5026,7 @@ function App({user, onLogout}) {
                 </div>
               )}
               <div className="tab-nav">
-                {[["info","📋 Información"],["cuotas","💰 Contribuciones"],["devoluciones","↩️ Devoluciones"],["bitacora","📓 Bitácora"]].map(([id,lbl])=>(
+                {[["info","📋 Informacion"],["cuotas","💰 Contribuciones"],["devoluciones","↩️ Devoluciones"],["bitacora","📓 Bitácora"]].map(([id,lbl])=>(
                   <button key={id} className={`tab-btn${activeTab===id?" active":""}`} onClick={()=>setActiveTab(id)}>{lbl}</button>
                 ))}
               </div>
