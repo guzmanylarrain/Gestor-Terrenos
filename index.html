@@ -10,7 +10,13 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.2/babel.min.js" integrity="sha384-dqDn4UOhYWNxmtwnMX6yC3WtZZ6Li8rF6rLB7cu0i/R7btvb+p+kObgEHto7VsJK" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2.104.0/dist/umd/supabase.js" integrity="sha384-UiYSxQXCTojQCBgTDHAa/f6PRkGlvY/sx+VlmFvBi/lpAaq1TzpV7LpzShoUwGbT" crossorigin="anonymous"></script>
+<script>
+// Un solo index.html para los dos entornos. En Azure (migración hecha por TI, nov-2026) la página habla con un API
+// de TI que imita la API de Supabase (/rest/v1 y /auth/v1) sobre Azure SQL, y su login vive en azure-auth.js; en
+// GitHub Pages y en local sigue hablando con Supabase. Se decide por el dominio.
+var ON_AZURE = window.location.hostname.endsWith("cloudapp.azure.com");
+document.write(ON_AZURE ? '<script src="azure-auth.js"><\/script>' : '<script src="https://unpkg.com/@supabase/supabase-js@2.104.0/dist/umd/supabase.js" integrity="sha384-UiYSxQXCTojQCBgTDHAa/f6PRkGlvY/sx+VlmFvBi/lpAaq1TzpV7LpzShoUwGbT" crossorigin="anonymous"><\/script>');
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -790,7 +796,7 @@ function SetupScreen({onSetup}) {
         {err&&<div className="setup-error">{err}</div>}
         <div className="field" style={{marginBottom:12}}>
           <label>Project URL</label>
-          <input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://xxxxxxxxxxxx.supabase.co" onKeyDown={e=>e.key==="Enter"&&connect()}/>
+          <input value={url} onChange={e=>setUrl(e.target.value)} placeholder={ON_AZURE?"https://misapps.westus2.cloudapp.azure.com/api/terrenos":"https://xxxxxxxxxxxx.supabase.co"} onKeyDown={e=>e.key==="Enter"&&connect()}/>
         </div>
         <div className="field" style={{marginBottom:20}}>
           <label>Anon Key</label>
@@ -5019,12 +5025,15 @@ function App({user, onLogout}) {
 // ─────────────────────────────────────────────────────
 // SUPABASE AUTH CLIENT
 // ─────────────────────────────────────────────────────
+const API_URL = ON_AZURE ? 'https://misapps.westus2.cloudapp.azure.com/api/terrenos' : 'https://hpztcgooeuwacyvniyle.supabase.co';
+const API_KEY = ON_AZURE ? 'azure-sql-client' : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwenRjZ29vZXV3YWN5dm5peWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODI1ODgsImV4cCI6MjA5MDQ1ODU4OH0.AdJMDIjXfXHGB697u3xyobEfkCM2IePX6lDYTbWtSF0';
 let supabaseAuth = null;
 let currentUser = null;
 
 function initSupabaseAuth(url, key) {
-  if(window.supabase && window.supabase.createClient) {
-    supabaseAuth = window.supabase.createClient(url, key);
+  const authLib = ON_AZURE ? window.AzureAuthClient : window.supabase;
+  if(authLib && authLib.createClient) {
+    supabaseAuth = authLib.createClient(url, key);
   }
 }
 
@@ -5210,8 +5219,8 @@ function Root() {
   const [user, setUser] = useState(null);
 
   useEffect(()=>{
-    db = new SupabaseClient('https://hpztcgooeuwacyvniyle.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwenRjZ29vZXV3YWN5dm5peWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODI1ODgsImV4cCI6MjA5MDQ1ODU4OH0.AdJMDIjXfXHGB697u3xyobEfkCM2IePX6lDYTbWtSF0');
-    initSupabaseAuth('https://hpztcgooeuwacyvniyle.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwenRjZ29vZXV3YWN5dm5peWxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODI1ODgsImV4cCI6MjA5MDQ1ODU4OH0.AdJMDIjXfXHGB697u3xyobEfkCM2IePX6lDYTbWtSF0');
+    db = new SupabaseClient(API_URL, API_KEY);
+    initSupabaseAuth(API_URL, API_KEY);
     if(supabaseAuth){
       // Keep db.authToken synced with the active session (handles refresh + logout)
       supabaseAuth.auth.onAuthStateChange((_event, session)=>{
