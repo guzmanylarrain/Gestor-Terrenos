@@ -505,6 +505,15 @@ class SupabaseClient {
     if(!res.ok) throw new Error(`Upload ${res.status}: ${await res.text()}`);
     return `${this.url}/storage/v1/object/public/${bucket}/${path}`;
   }
+  // Los archivos solo se entregan con login, así que se bajan con el token; un enlace simple no lo manda.
+  // Se usa el API del entorno actual, aunque la URL guardada apunte a otro.
+  async downloadFile(fileUrl) {
+    const m = String(fileUrl||"").match(/\/storage\/v1\/object\/(?:public\/)?(.+)$/);
+    if(!m) throw new Error("Enlace no válido");
+    const res = await fetch(`${this.url}/storage/v1/object/${m[1]}`, {headers:this._h()});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.blob();
+  }
   async test() {
     const res = await fetch(`${this.url}/rest/v1/terrenos?limit=1`, {headers:this._h()});
     if(res.status===401) throw new Error("API Key inválida.");
@@ -558,6 +567,17 @@ const validateUploadFile = (file) => {
 
 // Solo permitir enlaces http(s). Evita que una URL manipulada
 // (ej. "javascript:...") guardada en la BD se ejecute al hacer clic.
+const bajarAdjunto = async (e, f) => {
+  e.preventDefault();
+  try{
+    const href = URL.createObjectURL(await db.downloadFile(f.url));
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = f.nombre || "archivo";
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(href), 60000);
+  }catch(err){ alert("No se pudo abrir el archivo: "+err.message); }
+};
 const safeHref = (u) => {
   const s = String(u||"").trim();
   return /^https?:\/\//i.test(s) ? s : null;
@@ -1382,13 +1402,19 @@ function SubtareasSection({bitacoraId, terrenoRol, subtareas, archivosSub, onRef
                         <div key={f.id} className="file-item" style={{marginTop:5}}>
                           <span className="file-icon">{fileIcon(f.tipo)}</span>
                           {safeHref(f.url)
-                            ? <a href={safeHref(f.url)} target="_blank" rel="noopener noreferrer" className="file-name">{f.nombre}</a>
+                            ? <a href={safeHref(f.url)} onClick={e=>bajarAdjunto(e,f)} className="file-name">{f.nombre}</a>
                             : <span className="file-name" title="Enlace no válido">{f.nombre}</span>}
                           <span className="file-size">{fmtSize(f.tamano)}</span>
                           <button className="file-del" onClick={()=>delSubFile(f)}>🗑</button>
                         </div>
                       ))}
-                      {/* Adjuntar archivos deshabilitado por seguridad (bucket privado). */}
+                      {/* Adjuntar solo en Azure: en Supabase el bucket es privado y los archivos no se podrían abrir. */}
+                      {ON_AZURE && (
+                        <label className="upload-zone" style={{marginTop:7,padding:"8px 12px"}}>
+                          <input type="file" multiple onChange={async e=>{for(const f of Array.from(e.target.files)) await uploadSubFile(sub.id,f);e.target.value="";}}/>
+                          {uploading[sub.id]?<p>⏳ Subiendo...</p>:<p style={{fontSize:11}}>📎 Adjuntar archivo a subtarea</p>}
+                        </label>
+                      )}
                     </div>
                   )}
                 </>
@@ -4122,7 +4148,7 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
                           <div key={f.id} className="file-item">
                             <span className="file-icon">{fileIcon(f.tipo)}</span>
                             {safeHref(f.url)
-                            ? <a href={safeHref(f.url)} target="_blank" rel="noopener noreferrer" className="file-name">{f.nombre}</a>
+                            ? <a href={safeHref(f.url)} onClick={e=>bajarAdjunto(e,f)} className="file-name">{f.nombre}</a>
                             : <span className="file-name" title="Enlace no válido">{f.nombre}</span>}
                             <span className="file-size">{fmtSize(f.tamano)}</span>
                             <button className="file-del" onClick={()=>deleteFile(f)}>🗑</button>
@@ -4131,8 +4157,20 @@ function BitacoraTab({terreno, bitacora, archivos, subtareas, archivosSub, onRef
                       </div>
                     )}
 
-                    {/* Adjuntar archivos deshabilitado por seguridad (bucket privado).
-                        La lógica de subida se conserva por si se reactiva más adelante. */}
+                    {/* Adjuntar solo en Azure: en Supabase el bucket es privado y los archivos no se podrían abrir. */}
+                    {ON_AZURE && (
+                      <label className={`upload-zone${uploading[entry.id]?" drag":""}`}>
+                        <input type="file" multiple onChange={async e=>{
+                          for(const f of Array.from(e.target.files)) await uploadFile(entry.id, f);
+                          e.target.value="";
+                        }}/>
+                        {uploading[entry.id] ? (
+                          <p>⏳ Subiendo archivo...</p>
+                        ):(
+                          <p>📎 Arrastra archivos o <strong style={{color:"var(--teal)"}}>haz clic para adjuntar</strong> PDF, Word, imágenes...</p>
+                        )}
+                      </label>
+                    )}
                     <SubtareasSection
                       bitacoraId={entry.id}
                       terrenoRol={terreno.rol}
